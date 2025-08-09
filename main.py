@@ -3,7 +3,11 @@ from __future__ import annotations
 import random
 import time
 from dataclasses import dataclass, field
-from typing import List, Tuple
+from typing import List, Tuple, Optional
+import argparse
+import os
+from pathlib import Path
+import tomllib
 
 from asciimatics.screen import Screen
 import math
@@ -168,14 +172,14 @@ class Seaweed:
         frame2 = [s.ljust(2) for s in b]
         return frame1, frame2
 
-    def draw(self, screen: Screen, frame_no: int):
+    def draw(self, screen: Screen, frame_no: int, mono: bool = False):
         f1, f2 = self.frames()
         sway = ((frame_no // 4) + self.phase) % 2
         rows = f1 if sway == 0 else f2
         for i, row in enumerate(rows):
             y = self.base_y - (self.height - 1 - i)
             if 0 <= y < screen.height:
-                screen.print_at(row, self.x, y, colour=Screen.COLOUR_GREEN)
+                screen.print_at(row, self.x, y, colour=Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)
 
 
 @dataclass
@@ -250,10 +254,10 @@ class Splat:
     def active(self) -> bool:
         return self.age_frames < self.max_frames
 
-    def draw(self, screen: Screen):
+    def draw(self, screen: Screen, mono: bool = False):
         idx = min(len(self.FRAMES) - 1, self.age_frames // 4)
         lines = self.FRAMES[idx]
-        draw_sprite(screen, lines, self.x - 4, self.y - 2, Screen.COLOUR_RED)
+        draw_sprite(screen, lines, self.x - 4, self.y - 2, Screen.COLOUR_WHITE if mono else Screen.COLOUR_RED)
 
 
 @dataclass
@@ -321,7 +325,8 @@ class Fish:
 
 
 class AsciiQuarium:
-    def __init__(self):
+    def __init__(self, settings: "Settings"):
+        self.settings = settings
         self.seaweed: List[Seaweed] = []
         self.fish: List[Fish] = []
         self.bubbles: List[Bubble] = []
@@ -329,6 +334,7 @@ class AsciiQuarium:
         self.specials: List["Actor"] = []
         self._paused = False
         self._special_timer = random.uniform(3.0, 8.0)
+        self._show_help = False
 
     def rebuild(self, screen: Screen):
         self.seaweed.clear()
@@ -339,7 +345,7 @@ class AsciiQuarium:
         self._special_timer = random.uniform(3.0, 8.0)
 
         # Seaweed density
-        count = max(3, screen.width // 15)
+        count = max(1, int((screen.width // 15) * self.settings.density))
         for _ in range(count):
             h = random.randint(3, 6)
             x = random.randint(1, max(1, screen.width - 3))
@@ -349,16 +355,8 @@ class AsciiQuarium:
         # Fish count proportional to area under waterline
         water_top = 5
         area = max(1, (screen.height - (water_top + 4)) * screen.width)
-        fcount = max(4, area // 350)
-        colours = [
-            Screen.COLOUR_CYAN,
-            Screen.COLOUR_YELLOW,
-            Screen.COLOUR_GREEN,
-            Screen.COLOUR_RED,
-            Screen.COLOUR_MAGENTA,
-            Screen.COLOUR_BLUE,
-            Screen.COLOUR_WHITE,
-        ]
+        fcount = max(2, int(area // 350 * self.settings.density))
+        colours = self._palette(screen)
         for _ in range(fcount):
             direction = random.choice([-1, 1])
             frames = random_fish_frames(direction)
@@ -380,7 +378,8 @@ class AsciiQuarium:
         for i, row in enumerate(tiled):
             y = 5 + i
             if y < screen.height:
-                screen.print_at(row, 0, y, colour=Screen.COLOUR_CYAN)
+                colour = Screen.COLOUR_WHITE if self.settings.color == "mono" else Screen.COLOUR_CYAN
+                screen.print_at(row, 0, y, colour=colour)
 
     def draw_castle(self, screen: Screen):
         lines = CASTLE
@@ -418,18 +417,38 @@ class AsciiQuarium:
         # Draw in depth order: waterline -> castle -> seaweed -> fish -> bubbles -> splats -> specials
         self.draw_waterline(screen)
         self.draw_castle(screen)
+        mono = self.settings.color == "mono"
         for s in self.seaweed:
-            s.draw(screen, frame_no)
+            s.draw(screen, frame_no, mono)
         for f in self.fish:
-            f.draw(screen)
+            # Override color if mono
+            if self.settings.color == "mono":
+                c = Screen.COLOUR_WHITE
+                draw_sprite(screen, f.frames, int(f.x), int(f.y), c)
+            else:
+                f.draw(screen)
         for b in self.bubbles:
-            b.draw(screen)
+            if self.settings.color == "mono":
+                # draw as white
+                if 0 <= b.y < screen.height:
+                    ch = random.choice([".", "o", "O"])
+                    screen.print_at(ch, b.x, b.y, colour=Screen.COLOUR_WHITE)
+            else:
+                b.draw(screen)
         for s in self.splats:
-            s.draw(screen)
+            s.draw(screen, mono)
 
         # Update specials draw last (foreground)
         for a in list(self.specials):
-            a.draw(screen)
+            # Try to pass mono flag if supported
+            try:
+                a.draw(screen, mono)  # type: ignore[call-arg]
+            except TypeError:
+                a.draw(screen)
+
+        # Help overlay if toggled
+        if self._show_help:
+            self._draw_help(screen)
 
     # Random event spawner
     def spawn_random(self, screen: Screen):
@@ -446,6 +465,117 @@ class AsciiQuarium:
         spawner = random.choice(choices)
         self.specials.extend(spawner(screen, self))
 
+    # Palette based on color mode
+    def _palette(self, screen: Screen) -> List[int]:
+        if self.settings.color == "mono":
+            return [Screen.COLOUR_WHITE]
+        # For simplicity, return base 8-color palette
+        return [
+            Screen.COLOUR_CYAN,
+            Screen.COLOUR_YELLOW,
+            Screen.COLOUR_GREEN,
+            Screen.COLOUR_RED,
+            Screen.COLOUR_MAGENTA,
+            Screen.COLOUR_BLUE,
+            Screen.COLOUR_WHITE,
+        ]
+
+    def _draw_help(self, screen: Screen):
+        lines = [
+            "Asciiquarium Redux",
+            f"fps: {self.settings.fps}  density: {self.settings.density}  color: {self.settings.color}",
+            f"seed: {self.settings.seed if self.settings.seed is not None else 'random'}",
+            "",
+            "Controls:",
+            "  q: quit    p: pause/resume    r: rebuild",
+            "  h/?: toggle this help",
+        ]
+        x, y = 2, 1
+        # Simple box
+        width = max(len(s) for s in lines) + 4
+        height = len(lines) + 2
+        screen.print_at("+" + "-" * (width - 2) + "+", x, y, colour=Screen.COLOUR_WHITE)
+        for i, row in enumerate(lines, start=1):
+            screen.print_at("|" + row.ljust(width - 2) + "|", x, y + i, colour=Screen.COLOUR_WHITE)
+        screen.print_at("+" + "-" * (width - 2) + "+", x, y + height - 1, colour=Screen.COLOUR_WHITE)
+
+
+# ------------------------------
+# CLI and settings
+# ------------------------------
+
+
+@dataclass
+class Settings:
+    fps: int = 20
+    density: float = 1.0
+    color: str = "auto"  # auto|mono|16|256
+    seed: Optional[int] = None
+
+
+def _find_config_paths() -> List[Path]:
+    paths: List[Path] = []
+    cwd = Path.cwd()
+    paths.append(cwd / ".asciiquarium.toml")
+    xdg = os.environ.get("XDG_CONFIG_HOME")
+    if xdg:
+        paths.append(Path(xdg) / "asciiquarium-redux" / "config.toml")
+    home = Path.home()
+    paths.append(home / ".config" / "asciiquarium-redux" / "config.toml")
+    return [p for p in paths if p.exists()]
+
+
+def _load_toml(path: Path) -> dict:
+    try:
+        with path.open("rb") as f:
+            return tomllib.load(f)
+    except Exception:
+        return {}
+
+
+def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
+    # Defaults
+    s = Settings()
+
+    # Config files (first wins)
+    for p in _find_config_paths():
+        data = _load_toml(p)
+        render = data.get("render", {})
+        scene = data.get("scene", {})
+        if "fps" in render:
+            s.fps = int(render.get("fps", s.fps))
+        if "color" in render:
+            s.color = str(render.get("color", s.color))
+        if "density" in scene:
+            try:
+                s.density = float(scene.get("density", s.density))
+            except Exception:
+                pass
+        if "seed" in scene:
+            seed_val = scene.get("seed")
+            if isinstance(seed_val, int):
+                s.seed = seed_val
+            elif isinstance(seed_val, str) and seed_val.lower() == "random":
+                s.seed = None
+        break
+    # CLI
+    parser = argparse.ArgumentParser(description="Asciiquarium Redux")
+    parser.add_argument("--fps", type=int, help="Target frames per second (default 20)")
+    parser.add_argument("--density", type=float, help="Density multiplier for objects (default 1.0)")
+    parser.add_argument("--color", choices=["auto", "mono", "16", "256"], help="Color mode")
+    parser.add_argument("--seed", type=int, help="Deterministic RNG seed (int). Omit for random")
+    args = parser.parse_args(argv)
+
+    if args.fps is not None:
+        s.fps = max(5, min(120, args.fps))
+    if args.density is not None:
+        s.density = max(0.1, min(5.0, args.density))
+    if args.color is not None:
+        s.color = args.color
+    if args.seed is not None:
+        s.seed = args.seed
+    return s
+
 
 # ------------------------------
 # Actor base class & concrete actors
@@ -454,7 +584,7 @@ class AsciiQuarium:
 
 class Actor:
     def update(self, dt: float, screen: Screen, app: "AsciiQuarium") -> None: ...
-    def draw(self, screen: Screen) -> None: ...
+    def draw(self, screen: Screen, mono: bool = False) -> None: ...
     @property
     def active(self) -> bool: ...
 
@@ -492,7 +622,7 @@ class Shark(Actor):
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
             self._active = False
 
-    def draw(self, screen: Screen) -> None:
+    def draw(self, screen: Screen, mono: bool = False) -> None:
         # Mirror for left by reversing lines
         if self.dir > 0:
             draw_sprite(screen, self.frame, int(self.x), int(self.y), Screen.COLOUR_WHITE)
@@ -545,26 +675,26 @@ class FishHook(Actor):
                     app.fish.remove(self.caught)
                 self._active = False
 
-    def draw(self, screen: Screen) -> None:
+    def draw(self, screen: Screen, mono: bool = False) -> None:
         # Draw line from top to hook
         top = -50
         line_len = int(self.y) - top
         for i in range(line_len):
             ly = top + i
             if 0 <= ly < screen.height:
-                screen.print_at("|", self.x + 7, ly, colour=Screen.COLOUR_GREEN)
+                screen.print_at("|", self.x + 7, ly, colour=Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)
         # Draw hook
-        hook = parse_sprite(
-            r"""
-       o
-      ||
-      ||
+                hook = parse_sprite(
+                        r"""
+             o
+            ||
+            ||
 / \   ||
-  \__//
-  `--'
+    \__//
+    `--'
 """
-        )
-        draw_sprite(screen, hook, self.x, int(self.y), Screen.COLOUR_GREEN)
+                )
+                draw_sprite(screen, hook, self.x, int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)
 
 
 def _bool(v: bool) -> bool:
@@ -599,12 +729,13 @@ class Whale(Actor):
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
             self._active = False
 
-    def draw(self, screen: Screen) -> None:
+    def draw(self, screen: Screen, mono: bool = False) -> None:
         # Spout every few frames
         if self.spout_frame < 10:
             sp = ["   :", "   :", "  . .", " .-:-."]
             for i, row in enumerate(sp[: max(0, self.spout_frame // 3)]):
-                screen.print_at(row, int(self.x) + (1 if self.dir > 0 else 11), i, colour=Screen.COLOUR_CYAN)
+                colour = Screen.COLOUR_WHITE if mono else Screen.COLOUR_CYAN
+                screen.print_at(row, int(self.x) + (1 if self.dir > 0 else 11), i, colour=colour)
         img = self.base if self.dir > 0 else [line[::-1] for line in self.base]
         draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
 
@@ -632,9 +763,9 @@ class Ducks(Actor):
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
             self._active = False
 
-    def draw(self, screen: Screen) -> None:
+    def draw(self, screen: Screen, mono: bool = False) -> None:
         img = self.frame_a if self.dir > 0 else [line[::-1] for line in self.frame_a]
-        draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_YELLOW)
+        draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_YELLOW)
 
 
 class Dolphins(Actor):
@@ -665,12 +796,12 @@ class Dolphins(Actor):
         if (self.dir > 0 and self.x > screen.width + 30) or (self.dir < 0 and self.x < -30):
             self._active = False
 
-    def draw(self, screen: Screen) -> None:
+    def draw(self, screen: Screen, mono: bool = False) -> None:
         for i in range(3):
             px = int(self.x + i * self.distance)
             py = int(self.base_y + 3 * math.sin((self.t * 2 + i) * 1.2))
             img = self.dolph if self.dir > 0 else [line[::-1] for line in self.dolph]
-            draw_sprite(screen, img, px, py, Screen.COLOUR_CYAN)
+            draw_sprite(screen, img, px, py, Screen.COLOUR_WHITE if mono else Screen.COLOUR_CYAN)
 
 
 class Swan(Actor):
@@ -701,7 +832,7 @@ class Swan(Actor):
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + 10 < 0):
             self._active = False
 
-    def draw(self, screen: Screen) -> None:
+    def draw(self, screen: Screen, mono: bool = False) -> None:
         img = self.img if self.dir > 0 else [line[::-1] for line in self.img]
         draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
 
@@ -732,9 +863,9 @@ class Monster(Actor):
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
             self._active = False
 
-    def draw(self, screen: Screen) -> None:
+    def draw(self, screen: Screen, mono: bool = False) -> None:
         img = self.img if self.dir > 0 else [line[::-1] for line in self.img]
-        draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_GREEN)
+        draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)
 
 
 # Spawner helpers
@@ -794,7 +925,7 @@ _____|____|____|____\\\\\__
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
             self._active = False
 
-    def draw(self, screen: Screen) -> None:
+    def draw(self, screen: Screen, mono: bool = False) -> None:
         img = self.img if self.dir > 0 else [line[::-1] for line in self.img]
         draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
 
@@ -803,12 +934,13 @@ def spawn_ship(screen: Screen, app: "AsciiQuarium") -> List[Actor]:
     return [Ship(screen, app)]
 
 
-def run(screen: Screen):
-    app = AsciiQuarium()
+def run(screen: Screen, settings: Settings):
+    app = AsciiQuarium(settings)
     app.rebuild(screen)
 
     last = time.time()
     frame_no = 0
+    target_dt = 1.0 / max(1, settings.fps)
 
     while True:
         now = time.time()
@@ -823,15 +955,23 @@ def run(screen: Screen):
             app._paused = not app._paused
         if ev in (ord("r"), ord("R")):
             app.rebuild(screen)
+        if ev in (ord("h"), ord("H"), ord("?")):
+            app._show_help = not app._show_help
 
         screen.clear()
         app.update(dt, screen, frame_no)
         screen.refresh()
         frame_no += 1
 
-        # Try to target ~20 FPS
-        time.sleep(0.05)
+        # Target FPS
+        elapsed = time.time() - now
+        sleep_for = max(0.0, target_dt - elapsed)
+        time.sleep(sleep_for)
 
 
 if __name__ == "__main__":
-    Screen.wrapper(run)
+    settings = load_settings_from_sources()
+    if settings.seed is not None:
+        random.seed(settings.seed)
+    # Wrap to pass settings into the screen function
+    Screen.wrapper(lambda scr: run(scr, settings))

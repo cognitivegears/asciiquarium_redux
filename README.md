@@ -4,7 +4,7 @@ A Python-based port of the classic terminal animation “Asciiquarium,” implem
 
 Original Asciiquarium by Kirk Baucom (Perl): [robobunny.com/projects/asciiquarium](https://robobunny.com/projects/asciiquarium/html/)
 
-Status: Minimal playable port included.
+Status: Playable port with CLI options, help overlay, and config support.
 
 
 ## Why a Redux?
@@ -44,6 +44,18 @@ Controls:
 - q: quit
 - p: pause/resume
 - r: rebuild scene (useful after resize)
+- h or ?: toggle help overlay
+
+CLI examples:
+
+```sh
+uv run python main.py --fps 30 --density 1.5 --color mono --seed 123
+```
+
+- --fps (int): target frames per second (default 20, clamp 5–120)
+- --density (float): density multiplier (default 1.0, clamp 0.1–5.0)
+- --color <auto|mono|16|256>: color mode (mono forces white)
+- --seed (int): deterministic RNG seed; omit for random
 
 
 ## Notes
@@ -53,7 +65,7 @@ Controls:
 - Ensure a UTF-8 locale and a monospaced font for best results.
 
 
-## Configuration (planned)
+## Configuration
 
 Default locations checked (first wins):
 
@@ -65,13 +77,12 @@ Example `config.toml`:
 
 ```toml
 [render]
-fps = 20
-color = "auto"   # auto|mono|16|256|truecolor
+fps = 24
+color = "mono"   # auto|mono|16|256
 
 [scene]
-density = 1.0     # 0.5..2.0
-seed = "random"   # integer or "random"
-length_seconds = 120
+density = 1.2     # 0.1..5.0
+seed = 42         # or "random" (string) for non-deterministic
 ```
 
 
