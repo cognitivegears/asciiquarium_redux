@@ -20,6 +20,7 @@ from .entities.specials import (
     spawn_dolphins,
     spawn_swan,
     spawn_monster,
+    spawn_big_fish,
 )
 
 
@@ -143,6 +144,7 @@ class AsciiQuarium:
             spawn_dolphins,
             spawn_swan,
             spawn_monster,
+            spawn_big_fish,
         ]
         spawner = random.choice(choices)
         self.specials.extend(spawner(screen, self))

@@ -340,3 +340,71 @@ def spawn_monster(screen: Screen, app) -> List[Actor]:
 
 def spawn_ship(screen: Screen, app) -> List[Actor]:
     return [Ship(screen, app)]
+
+
+class BigFish(Actor):
+        def __init__(self, screen: Screen, app):
+                self.dir = random.choice([-1, 1])
+                self.speed = 30.0 * (self.dir / abs(self.dir))  # roughly fast like Perl (speed 3)
+                if self.dir > 0:
+                        self.img = parse_sprite(
+                                r"""
+ ______
+`""-.  `````-----.....__
+         `.  .      .       `-.
+             :     .     .       `.
+ ,     :   .    .          _ :
+: `.   :                  (@) `._
+ `. `..'     .     =`-.       .__)
+     ;     .        =  ~  :     .-"
+ .' .'`.   .    .  =.-'  `._ .'
+: .'   :               .   .'
+ '   .'  .    .     .   .-'
+     .'____....----''.'=.'
+     ""             .'.'
+                             ''"'`
+"""
+                        )
+                        self.x = -34
+                else:
+                        self.img = parse_sprite(
+                                r"""
+                                                     ______
+                    __.....-----'''''  .-""'
+             .-'       .      .  .'
+         .'       .     .     :
+        : _          .    .   :     ,
+ _.' (@)                  :   .' :
+(__.       .-'=     .     `..' .'
+ "-.     :  ~  =        .     ;
+     `. _.'  `-.=  .    .   .'`. `.
+         `.   .               :   `. :
+             `-.   .     .    .  `.   `
+                    `.=`.``----....____`.
+                        `.`.             ""
+                            '`"``
+"""
+                        )
+                        self.x = screen.width
+                self.w, self.h = sprite_size(self.img)
+                max_height = 9
+                min_height = max_height if screen.height - 15 <= max_height else (screen.height - 15)
+                self.y = random.randint(max_height, max(min_height, max_height))
+                self._active = True
+
+        @property
+        def active(self) -> bool:
+                return self._active
+
+        def update(self, dt: float, screen: Screen, app) -> None:
+                self.x += (self.speed * dt)
+                if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
+                        self._active = False
+
+        def draw(self, screen: Screen, mono: bool = False) -> None:
+                img = self.img if self.dir > 0 else [line[::-1] for line in self.img]
+                draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_YELLOW)
+
+
+def spawn_big_fish(screen: Screen, app) -> List[Actor]:
+        return [BigFish(screen, app)]
