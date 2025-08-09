@@ -88,6 +88,8 @@ class AsciiQuarium:
         dt *= self.settings.speed
         if not self._paused:
             self._seaweed_tick += dt
+            for s in self.seaweed:
+                s.update(dt, screen)
             for f in self.fish:
                 f.update(dt, screen, self.bubbles)
             for b in self.bubbles:
