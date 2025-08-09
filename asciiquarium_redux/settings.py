@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import argparse
-import sys
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -100,16 +99,7 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                 override_path = Path(tok.split("=", 1)[1]).expanduser()
                 break
 
-    # Determine config files to read
-    if override_path is not None:
-        if not override_path.exists():
-            print(f"Error: config file not found: {override_path}", file=sys.stderr)
-            raise SystemExit(2)
-        config_paths = [override_path]
-    else:
-        config_paths = _find_config_paths(None)
-
-    for p in config_paths:
+    for p in _find_config_paths(override_path):
         data = _load_toml(p)
         render = data.get("render", {})
         scene = data.get("scene", {})

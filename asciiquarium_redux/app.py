@@ -159,6 +159,26 @@ class AsciiQuarium:
                 colour = Screen.COLOUR_WHITE if self.settings.color == "mono" else Screen.COLOUR_CYAN
                 screen.print_at(row, 0, y, colour=colour)
 
+    def _waterline_row(self, idx: int, screen: Screen) -> str:
+        if idx < 0 or idx >= len(WATER_SEGMENTS):
+            return ""
+        seg = WATER_SEGMENTS[idx]
+        seg_len = len(seg)
+        repeat = screen.width // seg_len + 2
+        return (seg * repeat)[: screen.width]
+
+    def _bubble_hits_waterline(self, x: int, y: int, screen: Screen) -> bool:
+        # Convert to index within waterline rows
+        idx = y - self.settings.waterline_top
+        if idx < 0 or idx >= len(WATER_SEGMENTS):
+            return False
+        if x < 0 or x >= screen.width:
+            return False
+        row = self._waterline_row(idx, screen)
+        if not row:
+            return False
+        return row[x] != ' '
+
     def draw_castle(self, screen: Screen):
         lines = CASTLE
         w, h = sprite_size(lines)
@@ -177,10 +197,16 @@ class AsciiQuarium:
                 s.update(dt, screen)
             for f in self.fish:
                 f.update(dt, screen, self.bubbles)
+            survivors: List[Bubble] = []
             for b in self.bubbles:
                 b.update(dt)
-            # keep bubbles while below the waterline+1
-            self.bubbles = [b for b in self.bubbles if b.y > (self.settings.waterline_top + 1)]
+                # Kill bubble if it hits any visible waterline character
+                if b.y < 0:
+                    continue
+                if self._bubble_hits_waterline(b.x, b.y, screen):
+                    continue
+                survivors.append(b)
+            self.bubbles = survivors
             for a in list(self.specials):
                 a.update(dt, screen, self)
             self.specials = [a for a in self.specials if getattr(a, "active", True)]
