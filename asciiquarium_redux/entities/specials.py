@@ -154,12 +154,48 @@ class Ducks(Actor):
         self.speed = 10.0 * self.dir
         self.x = -30 if self.dir > 0 else screen.width
         self.y = 5
-        self.frame_a = parse_sprite(r"""
+        # 3-frame animation inspired by original asciiquarium ducks
+        ducks_lr = [
+            parse_sprite(r"""
       _  _  _
 ,____(')=,____(')=,____(')<
  \~~= ')  \~~= ')  \~~= ')
-""")
-        self.w, self.h = sprite_size(self.frame_a)
+"""),
+            parse_sprite(r"""
+      _  _  _
+,____(')=,____(')<,____(')=
+ \~~= ')  \~~= ')  \~~= ')
+"""),
+            parse_sprite(r"""
+      _  _  _
+,____(')<,____(')=,____(')=
+ \~~= ')  \~~= ')  \~~= ')
+"""),
+        ]
+        ducks_rl = [
+            parse_sprite(r"""
+  _  _  _
+>(')____,=(')____,=(')____,
+ (` =~~/  (` =~~/  (` =~~/
+"""),
+            parse_sprite(r"""
+  _  _  _
+=(')____,>(')____,=(')____,
+ (` =~~/  (` =~~/  (` =~~/
+"""),
+            parse_sprite(r"""
+  _  _  _
+=(')____,=(')____,>(')____,
+ (` =~~/  (` =~~/  (` =~~/
+"""),
+        ]
+        self.frames = ducks_lr if self.dir > 0 else ducks_rl
+        w_list = [sprite_size(f)[0] for f in self.frames]
+        h_list = [sprite_size(f)[1] for f in self.frames]
+        self.w, self.h = max(w_list), max(h_list)
+        self._frame_idx = 0
+        self._frame_t = 0.0
+        self._frame_dt = 0.25  # seconds per frame
         self._active = True
 
     @property
@@ -168,11 +204,15 @@ class Ducks(Actor):
 
     def update(self, dt: float, screen: Screen, app) -> None:
         self.x += self.speed * dt
+        self._frame_t += dt
+        if self._frame_t >= self._frame_dt:
+            self._frame_t = 0.0
+            self._frame_idx = (self._frame_idx + 1) % len(self.frames)
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
             self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
-        img = self.frame_a if self.dir > 0 else [line[::-1] for line in self.frame_a]
+        img = self.frames[self._frame_idx]
         draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_YELLOW)
 
 
@@ -184,14 +224,47 @@ class Dolphins(Actor):
         self.base_y = 5
         self.t = 0.0
         self.distance = 15 * self.dir
-        self.dolph = parse_sprite(
-            r"""
+        # Two-frame dolphin animation per direction
+        dolph_lr = [
+            parse_sprite(
+                r"""
      ,
    _/(__
 .-'a    `-._/)
 '^^~\)''''~~\)
 """
-        )
+            ),
+            parse_sprite(
+                r"""
+     ,
+   _/(__  __/)
+.-'a    ``.~\)
+'^^~(/''''
+"""
+            ),
+        ]
+        dolph_rl = [
+            parse_sprite(
+                r"""
+        ,
+      __)\_
+(\_.-'    a`-.
+(/~~````(/~^^`
+"""
+            ),
+            parse_sprite(
+                r"""
+        ,
+(\__  __)\_
+(/~.''    a`-.
+    ````\)~^^`
+"""
+            ),
+        ]
+        self.frames = dolph_lr if self.dir > 0 else dolph_rl
+        self._frame_idx = 0
+        self._frame_t = 0.0
+        self._frame_dt = 0.25
         self._active = True
 
     @property
@@ -201,15 +274,20 @@ class Dolphins(Actor):
     def update(self, dt: float, screen: Screen, app) -> None:
         self.t += dt
         self.x += self.speed * dt
+        # animate
+        self._frame_t += dt
+        if self._frame_t >= self._frame_dt:
+            self._frame_t = 0.0
+            self._frame_idx = (self._frame_idx + 1) % len(self.frames)
         if (self.dir > 0 and self.x > screen.width + 30) or (self.dir < 0 and self.x < -30):
             self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
         for i in range(3):
+            frame = self.frames[(self._frame_idx + i) % len(self.frames)]
             px = int(self.x + i * self.distance)
             py = int(self.base_y + 3 * math.sin((self.t * 2 + i) * 1.2))
-            img = self.dolph if self.dir > 0 else [line[::-1] for line in self.dolph]
-            draw_sprite(screen, img, px, py, Screen.COLOUR_WHITE if mono else Screen.COLOUR_CYAN)
+            draw_sprite(screen, frame, px, py, Screen.COLOUR_WHITE if mono else Screen.COLOUR_CYAN)
 
 
 class Swan(Actor):
@@ -218,8 +296,10 @@ class Swan(Actor):
         self.speed = 10.0 * self.dir
         self.x = -10 if self.dir > 0 else screen.width
         self.y = 1
-        self.img = parse_sprite(
-            r"""
+        # Two subtle wing positions
+        swan_lr = [
+            parse_sprite(
+                r"""
        ___
 ,_    / _,\
 | \   \\ \|
@@ -228,7 +308,47 @@ class Swan(Actor):
 (\_   `   \
  \   -=~  /
 """
-        )
+            ),
+            parse_sprite(
+                r"""
+       ___
+,_    / _,\
+| \   \\  \
+|  \_  \\\\
+(_   \_) \
+(\_   `   \
+ \  ~=-  /
+"""
+            ),
+        ]
+        swan_rl = [
+            parse_sprite(
+                r"""
+ ___
+/,_ \    _,
+|/ )/   / |
+  //  _/  |
+ / ( /   _)
+/   `   _/)
+\  ~=-   /
+"""
+            ),
+            parse_sprite(
+                r"""
+ ___
+/,_ \    _,
+|/ )/   / |
+  //  _/  |
+ / ( /   _)
+/   `   _/)
+\   -=~  /
+"""
+            ),
+        ]
+        self.frames = swan_lr if self.dir > 0 else swan_rl
+        self._frame_idx = 0
+        self._frame_t = 0.0
+        self._frame_dt = 0.25
         self._active = True
 
     @property
@@ -237,11 +357,15 @@ class Swan(Actor):
 
     def update(self, dt: float, screen: Screen, app) -> None:
         self.x += self.speed * dt
+        self._frame_t += dt
+        if self._frame_t >= self._frame_dt:
+            self._frame_t = 0.0
+            self._frame_idx = (self._frame_idx + 1) % len(self.frames)
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + 10 < 0):
             self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
-        img = self.img if self.dir > 0 else [line[::-1] for line in self.img]
+        img = self.frames[self._frame_idx]
         draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
 
 
@@ -249,17 +373,49 @@ class Monster(Actor):
     def __init__(self, screen: Screen, app):
         self.dir = random.choice([-1, 1])
         self.speed = 15.0 * self.dir
-        self.x = -40 if self.dir > 0 else screen.width
+        self.x = -64 if self.dir > 0 else screen.width
         self.y = 2
-        self.img = parse_sprite(
-            r"""
+        # 4-frame sea monster undulation
+        self.frames = [
+            parse_sprite(
+                r"""
    ____
  _/ o  \____
 /  __       \
 \_/  \_______)
 """
-        )
-        self.w, self.h = sprite_size(self.img)
+            ),
+            parse_sprite(
+                r"""
+   ____
+ _/ O  \____
+/  __       \
+\_/  \______)
+"""
+            ),
+            parse_sprite(
+                r"""
+   ____
+ _/ o  \____
+/  __       \
+\_/  \_______)
+"""
+            ),
+            parse_sprite(
+                r"""
+   ____
+ _/ .  \____
+/  __       \
+\_/  \______)
+"""
+            ),
+        ]
+        w_list = [sprite_size(f)[0] for f in self.frames]
+        h_list = [sprite_size(f)[1] for f in self.frames]
+        self.w, self.h = max(w_list), max(h_list)
+        self._frame_idx = 0
+        self._frame_t = 0.0
+        self._frame_dt = 0.25
         self._active = True
 
     @property
@@ -268,11 +424,17 @@ class Monster(Actor):
 
     def update(self, dt: float, screen: Screen, app) -> None:
         self.x += self.speed * dt
+        self._frame_t += dt
+        if self._frame_t >= self._frame_dt:
+            self._frame_t = 0.0
+            self._frame_idx = (self._frame_idx + 1) % len(self.frames)
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
             self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
-        img = self.img if self.dir > 0 else [line[::-1] for line in self.img]
+        img = self.frames[self._frame_idx]
+        if self.dir < 0:
+            img = [line[::-1] for line in img]
         draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)
 
 
@@ -282,8 +444,10 @@ class Ship(Actor):
         self.speed = 10.0 * self.dir
         self.x = -24 if self.dir > 0 else screen.width
         self.y = 0
-        self.img = parse_sprite(
-            r"""
+        # Add a simple 2-frame wake animation for the ship
+        ship_lr = [
+            parse_sprite(
+                r"""
      |    |    |
     )_)  )_)  )_)
    )___))___))___)\
@@ -291,8 +455,47 @@ class Ship(Actor):
 _____|____|____|____\\\\\__
 \                   /
 """
-        )
-        self.w, self.h = sprite_size(self.img)
+            ),
+            parse_sprite(
+                r"""
+     |    |    |
+    )__) )__) )__)
+   )___))___))___)\\
+  )____)____)_____)\\\\
+_____|____|____|____\\\\\___
+\                   /
+"""
+            ),
+        ]
+        ship_rl = [
+            parse_sprite(
+                r"""
+         |    |    |
+        (_(  (_(  (_(
+      /(___((___((___(
+    //(_____(____(____(
+__///____|____|____|_____
+    \                   /
+"""
+            ),
+            parse_sprite(
+                r"""
+         |    |    |
+        (__  (__  (__) 
+      /(___((___((___(\
+    //(_____(____(____(\\
+__///____|____|____|______
+    \                   /
+"""
+            ),
+        ]
+        self.frames = ship_lr if self.dir > 0 else ship_rl
+        w_list = [sprite_size(f)[0] for f in self.frames]
+        h_list = [sprite_size(f)[1] for f in self.frames]
+        self.w, self.h = max(w_list), max(h_list)
+        self._frame_idx = 0
+        self._frame_t = 0.0
+        self._frame_dt = 0.5
         self._active = True
 
     @property
@@ -301,11 +504,15 @@ _____|____|____|____\\\\\__
 
     def update(self, dt: float, screen: Screen, app) -> None:
         self.x += self.speed * dt
+        self._frame_t += dt
+        if self._frame_t >= self._frame_dt:
+            self._frame_t = 0.0
+            self._frame_idx = (self._frame_idx + 1) % len(self.frames)
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
             self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
-        img = self.img if self.dir > 0 else [line[::-1] for line in self.img]
+        img = self.frames[self._frame_idx]
         draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
 
 
