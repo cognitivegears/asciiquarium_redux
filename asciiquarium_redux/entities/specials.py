@@ -92,7 +92,7 @@ class FishHook(Actor):
                 self.caught.follow_hook(hx, hy)
             if self.y <= 0:
                 if self.caught and self.caught in app.fish:
-                    app.fish.remove(self.caught)
+                    self.x = screen.width - 1
                 self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
@@ -701,18 +701,18 @@ class BigFish(Actor):
                 r"""
  ______
 `""-.  `````-----.....__
-         `.  .      .       `-.
-             :     .     .       `.
+     `.  .      .       `-.
+       :     .     .       `.
  ,     :   .    .          _ :
 : `.   :                  (@) `._
  `. `..'     .     =`-.       .__)
-     ;     .        =  ~  :     .-"
+   ;     .        =  ~  :     .-"
  .' .'`.   .    .  =.-'  `._ .'
 : .'   :               .   .'
  '   .'  .    .     .   .-'
-     .'____....----''.'='.
-     ""             .'.'
-                             ''"'`
+   .'____....----''.'=.'
+   ""             .'.'
+               ''"'`
 """
             )
             self.mask = parse_sprite(
@@ -737,20 +737,20 @@ class BigFish(Actor):
         else:
             self.img = parse_sprite(
                 r"""
-                                                     ______
-                    __.....-----'''''  .-""'
-             .-'       .      .  .'
-         .'       .     .     :
-        : _          .    .   :     ,
+                           ______
+          __.....-----'''''  .-""'
+       .-'       .      .  .'
+     .'       .     .     :
+    : _          .    .   :     ,
  _.' (@)                  :   .' :
 (__.       .-'=     .     `..' .'
  "-.     :  ~  =        .     ;
-     `. _.'  `-.=  .    .   .'`. `.
-         `.   .               :   `. :
-             `-.   .     .    .  `.   `
-                    `.=`.``----....____`.
-                        `.`.             ""
-                            '`"``
+   `. _.'  `-.=  .    .   .'`. `.
+     `.   .               :   `. :
+       `-.   .     .    .  `.   `
+          `.=`.``----....____`.
+            `.`.             ""
+              '`"``
 """
             )
             self.mask = parse_sprite(
@@ -790,11 +790,11 @@ class BigFish(Actor):
             self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
-        img = self.img if self.dir > 0 else [line[::-1] for line in self.img]
+        img = self.img
         if mono:
             draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
         else:
-            mask = self._rand_mask if self.dir > 0 else [line[::-1] for line in self._rand_mask]
+            mask = self._rand_mask
             draw_sprite_masked(screen, img, mask, int(self.x), int(self.y), Screen.COLOUR_YELLOW)
 
 
