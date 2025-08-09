@@ -304,6 +304,17 @@ class Seaweed:
     regrow_delay_max: float = field(default_factory=lambda: random.uniform(4.0, 12.0))
     growth_rate: float = field(default_factory=lambda: random.uniform(6.0, 12.0))  # rows/sec
     shrink_rate: float = field(default_factory=lambda: random.uniform(8.0, 16.0))  # rows/sec
+    # Configurable ranges (used on regrowth). Set by app when constructing.
+    sway_min: float = 0.18
+    sway_max: float = 0.5
+    lifetime_min_cfg: float = 25.0
+    lifetime_max_cfg: float = 60.0
+    regrow_delay_min_cfg: float = 4.0
+    regrow_delay_max_cfg: float = 12.0
+    growth_rate_min_cfg: float = 6.0
+    growth_rate_max_cfg: float = 12.0
+    shrink_rate_min_cfg: float = 8.0
+    shrink_rate_max_cfg: float = 16.0
 
     def __post_init__(self):
         # Initialize visible height
@@ -333,7 +344,7 @@ class Seaweed:
                 self.visible_height = float(self.height)
                 self.state = "alive"
                 self.lifetime_t = 0.0
-                self.lifetime_max = random.uniform(25.0, 60.0)
+                self.lifetime_max = random.uniform(self.lifetime_min_cfg, self.lifetime_max_cfg)
         elif self.state == "dying":
             self.visible_height = max(0.0, self.visible_height - self.shrink_rate * dt)
             if self.visible_height <= 0.0:
@@ -345,12 +356,12 @@ class Seaweed:
                 # Regrow with some variation
                 self.height = random.randint(3, 6)
                 self.phase = random.randint(0, 1)
-                self.sway_speed = random.uniform(0.18, 0.5)
-                self.growth_rate = random.uniform(6.0, 12.0)
-                self.shrink_rate = random.uniform(8.0, 16.0)
+                self.sway_speed = random.uniform(self.sway_min, self.sway_max)
+                self.growth_rate = random.uniform(self.growth_rate_min_cfg, self.growth_rate_max_cfg)
+                self.shrink_rate = random.uniform(self.shrink_rate_min_cfg, self.shrink_rate_max_cfg)
                 self.visible_height = 0.0
                 self.state = "growing"
-                self.regrow_delay_max = random.uniform(4.0, 12.0)
+                self.regrow_delay_max = random.uniform(self.regrow_delay_min_cfg, self.regrow_delay_max_cfg)
 
     def draw(self, screen: Screen, tick: int, mono: bool = False):
         f1, f2 = self.frames()
@@ -458,6 +469,16 @@ class Fish:
     hooked: bool = False
     hook_dx: int = 0
     hook_dy: int = 0
+    # Configurable movement and bubble behavior
+    speed_min: float = 0.6
+    speed_max: float = 2.5
+    bubble_min: float = 2.0
+    bubble_max: float = 5.0
+    # Y-band as fractions of screen height, plus waterline context
+    band_low_frac: float = 0.0
+    band_high_frac: float = 1.0
+    waterline_top: int = 5
+    water_rows: int = 3
 
     @property
     def width(self) -> int:
@@ -474,7 +495,7 @@ class Fish:
             by = int(self.y + self.height // 2)
             bx = int(self.x + (self.width if self.vx > 0 else -1))
             bubbles.append(Bubble(x=bx, y=by))
-            self.next_bubble = random.uniform(2.0, 5.0)
+            self.next_bubble = random.uniform(self.bubble_min, self.bubble_max)
         if self.vx > 0 and self.x > screen.width:
             self.respawn(screen, direction=1)
         elif self.vx < 0 and self.x + self.width < 0:
@@ -490,8 +511,15 @@ class Fish:
         frames, mask = random.choice(choices)
         self.frames = frames
         self.colour_mask = randomize_colour_mask(mask)
-        self.vx = random.uniform(0.6, 2.5) * direction
-        self.y = random.randint(max(9, 1), max(9, screen.height - self.height - 2))
+        self.vx = random.uniform(self.speed_min, self.speed_max) * direction
+        # compute y-band respecting waterline and screen size
+        default_low = max(self.waterline_top + self.water_rows + 1, 1)
+        low = max(default_low, int(screen.height * self.band_low_frac))
+        high = min(screen.height - self.height - 2, int(screen.height * self.band_high_frac) - 1)
+        if high < low:
+            low = max(1, default_low)
+            high = max(low, screen.height - self.height - 2)
+        self.y = random.randint(low, max(low, high))
         self.x = -self.width if direction > 0 else screen.width
 
     def draw(self, screen: Screen):

@@ -33,9 +33,14 @@ class AsciiQuarium:
         self.splats = []  # type: List[Splat]
         self.specials = []  # type: List[Actor]
         self._paused = False
-        self._special_timer = random.uniform(3.0, 8.0)
+        self._special_timer = random.uniform(
+            self.settings.spawn_start_delay_min, self.settings.spawn_start_delay_max
+        )
         self._show_help = False
         self._seaweed_tick = 0.0
+        self._time = 0.0
+        self._last_spawn = {}
+        self._global_cooldown_until = 0.0
 
     def rebuild(self, screen: Screen):
         self.seaweed.clear()
@@ -43,27 +48,61 @@ class AsciiQuarium:
         self.bubbles.clear()
         self.splats.clear()
         self.specials.clear()
-        self._special_timer = random.uniform(3.0, 8.0)
+        self._special_timer = random.uniform(self.settings.spawn_start_delay_min, self.settings.spawn_start_delay_max)
         self._seaweed_tick = 0.0
 
-        count = max(1, int((screen.width // 15) * self.settings.density))
+        # Seaweed count (optional override by config)
+        if self.settings.seaweed_count_base is not None and self.settings.seaweed_count_per_80_cols is not None:
+            units = max(1.0, screen.width / 80.0)
+            base = self.settings.seaweed_count_base
+            per = self.settings.seaweed_count_per_80_cols
+            count = max(1, int((base + per * units) * self.settings.density * self.settings.seaweed_scale))
+        else:
+            count = max(1, int((screen.width // 15) * self.settings.density * self.settings.seaweed_scale))
         for _ in range(count):
             h = random.randint(3, 6)
             x = random.randint(1, max(1, screen.width - 3))
             base_y = screen.height - 2
-            self.seaweed.append(Seaweed(x=x, base_y=base_y, height=h, phase=random.randint(0, 1)))
+            sw = Seaweed(x=x, base_y=base_y, height=h, phase=random.randint(0, 1))
+            # Apply configured lifecycle ranges (and initialize current params within those ranges)
+            sw.sway_min = self.settings.seaweed_sway_min
+            sw.sway_max = self.settings.seaweed_sway_max
+            sw.lifetime_min_cfg = self.settings.seaweed_lifetime_min
+            sw.lifetime_max_cfg = self.settings.seaweed_lifetime_max
+            sw.regrow_delay_min_cfg = self.settings.seaweed_regrow_delay_min
+            sw.regrow_delay_max_cfg = self.settings.seaweed_regrow_delay_max
+            sw.growth_rate_min_cfg = self.settings.seaweed_growth_rate_min
+            sw.growth_rate_max_cfg = self.settings.seaweed_growth_rate_max
+            sw.shrink_rate_min_cfg = self.settings.seaweed_shrink_rate_min
+            sw.shrink_rate_max_cfg = self.settings.seaweed_shrink_rate_max
+            # initialize current dynamics based on configured ranges
+            sw.sway_speed = random.uniform(sw.sway_min, sw.sway_max)
+            sw.lifetime_max = random.uniform(sw.lifetime_min_cfg, sw.lifetime_max_cfg)
+            sw.regrow_delay_max = random.uniform(sw.regrow_delay_min_cfg, sw.regrow_delay_max_cfg)
+            sw.growth_rate = random.uniform(sw.growth_rate_min_cfg, sw.growth_rate_max_cfg)
+            sw.shrink_rate = random.uniform(sw.shrink_rate_min_cfg, sw.shrink_rate_max_cfg)
+            self.seaweed.append(sw)
 
-        water_top = 5
+        water_top = self.settings.waterline_top
         area = max(1, (screen.height - (water_top + 4)) * screen.width)
-        fcount = max(2, int(area // 350 * self.settings.density))
+        # Fish count (optional override by config)
+        if self.settings.fish_count_base is not None and self.settings.fish_count_per_80_cols is not None:
+            units = max(1.0, screen.width / 80.0)
+            base = int(self.settings.fish_count_base)
+            per = float(self.settings.fish_count_per_80_cols)
+            fcount = max(2, int((base + per * units) * self.settings.density * self.settings.fish_scale))
+        else:
+            fcount = max(2, int(area // 350 * self.settings.density * self.settings.fish_scale))
         colours = self._palette(screen)
         for _ in range(fcount):
-            direction = random.choice([-1, 1])
+            # Direction with configurable bias towards rightward
+            direction = 1 if random.random() < float(self.settings.fish_direction_bias) else -1
             frames = random_fish_frames(direction)
             w, h = sprite_size(frames)
-            y = random.randint(max(9, 1), max(9, screen.height - h - 2))
+            # initial y will be refined by Fish.respawn; use temp fallback
+            y = random.randint(max(water_top + 3, 1), max(water_top + 3, screen.height - h - 2))
             x = (-w if direction > 0 else screen.width)
-            vx = random.uniform(0.6, 2.5) * direction
+            vx = random.uniform(self.settings.fish_speed_min, self.settings.fish_speed_max) * direction
             colour = random.choice(colours)
             # Build initial colour mask consistent with frames
             from .entities.core import (
@@ -90,14 +129,32 @@ class AsciiQuarium:
             if mask is not None and self.settings.color != "mono":
                 from .util import randomize_colour_mask
                 colour_mask = randomize_colour_mask(mask)
-            self.fish.append(Fish(frames=frames, x=x, y=y, vx=vx, colour=colour, colour_mask=colour_mask))
+            f = Fish(
+                frames=frames,
+                x=x,
+                y=y,
+                vx=vx,
+                colour=colour,
+                colour_mask=colour_mask,
+                speed_min=self.settings.fish_speed_min,
+                speed_max=self.settings.fish_speed_max,
+                bubble_min=self.settings.fish_bubble_min,
+                bubble_max=self.settings.fish_bubble_max,
+                band_low_frac=(self.settings.fish_y_band[0] if self.settings.fish_y_band else 0.0),
+                band_high_frac=(self.settings.fish_y_band[1] if self.settings.fish_y_band else 1.0),
+                waterline_top=self.settings.waterline_top,
+                water_rows=len(WATER_SEGMENTS),
+            )
+            # Initialize bubble timer from configured range
+            f.next_bubble = random.uniform(self.settings.fish_bubble_min, self.settings.fish_bubble_max)
+            self.fish.append(f)
 
     def draw_waterline(self, screen: Screen):
         seg_len = len(WATER_SEGMENTS[0])
         repeat = screen.width // seg_len + 2
         for i, seg in enumerate(WATER_SEGMENTS):
             row = (seg * repeat)[: screen.width]
-            y = 5 + i
+            y = self.settings.waterline_top + i
             if y < screen.height:
                 colour = Screen.COLOUR_WHITE if self.settings.color == "mono" else Screen.COLOUR_CYAN
                 screen.print_at(row, 0, y, colour=colour)
@@ -122,18 +179,21 @@ class AsciiQuarium:
                 f.update(dt, screen, self.bubbles)
             for b in self.bubbles:
                 b.update(dt)
-            self.bubbles = [b for b in self.bubbles if b.y > 6]
+            # keep bubbles while below the waterline+1
+            self.bubbles = [b for b in self.bubbles if b.y > (self.settings.waterline_top + 1)]
             for a in list(self.specials):
                 a.update(dt, screen, self)
             self.specials = [a for a in self.specials if getattr(a, "active", True)]
             for s in self.splats:
                 s.update()
             self.splats = [s for s in self.splats if s.active]
-            if not self.specials:
-                self._special_timer -= dt
-                if self._special_timer <= 0:
-                    self.spawn_random(screen)
-                    self._special_timer = random.uniform(8.0, 20.0)
+            # advance app time and spawn timer regardless of current specials
+            self._time += dt
+            self._special_timer -= dt
+            can_spawn_more = len(self.specials) < int(self.settings.spawn_max_concurrent)
+            if can_spawn_more and self._special_timer <= 0 and self._time >= self._global_cooldown_until:
+                self.spawn_random(screen)
+                self._special_timer = random.uniform(self.settings.spawn_interval_min, self.settings.spawn_interval_max)
 
         # Draw pass
         self.draw_waterline(screen)
@@ -165,19 +225,48 @@ class AsciiQuarium:
             self._draw_help(screen)
 
     def spawn_random(self, screen: Screen):
+        # Weighted random selection based on settings.specials_weights
         choices = [
-            spawn_shark,
-            spawn_fishhook,
-            spawn_whale,
-            spawn_ship,
-            spawn_ducks,
-            spawn_dolphins,
-            spawn_swan,
-            spawn_monster,
-            spawn_big_fish,
+            ("shark", spawn_shark),
+            ("fishhook", spawn_fishhook),
+            ("whale", spawn_whale),
+            ("ship", spawn_ship),
+            ("ducks", spawn_ducks),
+            ("dolphins", spawn_dolphins),
+            ("swan", spawn_swan),
+            ("monster", spawn_monster),
+            ("big_fish", spawn_big_fish),
         ]
-        spawner = random.choice(choices)
+        weighted = []
+        now = self._time
+        for name, fn in choices:
+            w = float(self.settings.specials_weights.get(name, 1.0))
+            if w <= 0:
+                continue
+            # filter by per-type cooldowns
+            cd = float(self.settings.specials_cooldowns.get(name, 0.0))
+            last = self._last_spawn.get(name, -1e9)
+            if now - last < cd:
+                continue
+            weighted.append((w, name, fn))
+        if not weighted:
+            return
+        total = sum(w for w, _, _ in weighted)
+        r = random.uniform(0.0, total)
+        acc = 0.0
+        chosen_name = weighted[-1][1]
+        spawner = weighted[-1][2]
+        for w, name, fn in weighted:
+            acc += w
+            if r <= acc:
+                spawner = fn
+                chosen_name = name
+                break
         self.specials.extend(spawner(screen, self))
+        # register cooldowns
+        self._last_spawn[chosen_name] = now
+        if self.settings.spawn_cooldown_global > 0:
+            self._global_cooldown_until = now + float(self.settings.spawn_cooldown_global)
 
     def _palette(self, screen: Screen) -> List[int]:
         if self.settings.color == "mono":

@@ -1,0 +1,97 @@
+# Rendering settings
+# - fps: target frames per second (recommended 5..120)
+# - color: output palette; "auto" tries to detect, "mono" forces white
+[render]
+fps = 24
+color = "auto"   # auto|mono|16|256
+
+# Scene/global parameters
+# - density: scales counts of objects (range ~0.1..5.0)
+# - seed: "random" or an integer for deterministic playback
+# - speed: global time multiplier (0.1..3.0; lower is slower)
+# - waterline_top: top row index of the waterline (0 = first row)
+[scene]
+density = 1.0     # 0.1..5.0
+seed = "random"  # or an int for deterministic playback
+speed = 0.75      # 0.1..3.0
+waterline_top = 5 # top row of waterline (0 = very top)
+
+# Special spawn timing and scaling
+# - start_delay_*: initial delay before first special (seconds)
+# - interval_*: time between specials (seconds)
+# - fish_scale/seaweed_scale: extra multipliers on top of density
+# - max_concurrent: cap on simultaneously active specials (>=1)
+# - cooldown_global: cooldown after any special spawns (seconds)
+[spawn]
+start_delay_min = 3.0
+start_delay_max = 8.0
+interval_min = 8.0
+interval_max = 20.0
+fish_scale = 1.0
+seaweed_scale = 1.0
+max_concurrent = 1          # max simultaneous specials
+cooldown_global = 0.0       # seconds after any special before next can spawn
+
+ [spawn.per_type]            # optional per-type cooldowns (seconds)
+ shark = 0.0
+ fishhook = 0.0
+ whale = 0.0
+ ship = 0.0
+ ducks = 0.0
+ dolphins = 0.0
+ swan = 0.0
+ monster = 0.0
+ big_fish = 0.0
+
+# Relative spawn weights per special type
+# - Scale: non-negative floats; 0 disables a type
+# - Use: probabilities are proportional to weights (higher = more frequent)
+[spawn.specials]
+shark = 1.0
+fishhook = 1.0
+whale = 1.0
+ship = 1.0
+ducks = 1.0
+dolphins = 1.0
+swan = 1.0
+monster = 1.0
+big_fish = 1.0
+
+
+
+# Fish behavior and counts
+# - direction_bias: probability of rightward motion (0..1)
+# - speed_min/max: fish speed range (units/sec ~0.6..2.5)
+# - bubble_min/max: seconds between bubbles (2.0..5.0+)
+# - y_band: optional vertical band as fractions of screen height [low, high], 0..1
+# - count_*: optional override for base count, scaling per 80 cols
+ [fish]
+ direction_bias = 0.5
+ speed_min = 0.6
+ speed_max = 2.5
+ bubble_min = 2.0
+ bubble_max = 5.0
+ # y_band = [0.20, 0.90]
+ # count_base = 6
+ # count_per_80_cols = 3.0
+
+# Seaweed behavior and counts
+# - sway_min/max: sway period factor (lower = faster sway)
+# - lifetime_min/max: time alive before dying (seconds)
+# - regrow_delay_min/max: time dormant before regrowing (seconds)
+# - growth_rate_min/max: rows per second while growing
+# - shrink_rate_min/max: rows per second while shrinking
+# - count_*: optional override for base count, scaling per 80 cols
+ [seaweed]
+ sway_min = 0.18
+ sway_max = 0.5
+ lifetime_min = 25.0
+ lifetime_max = 60.0
+ regrow_delay_min = 4.0
+ regrow_delay_max = 12.0
+ growth_rate_min = 6.0
+ growth_rate_max = 12.0
+ shrink_rate_min = 8.0
+ shrink_rate_max = 16.0
+ # count_base = 4
+ # count_per_80_cols = 3.0
