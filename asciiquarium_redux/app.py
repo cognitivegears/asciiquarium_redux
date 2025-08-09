@@ -5,6 +5,7 @@ import time
 from typing import List
 
 from asciimatics.screen import Screen
+from asciimatics.exceptions import ResizeScreenError
 
 from .util import sprite_size, draw_sprite, draw_sprite_masked
 from .environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK
@@ -348,6 +349,11 @@ def run(screen: Screen, settings: Settings):
             app.rebuild(screen)
         if ev in (ord("h"), ord("H"), ord("?")):
             app._show_help = not app._show_help
+
+        # Gracefully handle terminal resizes by restarting the UI loop
+        # via Screen.wrapper catching ResizeScreenError.
+        if screen.has_resized():
+            raise ResizeScreenError("Screen resized")
 
         screen.clear()
         app.update(dt, screen, frame_no)
