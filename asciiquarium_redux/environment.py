@@ -26,3 +26,21 @@ CASTLE = parse_sprite(
  |_______|__|_|_|_|__|_______|
 """
 )
+
+CASTLE_MASK = parse_sprite(
+        r"""
+                                RR
+
+                            yyy
+                         y   y
+                        y     y
+                     y       y
+
+
+
+                            yyy
+                         yy yy
+                        y y y y
+                        yyyyyyy
+"""
+)

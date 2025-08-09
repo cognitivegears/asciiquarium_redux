@@ -6,7 +6,7 @@ from typing import List
 from dataclasses import dataclass
 from asciimatics.screen import Screen
 
-from ..util import parse_sprite, sprite_size, draw_sprite, aabb_overlap
+from ..util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked, aabb_overlap, randomize_colour_mask
 from .core import Splat, Fish
 from .base import Actor
 
@@ -16,15 +16,19 @@ class Shark(Actor):
         self.dir = random.choice([-1, 1])
         self.speed = 2.0 * self.dir
         self.y = random.randint(max(9, 1), max(9, screen.height - 10))
-        self.frame = parse_sprite(r"""
+        self.frame = parse_sprite(
+            r"""
   __     __
  (  `-._/  )
   \   o  _/
   /  __  \
  /__/  \__\
-""")
+"""
+        )
         self.w, self.h = sprite_size(self.frame)
         self.x = -self.w if self.dir > 0 else screen.width
+        # Mask: default white
+        self.mask = ["W" * len(row) for row in self.frame]
         self._active = True
 
     @property
@@ -43,11 +47,12 @@ class Shark(Actor):
             self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
-        if self.dir > 0:
-            draw_sprite(screen, self.frame, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        img = self.frame if self.dir > 0 else [line[::-1] for line in self.frame]
+        msk = self.mask if self.dir > 0 else [line[::-1] for line in self.mask]
+        if mono:
+            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
         else:
-            mirrored = [line[::-1] for line in self.frame]
-            draw_sprite(screen, mirrored, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+            draw_sprite_masked(screen, img, msk, int(self.x), int(self.y), Screen.COLOUR_WHITE)
 
 
 class FishHook(Actor):
@@ -118,13 +123,24 @@ class Whale(Actor):
         self.y = 0
         self.base = parse_sprite(
             r"""
-        .-----:
-      .'       `.
+                .-----:
+            .'       `.
  / (o)       \
 (__,          \_.'
 """
         )
         self.w, self.h = sprite_size(self.base)
+        self.mask = parse_sprite(
+            r"""
+                         C C
+                     CCCCCCC
+                     C  C  C
+                BBBBBBB
+            BB       BB
+B    B       BWB B
+BBBBB          BBBB
+"""
+        )
         self.spout_frame = 0
         self._active = True
 
@@ -145,7 +161,11 @@ class Whale(Actor):
                 colour = Screen.COLOUR_WHITE if mono else Screen.COLOUR_CYAN
                 screen.print_at(row, int(self.x) + (1 if self.dir > 0 else 11), i, colour=colour)
         img = self.base if self.dir > 0 else [line[::-1] for line in self.base]
-        draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        msk = self.mask if self.dir > 0 else [line[::-1] for line in self.mask]
+        if mono:
+            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        else:
+            draw_sprite_masked(screen, img, msk, int(self.x), int(self.y), Screen.COLOUR_WHITE)
 
 
 class Ducks(Actor):
@@ -154,48 +174,74 @@ class Ducks(Actor):
         self.speed = 10.0 * self.dir
         self.x = -30 if self.dir > 0 else screen.width
         self.y = 5
-        # 3-frame animation inspired by original asciiquarium ducks
         ducks_lr = [
-            parse_sprite(r"""
+            parse_sprite(
+                r"""
       _  _  _
 ,____(')=,____(')=,____(')<
  \~~= ')  \~~= ')  \~~= ')
-"""),
-            parse_sprite(r"""
+"""
+            ),
+            parse_sprite(
+                r"""
       _  _  _
 ,____(')=,____(')<,____(')=
  \~~= ')  \~~= ')  \~~= ')
-"""),
-            parse_sprite(r"""
+"""
+            ),
+            parse_sprite(
+                r"""
       _  _  _
 ,____(')<,____(')=,____(')=
  \~~= ')  \~~= ')  \~~= ')
-"""),
+"""
+            ),
         ]
         ducks_rl = [
-            parse_sprite(r"""
+            parse_sprite(
+                r"""
   _  _  _
 >(')____,=(')____,=(')____,
  (` =~~/  (` =~~/  (` =~~/
-"""),
-            parse_sprite(r"""
+"""
+            ),
+            parse_sprite(
+                r"""
   _  _  _
 =(')____,>(')____,=(')____,
  (` =~~/  (` =~~/  (` =~~/
-"""),
-            parse_sprite(r"""
+"""
+            ),
+            parse_sprite(
+                r"""
   _  _  _
 =(')____,=(')____,>(')____,
  (` =~~/  (` =~~/  (` =~~/
-"""),
+"""
+            ),
         ]
         self.frames = ducks_lr if self.dir > 0 else ducks_rl
+        duck_mask_lr = parse_sprite(
+            r"""
+      g          g          g
+wwwwwgcgy  wwwwwgcgy  wwwwwgcgy
+ wwww Ww    wwww Ww    wwww Ww
+"""
+        )
+        duck_mask_rl = parse_sprite(
+            r"""
+  g          g          g
+ygcgwwwww  ygcgwwwww  ygcgwwwww
+ wW wwww    wW wwww    wW wwww
+"""
+        )
+        self.mask = duck_mask_lr if self.dir > 0 else duck_mask_rl
         w_list = [sprite_size(f)[0] for f in self.frames]
         h_list = [sprite_size(f)[1] for f in self.frames]
         self.w, self.h = max(w_list), max(h_list)
         self._frame_idx = 0
         self._frame_t = 0.0
-        self._frame_dt = 0.25  # seconds per frame
+        self._frame_dt = 0.25
         self._active = True
 
     @property
@@ -213,7 +259,10 @@ class Ducks(Actor):
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
         img = self.frames[self._frame_idx]
-        draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_YELLOW)
+        if mono:
+            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        else:
+            draw_sprite_masked(screen, img, self.mask, int(self.x), int(self.y), Screen.COLOUR_YELLOW)
 
 
 class Dolphins(Actor):
@@ -224,7 +273,6 @@ class Dolphins(Actor):
         self.base_y = 5
         self.t = 0.0
         self.distance = 15 * self.dir
-        # Two-frame dolphin animation per direction
         dolph_lr = [
             parse_sprite(
                 r"""
@@ -262,6 +310,23 @@ class Dolphins(Actor):
             ),
         ]
         self.frames = dolph_lr if self.dir > 0 else dolph_rl
+        # Masks from Perl: left-to-right has W far right; right-to-left has W near left
+        if self.dir > 0:
+            self.mask = parse_sprite(
+                r"""
+
+
+          W
+"""
+            )
+        else:
+            self.mask = parse_sprite(
+                r"""
+
+
+   W
+"""
+            )
         self._frame_idx = 0
         self._frame_t = 0.0
         self._frame_dt = 0.25
@@ -274,7 +339,6 @@ class Dolphins(Actor):
     def update(self, dt: float, screen: Screen, app) -> None:
         self.t += dt
         self.x += self.speed * dt
-        # animate
         self._frame_t += dt
         if self._frame_t >= self._frame_dt:
             self._frame_t = 0.0
@@ -287,7 +351,10 @@ class Dolphins(Actor):
             frame = self.frames[(self._frame_idx + i) % len(self.frames)]
             px = int(self.x + i * self.distance)
             py = int(self.base_y + 3 * math.sin((self.t * 2 + i) * 1.2))
-            draw_sprite(screen, frame, px, py, Screen.COLOUR_WHITE if mono else Screen.COLOUR_CYAN)
+            if mono:
+                draw_sprite(screen, frame, px, py, Screen.COLOUR_WHITE)
+            else:
+                draw_sprite_masked(screen, frame, self.mask, px, py, Screen.COLOUR_CYAN)
 
 
 class Swan(Actor):
@@ -296,14 +363,13 @@ class Swan(Actor):
         self.speed = 10.0 * self.dir
         self.x = -10 if self.dir > 0 else screen.width
         self.y = 1
-        # Two subtle wing positions
         swan_lr = [
             parse_sprite(
                 r"""
        ___
 ,_    / _,\
 | \   \\ \|
-|  \_  \\\\
+|  \_  \\\
 (_   \_) \
 (\_   `   \
  \   -=~  /
@@ -314,7 +380,7 @@ class Swan(Actor):
        ___
 ,_    / _,\
 | \   \\  \
-|  \_  \\\\
+|  \_  \\\
 (_   \_) \
 (\_   `   \
  \  ~=-  /
@@ -346,6 +412,19 @@ class Swan(Actor):
             ),
         ]
         self.frames = swan_lr if self.dir > 0 else swan_rl
+        self.mask = parse_sprite(
+            r"""
+
+     g
+     yy
+"""
+        ) if self.dir > 0 else parse_sprite(
+            r"""
+
+ g
+yy
+"""
+        )
         self._frame_idx = 0
         self._frame_t = 0.0
         self._frame_dt = 0.25
@@ -366,7 +445,10 @@ class Swan(Actor):
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
         img = self.frames[self._frame_idx]
-        draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        if mono:
+            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        else:
+            draw_sprite_masked(screen, img, self.mask, int(self.x), int(self.y), Screen.COLOUR_WHITE)
 
 
 class Monster(Actor):
@@ -375,7 +457,6 @@ class Monster(Actor):
         self.speed = 15.0 * self.dir
         self.x = -64 if self.dir > 0 else screen.width
         self.y = 2
-        # 4-frame sea monster undulation
         self.frames = [
             parse_sprite(
                 r"""
@@ -413,6 +494,14 @@ class Monster(Actor):
         w_list = [sprite_size(f)[0] for f in self.frames]
         h_list = [sprite_size(f)[1] for f in self.frames]
         self.w, self.h = max(w_list), max(h_list)
+        # Build a simple mask indicating a white eye (W); body picks up default green
+        self.mask_frames = []
+        for fr in self.frames:
+            m = []
+            for row in fr:
+                # mark the eye character 'o' / 'O' / '.' as white; else space to use default
+                m.append(''.join('W' if ch in ('o','O','.') else ' ' for ch in row))
+            self.mask_frames.append(m)
         self._frame_idx = 0
         self._frame_t = 0.0
         self._frame_dt = 0.25
@@ -435,7 +524,13 @@ class Monster(Actor):
         img = self.frames[self._frame_idx]
         if self.dir < 0:
             img = [line[::-1] for line in img]
-        draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)
+        if mono:
+            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        else:
+            mask = self.mask_frames[self._frame_idx]
+            if self.dir < 0:
+                mask = [line[::-1] for line in mask]
+            draw_sprite_masked(screen, img, mask, int(self.x), int(self.y), Screen.COLOUR_GREEN)
 
 
 class Ship(Actor):
@@ -444,7 +539,6 @@ class Ship(Actor):
         self.speed = 10.0 * self.dir
         self.x = -24 if self.dir > 0 else screen.width
         self.y = 0
-        # Add a simple 2-frame wake animation for the ship
         ship_lr = [
             parse_sprite(
                 r"""
@@ -462,7 +556,7 @@ _____|____|____|____\\\\\__
     )__) )__) )__)
    )___))___))___)\\
   )____)____)_____)\\\\
-_____|____|____|____\\\\\___
+_____|____|____|____\\\\\\___
 \                   /
 """
             ),
@@ -490,6 +584,52 @@ __///____|____|____|______
             ),
         ]
         self.frames = ship_lr if self.dir > 0 else ship_rl
+        # Use Perl masks for both animation frames to mirror exact color choices
+        ship_mask_lr = [
+            parse_sprite(
+                r"""
+     y    y    y
+
+                  w
+                   ww
+yyyyyyyyyyyyyyyyyyyywwwyy
+y                   y
+"""
+            ),
+            parse_sprite(
+                r"""
+     y    y    y
+
+                  w
+                   ww
+yyyyyyyyyyyyyyyyyyyywwwyy
+y                   y
+"""
+            ),
+        ]
+        ship_mask_rl = [
+            parse_sprite(
+                r"""
+         y    y    y
+
+      w
+    ww
+yywwwyyyyyyyyyyyyyyyyyyyy
+    y                   y
+"""
+            ),
+            parse_sprite(
+                r"""
+         y    y    y
+
+      w
+    ww
+yywwwyyyyyyyyyyyyyyyyyyyy
+    y                   y
+"""
+            ),
+        ]
+        self.mask_frames = ship_mask_lr if self.dir > 0 else ship_mask_rl
         w_list = [sprite_size(f)[0] for f in self.frames]
         h_list = [sprite_size(f)[1] for f in self.frames]
         self.w, self.h = max(w_list), max(h_list)
@@ -513,10 +653,13 @@ __///____|____|____|______
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
         img = self.frames[self._frame_idx]
-        draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        if mono:
+            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        else:
+            mask = self.mask_frames[self._frame_idx % len(self.mask_frames)]
+            draw_sprite_masked(screen, img, mask, int(self.x), int(self.y), Screen.COLOUR_WHITE)
 
 
-# Spawner helpers
 def spawn_shark(screen: Screen, app) -> List[Actor]:
     return [Shark(screen, app)]
 
@@ -550,12 +693,12 @@ def spawn_ship(screen: Screen, app) -> List[Actor]:
 
 
 class BigFish(Actor):
-        def __init__(self, screen: Screen, app):
-                self.dir = random.choice([-1, 1])
-                self.speed = 30.0 * (self.dir / abs(self.dir))  # roughly fast like Perl (speed 3)
-                if self.dir > 0:
-                        self.img = parse_sprite(
-                                r"""
+    def __init__(self, screen: Screen, app):
+        self.dir = random.choice([-1, 1])
+        self.speed = 30.0 * (self.dir / abs(self.dir))
+        if self.dir > 0:
+            self.img = parse_sprite(
+                r"""
  ______
 `""-.  `````-----.....__
          `.  .      .       `-.
@@ -567,15 +710,33 @@ class BigFish(Actor):
  .' .'`.   .    .  =.-'  `._ .'
 : .'   :               .   .'
  '   .'  .    .     .   .-'
-     .'____....----''.'=.'
+     .'____....----''.'='.
      ""             .'.'
                              ''"'`
 """
-                        )
-                        self.x = -34
-                else:
-                        self.img = parse_sprite(
-                                r"""
+            )
+            self.mask = parse_sprite(
+                r"""
+  111111
+ 11111  11111111111111111
+      11  2      2       111
+        1     2     2       11
+  1     1   2    2          1 1
+ 1 11   1                  1W1 111
+  11 1111     2     1111       1111
+    1     2        1  1  1     111
+  11 1111   2    2  1111  111 11
+ 1 11   1               2   11
+  1   11  2    2     2   111
+    111111111111111111111
+    11             1111
+                11111
+"""
+            )
+            self.x = -34
+        else:
+            self.img = parse_sprite(
+                r"""
                                                      ______
                     __.....-----'''''  .-""'
              .-'       .      .  .'
@@ -591,27 +752,51 @@ class BigFish(Actor):
                         `.`.             ""
                             '`"``
 """
-                        )
-                        self.x = screen.width
-                self.w, self.h = sprite_size(self.img)
-                max_height = 9
-                min_height = max_height if screen.height - 15 <= max_height else (screen.height - 15)
-                self.y = random.randint(max_height, max(min_height, max_height))
-                self._active = True
+            )
+            self.mask = parse_sprite(
+                r"""
+                           111111
+          11111111111111111  11111
+       111       2      2  11
+     11       2     2     1
+    1 1          2    2   1     1
+ 111 1W1                  1   11 1
+1111       1111     2     1111 11
+ 111     1  1  1        2     1
+   11 111  1111  2    2   1111 11
+     11   2               1   11 1
+       111   2     2    2  11   1
+          111111111111111111111
+            1111             11
+              11111
+"""
+            )
+            self.x = screen.width
+        self.w, self.h = sprite_size(self.img)
+        max_height = 9
+        min_height = max_height if screen.height - 15 <= max_height else (screen.height - 15)
+        self.y = random.randint(max_height, max(min_height, max_height))
+        # Randomize mask colours once to avoid per-frame flicker
+        self._rand_mask = randomize_colour_mask(self.mask)
+        self._active = True
 
-        @property
-        def active(self) -> bool:
-                return self._active
+    @property
+    def active(self) -> bool:
+        return self._active
 
-        def update(self, dt: float, screen: Screen, app) -> None:
-                self.x += (self.speed * dt)
-                if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
-                        self._active = False
+    def update(self, dt: float, screen: Screen, app) -> None:
+        self.x += self.speed * dt
+        if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
+            self._active = False
 
-        def draw(self, screen: Screen, mono: bool = False) -> None:
-                img = self.img if self.dir > 0 else [line[::-1] for line in self.img]
-                draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_YELLOW)
+    def draw(self, screen: Screen, mono: bool = False) -> None:
+        img = self.img if self.dir > 0 else [line[::-1] for line in self.img]
+        if mono:
+            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        else:
+            mask = self._rand_mask if self.dir > 0 else [line[::-1] for line in self._rand_mask]
+            draw_sprite_masked(screen, img, mask, int(self.x), int(self.y), Screen.COLOUR_YELLOW)
 
 
 def spawn_big_fish(screen: Screen, app) -> List[Actor]:
-        return [BigFish(screen, app)]
+    return [BigFish(screen, app)]

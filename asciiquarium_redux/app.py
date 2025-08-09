@@ -6,8 +6,8 @@ from typing import List
 
 from asciimatics.screen import Screen
 
-from .util import sprite_size, draw_sprite
-from .environment import WATER_SEGMENTS, CASTLE
+from .util import sprite_size, draw_sprite, draw_sprite_masked
+from .environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK
 from .settings import Settings
 from .entities.core import Seaweed, Bubble, Splat, Fish, random_fish_frames
 from .entities.base import Actor
@@ -65,7 +65,32 @@ class AsciiQuarium:
             x = (-w if direction > 0 else screen.width)
             vx = random.uniform(0.6, 2.5) * direction
             colour = random.choice(colours)
-            self.fish.append(Fish(frames=frames, x=x, y=y, vx=vx, colour=colour))
+            # Build initial colour mask consistent with frames
+            from .entities.core import (
+                FISH_RIGHT, FISH_LEFT, FISH_RIGHT_MASKS, FISH_LEFT_MASKS,
+            )
+            if direction > 0:
+                pairs = list(zip(FISH_RIGHT, FISH_RIGHT_MASKS))
+            else:
+                pairs = list(zip(FISH_LEFT, FISH_LEFT_MASKS))
+            # Find matching mask for chosen frames
+            mask = None
+            for fset, mset in pairs:
+                if fset is frames:
+                    mask = mset
+                    break
+            # If identity didn't match (due to equality semantics), fallback by size index
+            if mask is None:
+                try:
+                    idx = (FISH_RIGHT if direction > 0 else FISH_LEFT).index(frames)
+                    mask = (FISH_RIGHT_MASKS if direction > 0 else FISH_LEFT_MASKS)[idx]
+                except ValueError:
+                    mask = None
+            colour_mask = None
+            if mask is not None and self.settings.color != "mono":
+                from .util import randomize_colour_mask
+                colour_mask = randomize_colour_mask(mask)
+            self.fish.append(Fish(frames=frames, x=x, y=y, vx=vx, colour=colour, colour_mask=colour_mask))
 
     def draw_waterline(self, screen: Screen):
         seg_len = len(WATER_SEGMENTS[0])
@@ -82,7 +107,10 @@ class AsciiQuarium:
         w, h = sprite_size(lines)
         x = max(0, screen.width - w - 2)
         y = max(0, screen.height - h - 1)
-        draw_sprite(screen, lines, x, y, Screen.COLOUR_WHITE)
+        if self.settings.color == "mono":
+            draw_sprite(screen, lines, x, y, Screen.COLOUR_WHITE)
+        else:
+            draw_sprite_masked(screen, lines, CASTLE_MASK, x, y, Screen.COLOUR_WHITE)
 
     def update(self, dt: float, screen: Screen, frame_no: int):
         dt *= self.settings.speed
