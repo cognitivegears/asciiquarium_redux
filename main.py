@@ -172,9 +172,10 @@ class Seaweed:
         frame2 = [s.ljust(2) for s in b]
         return frame1, frame2
 
-    def draw(self, screen: Screen, frame_no: int, mono: bool = False):
+    def draw(self, screen: Screen, tick: int, mono: bool = False):
         f1, f2 = self.frames()
-        sway = ((frame_no // 4) + self.phase) % 2
+        # tick is an external counter that advances at a fixed period
+        sway = ((tick) + self.phase) % 2
         rows = f1 if sway == 0 else f2
         for i, row in enumerate(rows):
             y = self.base_y - (self.height - 1 - i)
@@ -335,6 +336,7 @@ class AsciiQuarium:
         self._paused = False
         self._special_timer = random.uniform(3.0, 8.0)
         self._show_help = False
+        self._seaweed_tick = 0  # increments at a fixed cadence
 
     def rebuild(self, screen: Screen):
         self.seaweed.clear()
@@ -343,6 +345,7 @@ class AsciiQuarium:
         self.splats.clear()
         self.specials.clear()
         self._special_timer = random.uniform(3.0, 8.0)
+        self._seaweed_tick = 0
 
         # Seaweed density
         count = max(1, int((screen.width // 15) * self.settings.density))
@@ -389,8 +392,13 @@ class AsciiQuarium:
         draw_sprite(screen, lines, x, y, Screen.COLOUR_WHITE)
 
     def update(self, dt: float, screen: Screen, frame_no: int):
+        # Apply global speed multiplier
+        dt *= self.settings.speed
         # Update entities
         if not self._paused:
+            # Advance seaweed tick at ~4 frames per second equivalent
+            # Use dt accumulation so it respects speed changes
+            self._seaweed_tick += dt
             for f in self.fish:
                 f.update(dt, screen, self.bubbles)
             # Update bubbles and cull
@@ -419,7 +427,9 @@ class AsciiQuarium:
         self.draw_castle(screen)
         mono = self.settings.color == "mono"
         for s in self.seaweed:
-            s.draw(screen, frame_no, mono)
+            # Convert accumulated time to a slow sway tick; 0.25s per state toggle
+            tick = int(self._seaweed_tick / 0.25)
+            s.draw(screen, tick, mono)
         for f in self.fish:
             # Override color if mono
             if self.settings.color == "mono":
@@ -483,7 +493,7 @@ class AsciiQuarium:
     def _draw_help(self, screen: Screen):
         lines = [
             "Asciiquarium Redux",
-            f"fps: {self.settings.fps}  density: {self.settings.density}  color: {self.settings.color}",
+            f"fps: {self.settings.fps}  density: {self.settings.density}  speed: {self.settings.speed}  color: {self.settings.color}",
             f"seed: {self.settings.seed if self.settings.seed is not None else 'random'}",
             "",
             "Controls:",
@@ -511,6 +521,7 @@ class Settings:
     density: float = 1.0
     color: str = "auto"  # auto|mono|16|256
     seed: Optional[int] = None
+    speed: float = 0.75  # global speed multiplier (1.0 = old speed, <1 slower)
 
 
 def _find_config_paths() -> List[Path]:
@@ -557,6 +568,11 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                 s.seed = seed_val
             elif isinstance(seed_val, str) and seed_val.lower() == "random":
                 s.seed = None
+        if "speed" in scene:
+            try:
+                s.speed = float(scene.get("speed", s.speed))
+            except Exception:
+                pass
         break
     # CLI
     parser = argparse.ArgumentParser(description="Asciiquarium Redux")
@@ -564,6 +580,7 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
     parser.add_argument("--density", type=float, help="Density multiplier for objects (default 1.0)")
     parser.add_argument("--color", choices=["auto", "mono", "16", "256"], help="Color mode")
     parser.add_argument("--seed", type=int, help="Deterministic RNG seed (int). Omit for random")
+    parser.add_argument("--speed", type=float, help="Global speed multiplier (default 0.75; 1.0 = normal)")
     args = parser.parse_args(argv)
 
     if args.fps is not None:
@@ -574,6 +591,8 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
         s.color = args.color
     if args.seed is not None:
         s.seed = args.seed
+    if args.speed is not None:
+        s.speed = max(0.1, min(3.0, args.speed))
     return s
 
 

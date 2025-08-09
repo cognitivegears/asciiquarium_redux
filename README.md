@@ -49,13 +49,14 @@ Controls:
 CLI examples:
 
 ```sh
-uv run python main.py --fps 30 --density 1.5 --color mono --seed 123
+uv run python main.py --fps 30 --density 1.5 --color mono --seed 123 --speed 0.7
 ```
 
 - --fps (int): target frames per second (default 20, clamp 5–120)
 - --density (float): density multiplier (default 1.0, clamp 0.1–5.0)
 - --color <auto|mono|16|256>: color mode (mono forces white)
 - --seed (int): deterministic RNG seed; omit for random
+- --speed (float): global speed multiplier (default 0.75; 1.0 = baseline)
 
 
 ## Notes
@@ -83,6 +84,7 @@ color = "mono"   # auto|mono|16|256
 [scene]
 density = 1.2     # 0.1..5.0
 seed = 42         # or "random" (string) for non-deterministic
+speed = 0.75      # 0.1..3.0 (lower = slower)
 ```
 
 
