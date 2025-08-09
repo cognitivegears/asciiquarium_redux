@@ -5,7 +5,8 @@ from __future__ import annotations
 
 import random
 from asciimatics.screen import Screen
-from asciiquarium_redux.app import load_settings_from_sources, run
+from asciiquarium_redux.settings import load_settings_from_sources
+from asciiquarium_redux.app import run
 
 
 def main(argv: list[str] | None = None) -> None:

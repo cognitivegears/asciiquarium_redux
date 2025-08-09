@@ -2,7 +2,8 @@ from __future__ import annotations
 
 import random
 from asciimatics.screen import Screen
-from .app import load_settings_from_sources, run
+from .settings import load_settings_from_sources
+from .app import run
 
 
 def main(argv: list[str] | None = None) -> None:
