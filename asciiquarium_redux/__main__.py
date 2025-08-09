@@ -1,11 +1,8 @@
 from __future__ import annotations
 
-# Thin shim delegating to the packaged app to avoid divergence.
-# Keep this for local runs: `python main.py`.
-
 import random
 from asciimatics.screen import Screen
-from asciiquarium_redux.app import load_settings_from_sources, run
+from .app import load_settings_from_sources, run
 
 
 def main(argv: list[str] | None = None) -> None:
