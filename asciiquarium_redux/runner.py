@@ -34,4 +34,14 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(2)
     if settings.seed is not None:
         random.seed(settings.seed)
+    if getattr(settings, "ui_backend", "terminal") == "tk":
+        try:
+            # Preflight to provide a clearer error if Tk isn't present
+            import tkinter  # type: ignore
+            from .tk_runner import run_tk
+            run_tk(settings)
+            return
+        except Exception as e:
+            print(f"Tk backend unavailable ({e}); falling back to terminal.", file=sys.stderr)
+    # Default: terminal backend
     run_with_resize(settings)

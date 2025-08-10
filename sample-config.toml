@@ -101,3 +101,17 @@ dwell_seconds = 20.0
  shrink_rate_max = 16.0
  # count_base = 4
  # count_per_80_cols = 3.0
+
+
+# UI / Backend settings
+# - backend: "terminal" (default) or "tk" for windowed mode
+# - fullscreen: true to run the Tk window fullscreen
+# - cols/rows: character grid size for Tk mode
+# - font_family/font_size: font used for Tk canvas rendering
+[ui]
+backend = "terminal"   # terminal|tk
+fullscreen = false
+cols = 120
+rows = 40
+font_family = "Menlo"
+font_size = 14

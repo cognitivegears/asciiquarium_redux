@@ -63,6 +63,13 @@ class Settings:
     specials_cooldowns: Dict[str, float] = field(default_factory=dict)
     # Fishhook behavior
     fishhook_dwell_seconds: float = 20.0
+    # UI/backend
+    ui_backend: str = "terminal"  # terminal|tk
+    ui_fullscreen: bool = False
+    ui_cols: int = 120
+    ui_rows: int = 40
+    ui_font_family: str = "Menlo"
+    ui_font_size: int = 14
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
@@ -253,6 +260,27 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                         s.fishhook_dwell_seconds = float(val)
                 except Exception:
                     pass
+        # ui section (optional)
+        ui = data.get("ui", {})
+        if isinstance(ui, dict):
+            b = ui.get("backend")
+            if isinstance(b, str):
+                s.ui_backend = b
+            fs = ui.get("fullscreen")
+            if isinstance(fs, bool):
+                s.ui_fullscreen = fs
+            v = ui.get("cols")
+            if isinstance(v, int):
+                s.ui_cols = max(40, min(300, v))
+            v = ui.get("rows")
+            if isinstance(v, int):
+                s.ui_rows = max(15, min(200, v))
+            f = ui.get("font_family")
+            if isinstance(f, str):
+                s.ui_font_family = f
+            v = ui.get("font_size")
+            if isinstance(v, int):
+                s.ui_font_size = max(8, min(48, v))
 
         # use the first found config file only
         break
@@ -263,6 +291,8 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
     parser.add_argument("--color", choices=["auto", "mono", "16", "256"])
     parser.add_argument("--seed", type=int)
     parser.add_argument("--speed", type=float)
+    parser.add_argument("--backend", choices=["terminal", "tk"])
+    parser.add_argument("--fullscreen", action="store_true")
     args = parser.parse_args(argv)
 
     if args.fps is not None:
@@ -275,4 +305,8 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
         s.seed = args.seed
     if args.speed is not None:
         s.speed = max(0.1, min(3.0, args.speed))
+    if args.backend is not None:
+        s.ui_backend = args.backend
+    if args.fullscreen:
+        s.ui_fullscreen = True
     return s

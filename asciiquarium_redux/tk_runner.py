@@ -1,0 +1,123 @@
+from __future__ import annotations
+
+import time
+import tkinter as tk
+from tkinter import font as tkfont
+from typing import Any, cast
+
+from asciimatics.screen import Screen
+
+from .app import AsciiQuarium
+from .backends import TkRenderContext, TkEventStream
+
+
+class ScreenShim:
+    """Minimal Screen-like adapter that exposes width, height and print_at.
+
+    We import asciimatics.Screen only for colour constants; this shim never refreshes,
+    TkRenderContext handles buffer flushing.
+    """
+
+    def __init__(self, ctx: TkRenderContext):
+        self._ctx = ctx
+
+    @property
+    def width(self) -> int:
+        return self._ctx.size()[0]
+
+    @property
+    def height(self) -> int:
+        return self._ctx.size()[1]
+
+    def print_at(self, text: str, x: int, y: int, colour: int | None = None, *args: Any, **kwargs: Any) -> None:
+        self._ctx.print_at(x, y, text, colour)
+
+
+def run_tk(settings) -> None:
+    # Window setup
+    root = tk.Tk()
+    root.title("Asciiquarium Redux")
+    # Determine cell size from font
+    family = getattr(settings, "ui_font_family", "Menlo")
+    size = getattr(settings, "ui_font_size", 14)
+    fnt = tkfont.Font(family=family, size=size)
+    cell_w = max(8, int(fnt.measure("W")))
+    cell_h = max(12, int(fnt.metrics("linespace")))
+    cols = getattr(settings, "ui_cols", 120)
+    rows = getattr(settings, "ui_rows", 40)
+    canvas = tk.Canvas(root, width=cols * cell_w, height=rows * cell_h, bg="black", highlightthickness=0)
+    canvas.pack(fill=tk.BOTH, expand=False)
+
+    # Expose cell size for event conversion
+    root._cell_w = cell_w  # type: ignore[attr-defined]
+    root._cell_h = cell_h  # type: ignore[attr-defined]
+
+    if getattr(settings, "ui_fullscreen", False):
+        root.attributes("-fullscreen", True)
+
+    ctx = TkRenderContext(root, canvas, cols, rows, cell_w, cell_h, font=fnt)
+    screen = ScreenShim(ctx)
+    events = TkEventStream(root)
+    app = AsciiQuarium(settings)
+    app.rebuild(screen)  # type: ignore[arg-type]
+
+    last = time.time()
+    frame_no = 0
+    target_dt = 1.0 / max(1, settings.fps)
+
+    def tick() -> None:
+        nonlocal last, frame_no
+        now = time.time()
+        dt = min(0.1, now - last)
+        last = now
+
+        # Handle events
+        for ev in events.poll():
+            from .backends import KeyEvent as KEv, MouseEvent as MEv
+            if isinstance(ev, KEv):
+                k = ev.key
+                if k in ("q", "Q"):
+                    root.destroy()
+                    return
+                if k in ("p", "P"):
+                    app._paused = not app._paused
+                if k in ("r", "R"):
+                    app.rebuild(screen)  # type: ignore[arg-type]
+                if k in ("h", "H", "?"):
+                    app._show_help = not app._show_help
+                if k == " ":
+                    from .entities.specials import FishHook, spawn_fishhook
+                    hooks = [a for a in app.specials if isinstance(a, FishHook) and a.active]
+                    if hooks:
+                        for h in hooks:
+                            if hasattr(h, "retract_now"):
+                                h.retract_now()
+                    else:
+                        app.specials.extend(spawn_fishhook(screen, app))  # type: ignore[arg-type]
+            elif isinstance(ev, MEv):
+                # Mouse event
+                if ev.button == 1:
+                    click_x = int(getattr(ev, "x", 0))
+                    click_y = int(getattr(ev, "y", 0))
+                    water_top = settings.waterline_top
+                    if water_top + 1 <= click_y <= screen.height - 2:
+                        from .entities.specials import FishHook, spawn_fishhook_to
+                        hooks = [a for a in app.specials if isinstance(a, FishHook) and a.active]
+                        if hooks:
+                            for h in hooks:
+                                if hasattr(h, "retract_now"):
+                                    h.retract_now()
+                        else:
+                            app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))  # type: ignore[arg-type]
+        ctx.clear()
+        app.update(dt, cast(Screen, screen), frame_no)
+        ctx.flush()
+        frame_no += 1
+
+        # Schedule next frame
+        elapsed = time.time() - now
+        delay_ms = max(0, int((target_dt - elapsed) * 1000))
+        root.after(delay_ms, tick)
+
+    root.after(0, tick)
+    root.mainloop()
