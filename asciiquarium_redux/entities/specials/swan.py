@@ -18,8 +18,8 @@ class Swan(Actor):
                 r"""
        ___
 ,_    / _,\
-| \   \\ \|
-|  \_  \\\\
+| \   \( \|
+|  \_  \\
 (_   \_) \
 (\_   `   \
  \   -=~  /
@@ -29,11 +29,11 @@ class Swan(Actor):
                 r"""
        ___
 ,_    / _,\
-| \   \\  \
-|  \_  \\\\
+| \   \( \|
+|  \_  \\
 (_   \_) \
 (\_   `   \
- \  ~=-  /
+ \   -=~  /
 """
             ),
         ]
@@ -62,19 +62,16 @@ class Swan(Actor):
             ),
         ]
         self.frames = swan_lr if self.dir > 0 else swan_rl
-        self.mask = parse_sprite(
-            r"""
-
-     g
-     yy
-"""
-        ) if self.dir > 0 else parse_sprite(
-            r"""
-
- g
-yy
-"""
-        )
+        # Build masks with full sprite height to preserve vertical alignment
+        h = len(self.frames[0])
+        ltr_mask = [''] * h
+        rtl_mask = [''] * h
+        # Match Perl: one blank line, then head 'g' and beak 'yy' alignment
+        ltr_mask[1] = '         g'
+        ltr_mask[2] = '         yy'
+        rtl_mask[1] = ' g'
+        rtl_mask[2] = 'yy'
+        self.mask = ltr_mask if self.dir > 0 else rtl_mask
         self._frame_idx = 0
         self._frame_t = 0.0
         self._frame_dt = 0.25
