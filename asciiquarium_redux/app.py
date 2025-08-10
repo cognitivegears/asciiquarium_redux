@@ -8,12 +8,13 @@ from asciimatics.screen import Screen
 from asciimatics.event import KeyboardEvent, MouseEvent
 from asciimatics.exceptions import ResizeScreenError
 
-from .util import sprite_size, draw_sprite, draw_sprite_masked
+from .util import sprite_size, draw_sprite, draw_sprite_masked, fill_rect, draw_sprite_masked_with_bg
 from .environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK, waterline_row
 from .settings import Settings
 from .entities.core import Seaweed, Bubble, Splat, Fish, random_fish_frames
 from .entities.base import Actor
 from .entities.specials import (
+    FishHook,
     spawn_shark,
     spawn_fishhook,
     spawn_fishhook_to,
@@ -189,9 +190,11 @@ class AsciiQuarium:
         x = max(0, screen.width - w - 2)
         y = max(0, screen.height - h - 1)
         if self.settings.color == "mono":
-            draw_sprite(screen, lines, x, y, Screen.COLOUR_WHITE)
+            # In mono, still keep castle opaque within its silhouette
+            draw_sprite_masked_with_bg(screen, lines, [''] * len(lines), x, y, Screen.COLOUR_WHITE, Screen.COLOUR_BLACK)
         else:
-            draw_sprite_masked(screen, lines, CASTLE_MASK, x, y, Screen.COLOUR_WHITE)
+            # Opaque per-row background to prevent see-through, but no full-rect cutoffs
+            draw_sprite_masked_with_bg(screen, lines, CASTLE_MASK, x, y, Screen.COLOUR_WHITE, Screen.COLOUR_BLACK)
 
     def update(self, dt: float, screen: Screen, frame_no: int):
         dt *= self.settings.speed
@@ -273,7 +276,11 @@ class AsciiQuarium:
         ]
         weighted = []
         now = self._time
+        # Detect existing fishhook so we can avoid selecting it while active
+        hook_active = any(isinstance(a, FishHook) and a.active for a in self.specials)
         for name, fn in choices:
+            if name == "fishhook" and hook_active:
+                continue
             w = float(self.settings.specials_weights.get(name, 1.0))
             if w <= 0:
                 continue
@@ -360,8 +367,19 @@ def run(screen: Screen, settings: Settings):
             app.rebuild(screen)
         if key in (ord("h"), ord("H"), ord("?")):
             app._show_help = not app._show_help
+        # Spacebar: drop fishhook at random position (like random special)
+        if key == ord(" "):
+            # If a hook exists and is not retracting, command it to retract immediately
+            hooks = [a for a in app.specials if isinstance(a, FishHook) and a.active]
+            if hooks:
+                # Retract existing hook on space
+                for h in hooks:
+                    if hasattr(h, "retract_now"):
+                        h.retract_now()
+            else:
+                app.specials.extend(spawn_fishhook(screen, app))
 
-        # Mouse handling: left-click spawns a targeted fishhook
+    # Mouse handling: left-click spawns a targeted fishhook, or retracts if one is down
         if isinstance(ev, MouseEvent):
             # Spawn only on left button down transition (debounce)
             left_now = 1 if (ev.buttons & 1) else 0
@@ -372,7 +390,14 @@ def run(screen: Screen, settings: Settings):
                 water_top = settings.waterline_top
                 # Only accept clicks below waterline and above bottom-1
                 if water_top + 1 <= click_y <= screen.height - 2:
-                    app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))
+                    # If a hook exists, command it to retract on click
+                    hooks = [a for a in app.specials if isinstance(a, FishHook) and a.active]
+                    if hooks:
+                        for h in hooks:
+                            if hasattr(h, "retract_now"):
+                                h.retract_now()
+                    else:
+                        app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))
             app._mouse_buttons = ev.buttons
             app._last_mouse_event_time = now
         else:

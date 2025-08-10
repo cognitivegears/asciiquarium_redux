@@ -129,6 +129,81 @@ def draw_sprite_masked(
                 run_start = cx if drawable else None
                 run_colour = col if drawable else None
 
+def fill_rect(screen: Screen, x: int, y: int, w: int, h: int, colour: int) -> None:
+    """Fill a rectangular area with spaces in the given colour (opaque erase).
+
+    This mimics Perl's default (non-transparent) entity rendering where spaces
+    overwrite what's behind. Useful for solids like the castle.
+    """
+    if w <= 0 or h <= 0:
+        return
+    max_y = screen.height - 1
+    max_x = screen.width - 1
+    # Clip vertical bounds
+    y0 = max(0, y)
+    y1 = min(max_y, y + h - 1)
+    if y1 < y0:
+        return
+    # Determine horizontal clipping once per row
+    x0 = max(0, x)
+    x1 = min(max_x, x + w - 1)
+    if x1 < x0:
+        return
+    span = ' ' * (x1 - x0 + 1)
+    for sy in range(y0, y1 + 1):
+        screen.print_at(span, x0, sy, colour=colour)
+
+
+def draw_sprite_masked_with_bg(
+    screen: Screen,
+    lines: List[str],
+    mask: List[str],
+    x: int,
+    y: int,
+    default_colour: int,
+    bg_colour: int,
+):
+    """Draw a masked sprite with an opaque background span per row.
+
+    For each row, first paint spaces from x..x+len(row)-1 in bg_colour to make
+    sprite spaces opaque within the silhouette of that row, then draw the masked
+    glyphs over the top. This avoids blanking a full rectangle and matches Perl
+    behavior for sprites like the castle that are effectively non-transparent.
+    """
+    if not lines:
+        return
+    max_y = screen.height - 1
+    max_x = screen.width - 1
+    h = len(lines)
+    for dy in range(h):
+        row = lines[dy]
+        if not row:
+            continue
+        sy = y + dy
+        if sy < 0 or sy > max_y:
+            continue
+        # Determine silhouette span for this row (first..last non-space)
+        first = None
+        last = None
+        for i, ch in enumerate(row):
+            if ch != ' ':
+                if first is None:
+                    first = i
+                last = i
+        if first is None or last is None:
+            # Entire row is spaces; nothing to fill or draw
+            continue
+        # Clip horizontally to screen
+        start_idx = max(first, 0 if x >= 0 else -x)
+        end_idx = min(last + 1, max_x - x + 1, len(row))
+        if end_idx <= start_idx:
+            continue
+        span = ' ' * (end_idx - start_idx)
+        screen.print_at(span, x + start_idx, sy, colour=bg_colour)
+        # Now draw the masked row on top
+        # Use the existing masked renderer for batching
+        draw_sprite_masked(screen, [row], [mask[dy] if dy < len(mask) else ''], x, sy, default_colour)
+
 
 def randomize_colour_mask(mask: List[str]) -> List[str]:
     """Randomize digit placeholders 1..9 in a mask to random colour letters.

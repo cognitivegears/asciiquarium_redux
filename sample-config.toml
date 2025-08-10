@@ -58,6 +58,12 @@ monster = 1.0
 big_fish = 1.0
 
 
+# Fishhook behavior
+# - dwell_seconds: how long the hook stays down before retracting (seconds)
+[fishhook]
+dwell_seconds = 20.0
+
+
 
 # Fish behavior and counts
 # - direction_bias: probability of rightward motion (0..1)

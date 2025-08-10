@@ -61,6 +61,8 @@ class Settings:
     spawn_max_concurrent: int = 1
     spawn_cooldown_global: float = 0.0
     specials_cooldowns: Dict[str, float] = field(default_factory=dict)
+    # Fishhook behavior
+    fishhook_dwell_seconds: float = 20.0
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
@@ -241,6 +243,17 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                     s.seaweed_count_per_80_cols = float(seaweed.get("count_per_80_cols"))
                 except Exception:
                     pass
+        # fishhook section (optional)
+        fishhook = data.get("fishhook", {})
+        if isinstance(fishhook, dict):
+            if "dwell_seconds" in fishhook:
+                try:
+                    val = fishhook.get("dwell_seconds")
+                    if val is not None:
+                        s.fishhook_dwell_seconds = float(val)
+                except Exception:
+                    pass
+
         # use the first found config file only
         break
     parser = argparse.ArgumentParser(description="Asciiquarium Redux")
