@@ -52,9 +52,13 @@ class Dolphins(Actor):
 """
             ),
         ]
-        self.frames = dolph_lr if self.dir > 0 else dolph_rl
-        # Masks from Perl: left-to-right has W far right; right-to-left has W near left
+        # Match Perl orientation: use the opposite set we previously had
+        # so that left-to-right faces right and right-to-left faces left.
+        self.frames = dolph_rl if self.dir > 0 else dolph_lr
+        # Masks from Perl: align the 'W' with the eye on the facing side
+        # Perl uses mask[0] (far right 'W') for left-to-right and mask[1] (near left 'W') for right-to-left.
         if self.dir > 0:
+            # Left-to-right: eye highlight far right
             self.mask = parse_sprite(
                 r"""
 
@@ -63,6 +67,7 @@ class Dolphins(Actor):
 """
             )
         else:
+            # Right-to-left: eye highlight near left
             self.mask = parse_sprite(
                 r"""
 
@@ -90,6 +95,8 @@ class Dolphins(Actor):
             self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
+        # Match Perl: body coloured mostly blue, with one cyan highlight dolphin
+        colours = [Screen.COLOUR_BLUE, Screen.COLOUR_BLUE, Screen.COLOUR_CYAN]
         for i in range(3):
             frame = self.frames[(self._frame_idx + i) % len(self.frames)]
             px = int(self.x + i * self.distance)
@@ -97,7 +104,7 @@ class Dolphins(Actor):
             if mono:
                 draw_sprite(screen, frame, px, py, Screen.COLOUR_WHITE)
             else:
-                draw_sprite_masked(screen, frame, self.mask, px, py, Screen.COLOUR_CYAN)
+                draw_sprite_masked(screen, frame, self.mask, px, py, colours[i])
 
 
 def spawn_dolphins(screen: Screen, app):
