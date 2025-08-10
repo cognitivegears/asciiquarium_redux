@@ -1,5 +1,5 @@
 from .shark import Shark, spawn_shark
-from .fishhook import FishHook, spawn_fishhook
+from .fishhook import FishHook, spawn_fishhook, spawn_fishhook_to
 from .whale import Whale, spawn_whale
 from .ducks import Ducks, spawn_ducks
 from .dolphins import Dolphins, spawn_dolphins
@@ -20,6 +20,7 @@ __all__ = [
     "BigFish",
     "spawn_shark",
     "spawn_fishhook",
+    "spawn_fishhook_to",
     "spawn_whale",
     "spawn_ducks",
     "spawn_dolphins",

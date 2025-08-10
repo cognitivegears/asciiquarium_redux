@@ -5,6 +5,7 @@ import time
 from typing import List
 
 from asciimatics.screen import Screen
+from asciimatics.event import KeyboardEvent, MouseEvent
 from asciimatics.exceptions import ResizeScreenError
 
 from .util import sprite_size, draw_sprite, draw_sprite_masked
@@ -15,6 +16,7 @@ from .entities.base import Actor
 from .entities.specials import (
     spawn_shark,
     spawn_fishhook,
+    spawn_fishhook_to,
     spawn_whale,
     spawn_ship,
     spawn_ducks,
@@ -336,15 +338,27 @@ def run(screen: Screen, settings: Settings):
         dt = min(0.1, now - last)
         last = now
 
-        ev = screen.get_key()
-        if ev in (ord("q"), ord("Q")):
+        # Keyboard or mouse event
+        ev = screen.get_event()
+        # Key handling
+        key = ev.key_code if isinstance(ev, KeyboardEvent) else None
+        if key in (ord("q"), ord("Q")):
             return
-        if ev in (ord("p"), ord("P")):
+        if key in (ord("p"), ord("P")):
             app._paused = not app._paused
-        if ev in (ord("r"), ord("R")):
+        if key in (ord("r"), ord("R")):
             app.rebuild(screen)
-        if ev in (ord("h"), ord("H"), ord("?")):
+        if key in (ord("h"), ord("H"), ord("?")):
             app._show_help = not app._show_help
+
+        # Mouse handling: left-click spawns a targeted fishhook
+        if isinstance(ev, MouseEvent) and (ev.buttons & 1):
+            click_x = int(ev.x)
+            click_y = int(ev.y)
+            water_top = settings.waterline_top
+            # Only accept clicks below waterline and above bottom-1
+            if water_top + 1 <= click_y <= screen.height - 2:
+                app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))
 
         # Gracefully handle terminal resizes by restarting the UI loop
         # via Screen.wrapper catching ResizeScreenError.
