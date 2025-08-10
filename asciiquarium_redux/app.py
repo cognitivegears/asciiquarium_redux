@@ -227,11 +227,7 @@ class AsciiQuarium:
 
         # Draw pass
         self.draw_waterline(screen)
-        self.draw_castle(screen)
         mono = self.settings.color == "mono"
-        for s in self.seaweed:
-            tick = int(self._seaweed_tick / 0.25)
-            s.draw(screen, tick, mono)
         # Draw fish back-to-front by z to mimic Perl's fish_start..fish_end layering
         fish_to_draw = sorted(self.fish, key=lambda f: getattr(f, 'z', 0))
         for f in fish_to_draw:
@@ -239,6 +235,11 @@ class AsciiQuarium:
                 draw_sprite(screen, f.frames, int(f.x), int(f.y), Screen.COLOUR_WHITE)
             else:
                 f.draw(screen)
+        # Seaweed and castle are rendered above fish in Perl (higher depth)
+        for s in self.seaweed:
+            tick = int(self._seaweed_tick / 0.25)
+            s.draw(screen, tick, mono)
+        self.draw_castle(screen)
         for b in self.bubbles:
             if mono:
                 if 0 <= b.y < screen.height:
