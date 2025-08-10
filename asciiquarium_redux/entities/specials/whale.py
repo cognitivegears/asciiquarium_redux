@@ -91,7 +91,7 @@ class Whale(Actor):
                 r"""
 
 
-    :
+   :
 """
             ),
             parse_sprite(
@@ -152,7 +152,7 @@ class Whale(Actor):
         frames_right.append(["", ""] + whale_right)
         masks_right.append(["", ""] + mask_right)
         for sp in spout_frames:
-            frames_right.append(_indent_lines(sp, 1) + whale_right)
+            frames_right.append(_indent_lines(sp, 9) + whale_right)
             masks_right.append([""] * len(sp) + mask_right)
         # Transitional in-between height before returning to no-spout to avoid skipping
         frames_right.append(["", ""] + whale_right)
@@ -170,7 +170,7 @@ class Whale(Actor):
         frames_left.append(["", ""] + whale_left)
         masks_left.append(["", ""] + mask_left)
         for sp in spout_frames:
-            frames_left.append(_indent_lines(sp, 11) + whale_left)
+            frames_left.append(_indent_lines(sp, 3) + whale_left)
             masks_left.append([""] * len(sp) + mask_left)
         # Transitional in-between height before returning to no-spout to avoid skipping
         frames_left.append(["", ""] + whale_left)
