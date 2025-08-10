@@ -108,8 +108,12 @@ def draw_sprite_masked(
                 # Flush previous run
                 if run_colour is not None and cx > run_start:
                     segment = row[run_start:cx]
-                    if segment.strip():  # avoid printing pure spaces
-                        screen.print_at(segment, x + run_start, sy, colour=run_colour)
+                    # Skip leading spaces so we don't overwrite background ahead of shapes
+                    i = 0
+                    while i < len(segment) and segment[i] == ' ':
+                        i += 1
+                    if i < len(segment):
+                        screen.print_at(segment[i:], x + run_start + i, sy, colour=run_colour)
                 run_start = cx
                 run_colour = col
         # Note: loop flushes at sentinel
