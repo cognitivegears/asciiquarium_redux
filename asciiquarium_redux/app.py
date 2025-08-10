@@ -236,13 +236,14 @@ class AsciiQuarium:
                     screen.print_at(ch, b.x, b.y, colour=Screen.COLOUR_WHITE)
             else:
                 b.draw(screen)
-        for s in self.splats:
-            s.draw(screen, mono)
         for a in list(self.specials):
             try:
                 a.draw(screen, mono)  # type: ignore[call-arg]
             except TypeError:
                 a.draw(screen)
+        # Draw splats last so they appear above specials (e.g., shark)
+        for s in self.splats:
+            s.draw(screen, mono)
         if self._show_help:
             self._draw_help(screen)
 
