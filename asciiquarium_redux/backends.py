@@ -153,6 +153,23 @@ class TkRenderContext:
                 self.canvas.itemconfigure(tid, text=draw_text, fill=fill)
         self.canvas.update_idletasks()
 
+    def resize(self, cols: int, rows: int) -> None:
+        # Reset buffers and visual cache on resize
+        cols = max(1, int(cols))
+        rows = max(1, int(rows))
+        if cols == self.cols and rows == self.rows:
+            return
+        self.cols = cols
+        self.rows = rows
+        self._buffer = [[" "] * cols for _ in range(rows)]
+        self._colbuf = [[7] * cols for _ in range(rows)]
+        self._dirty.clear()
+        self._text_ids.clear()
+        try:
+            self.canvas.delete("all")
+        except Exception:
+            pass
+
 
 def _colour_to_fill(col: int) -> str:
     # Map asciimatics Screen colour ints to Tk fill colours

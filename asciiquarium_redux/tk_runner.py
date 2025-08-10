@@ -46,7 +46,7 @@ def run_tk(settings) -> None:
     cols = getattr(settings, "ui_cols", 120)
     rows = getattr(settings, "ui_rows", 40)
     canvas = tk.Canvas(root, width=cols * cell_w, height=rows * cell_h, bg="black", highlightthickness=0)
-    canvas.pack(fill=tk.BOTH, expand=False)
+    canvas.pack(fill=tk.BOTH, expand=True)
 
     # Expose cell size for event conversion
     root._cell_w = cell_w  # type: ignore[attr-defined]
@@ -64,6 +64,38 @@ def run_tk(settings) -> None:
     last = time.time()
     frame_no = 0
     target_dt = 1.0 / max(1, settings.fps)
+
+    resize_job: str | None = None
+
+    def _schedule_resize() -> None:
+        nonlocal resize_job
+        if resize_job is not None:
+            try:
+                root.after_cancel(resize_job)
+            except Exception:
+                pass
+        resize_job = root.after(120, _do_resize)
+
+    def _do_resize() -> None:
+        nonlocal resize_job
+        resize_job = None
+        # Use current canvas size in pixels
+        w = max(1, int(canvas.winfo_width()))
+        h = max(1, int(canvas.winfo_height()))
+        new_cols = max(1, w // cell_w)
+        new_rows = max(1, h // cell_h)
+        if new_cols != ctx.cols or new_rows != ctx.rows:
+            ctx.resize(new_cols, new_rows)
+            # Snap canvas to exact grid size to keep alignment crisp
+            cw = new_cols * cell_w
+            ch = new_rows * cell_h
+            if cw != w or ch != h:
+                canvas.config(width=cw, height=ch)
+            app.rebuild(screen)  # type: ignore[arg-type]
+
+    # Listen to canvas size changes (layout or user resize)
+    canvas.bind("<Configure>", lambda _e: _schedule_resize())
+    root.after(0, _schedule_resize)
 
     def tick() -> None:
         nonlocal last, frame_no
