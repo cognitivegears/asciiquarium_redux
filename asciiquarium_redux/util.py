@@ -20,6 +20,10 @@ def sprite_size(lines: List[str]) -> Tuple[int, int]:
 
 
 def draw_sprite(screen: Screen, lines: List[str], x: int, y: int, colour: int) -> None:
+    """Draw an unmasked sprite, treating spaces as transparent.
+
+    Only non-space characters are printed so background/sprites behind are preserved.
+    """
     max_y = screen.height - 1
     max_x = screen.width - 1
     for dy, row in enumerate(lines):
@@ -28,12 +32,22 @@ def draw_sprite(screen: Screen, lines: List[str], x: int, y: int, colour: int) -
             continue
         if x > max_x or x + len(row) < 0:
             continue
-        start = 0
-        if x < 0:
-            start = -x
-        visible = row[start : max(0, min(len(row), max_x - x + 1))]
-        if visible:
-            screen.print_at(visible, x + start, sy, colour=colour)
+        start_idx = 0 if x >= 0 else -x
+        end_idx = min(len(row), max_x - x + 1)
+        if end_idx <= start_idx:
+            continue
+        # Print contiguous non-space runs only
+        run_start = None
+        for cx in range(start_idx, end_idx + 1):  # sentinel at end
+            ch = row[cx] if cx < end_idx else None  # type: ignore
+            if cx < end_idx and ch != ' ':
+                if run_start is None:
+                    run_start = cx
+            else:
+                if run_start is not None and cx > run_start:
+                    segment = row[run_start:cx]
+                    screen.print_at(segment, x + run_start, sy, colour=colour)
+                    run_start = None
 
 
 # Map single-character mask codes to asciimatics colours.
@@ -55,6 +69,7 @@ def _mask_char_to_colour(ch: str, default_colour: int) -> Optional[int]:
     Returns None to indicate transparency (skip draw) when mask char is space.
     """
     if ch == ' ':
+        # Space in mask means: draw using default colour (not transparent).
         return default_colour
     return _MASK_COLOUR_MAP.get(ch, default_colour)
 
@@ -70,8 +85,8 @@ def draw_sprite_masked(
     """Draw a sprite with a per-character colour mask.
 
     The mask must be the same size as lines. Mask characters map to colours
-    using _MASK_COLOUR_MAP; spaces in the mask are treated as transparent and
-    will fall back to default_colour.
+    using _MASK_COLOUR_MAP; spaces in the mask mean "use default_colour" for
+    any non-space glyphs in the sprite.
     """
     if not lines:
         return
@@ -91,32 +106,28 @@ def draw_sprite_masked(
         end_idx = min(len(row), max_x - x + 1)
         if end_idx <= start_idx:
             continue
-        # Walk the row, batching runs of same colour
-        run_start = start_idx
+        # Walk the row, batching runs of same colour and non-space glyphs
+        run_start = None
         run_colour: Optional[int] = None
         for cx in range(start_idx, end_idx + 1):  # include sentinel at end
             if cx < end_idx:
                 ch = row[cx]
                 mch = mrow[cx] if cx < len(mrow) else ' '
                 col = _mask_char_to_colour(mch, default_colour)
+                drawable = (ch != ' ' and col is not None)
             else:
                 # sentinel to flush any pending run
                 ch = None  # type: ignore
                 col = None
+                drawable = False
 
-            if col != run_colour:
+            if not drawable or col != run_colour:
                 # Flush previous run
-                if run_colour is not None and cx > run_start:
-                    segment = row[run_start:cx]
-                    # Skip leading spaces so we don't overwrite background ahead of shapes
-                    i = 0
-                    while i < len(segment) and segment[i] == ' ':
-                        i += 1
-                    if i < len(segment):
-                        screen.print_at(segment[i:], x + run_start + i, sy, colour=run_colour)
-                run_start = cx
-                run_colour = col
-        # Note: loop flushes at sentinel
+                if run_colour is not None and run_start is not None and cx > run_start:
+                    segment = lines[dy][run_start:cx]
+                    screen.print_at(segment, x + run_start, sy, colour=run_colour)
+                run_start = cx if drawable else None
+                run_colour = col if drawable else None
 
 
 def randomize_colour_mask(mask: List[str]) -> List[str]:
