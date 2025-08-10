@@ -28,6 +28,9 @@ from .entities.specials import (
 
 
 class AsciiQuarium:
+    # Class-level attribute annotations for linters/type-checkers
+    _mouse_buttons: int
+    _last_mouse_event_time: float
     def __init__(self, settings: Settings):
         self.settings = settings
         self.seaweed = []  # type: List[Seaweed]
@@ -44,6 +47,9 @@ class AsciiQuarium:
         self._time = 0.0
         self._last_spawn = {}
         self._global_cooldown_until = 0.0
+        # Track mouse button state for debounce
+        self._mouse_buttons = 0
+        self._last_mouse_event_time = 0.0
 
     def rebuild(self, screen: Screen):
         self.seaweed.clear()
@@ -314,6 +320,7 @@ class AsciiQuarium:
             "",
             "Controls:",
             "  q: quit    p: pause/resume    r: rebuild",
+            "  Left-click: drop fishhook to clicked spot",
             "  h/?: toggle this help",
         ]
         x, y = 2, 1
@@ -352,13 +359,23 @@ def run(screen: Screen, settings: Settings):
             app._show_help = not app._show_help
 
         # Mouse handling: left-click spawns a targeted fishhook
-        if isinstance(ev, MouseEvent) and (ev.buttons & 1):
-            click_x = int(ev.x)
-            click_y = int(ev.y)
-            water_top = settings.waterline_top
-            # Only accept clicks below waterline and above bottom-1
-            if water_top + 1 <= click_y <= screen.height - 2:
-                app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))
+        if isinstance(ev, MouseEvent):
+            # Spawn only on left button down transition (debounce)
+            left_now = 1 if (ev.buttons & 1) else 0
+            left_prev = 1 if (app._mouse_buttons & 1) else 0
+            if left_now and not left_prev:
+                click_x = int(ev.x)
+                click_y = int(ev.y)
+                water_top = settings.waterline_top
+                # Only accept clicks below waterline and above bottom-1
+                if water_top + 1 <= click_y <= screen.height - 2:
+                    app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))
+            app._mouse_buttons = ev.buttons
+            app._last_mouse_event_time = now
+        else:
+            # If we haven't seen a mouse event for a short while, assume release.
+            if app._mouse_buttons != 0 and (now - app._last_mouse_event_time) > 0.2:
+                app._mouse_buttons = 0
 
         # Gracefully handle terminal resizes by restarting the UI loop
         # via Screen.wrapper catching ResizeScreenError.
