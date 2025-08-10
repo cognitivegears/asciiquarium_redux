@@ -16,46 +16,46 @@ class Ducks(Actor):
         ducks_lr = [
             parse_sprite(
                 r"""
-      _  _  _
-,____(')=  ,____(')=  ,____(')<
-    \~~= ')    \~~= ')    \~~= ')
+
+,____(')=,____(')=,____(')<
+ \~~= ')  \~~= ')  \~~= ')
 """
             ),
             parse_sprite(
                 r"""
-      _  _  _
-,____(')=  ,____(')<  ,____(')=
-    \~~= ')    \~~= ')    \~~= ')
+
+,____(')=,____(')<,____(')=
+ \~~= ')  \~~= ')  \~~= ')
 """
             ),
             parse_sprite(
                 r"""
-      _  _  _
-,____(')<  ,____(')=  ,____(')=
-    \~~= ')    \~~= ')    \~~= ')
+
+,____(')<,____(')=,____(')=
+ \~~= ')  \~~= ')  \~~= ')
 """
             ),
         ]
         ducks_rl = [
             parse_sprite(
                 r"""
-  _  _  _
->(')____,  =(')____,  =(')____,
-    (` =~~/    (` =~~/    (` =~~/
+
+>(')____,=(')____,=(')____,
+ (` =~~/  (` =~~/  (` =~~/
 """
             ),
             parse_sprite(
                 r"""
-  _  _  _
-=(')____,  >(')____,  =(')____,
-    (` =~~/    (` =~~/    (` =~~/
+
+=(')____,>(')____,=(')____,
+ (` =~~/  (` =~~/  (` =~~/
 """
             ),
             parse_sprite(
                 r"""
-  _  _  _
-=(')____,  =(')____,  >(')____,
-    (` =~~/    (` =~~/    (` =~~/
+
+=(')____,=(')____,>(')____,
+ (` =~~/  (` =~~/  (` =~~/
 """
             ),
         ]
@@ -101,8 +101,7 @@ ygcgwwwww  ygcgwwwww  ygcgwwwww
         if mono:
             draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
         else:
-            # Default to white like the Perl version's default_color => 'WHITE'
-            draw_sprite_masked(screen, img, self.mask, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+            draw_sprite_masked(screen, img, self.mask, int(self.x), int(self.y), Screen.COLOUR_YELLOW)
 
 
 def spawn_ducks(screen: Screen, app):
