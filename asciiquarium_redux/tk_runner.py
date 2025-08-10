@@ -151,5 +151,17 @@ def run_tk(settings) -> None:
         delay_ms = max(0, int((target_dt - elapsed) * 1000))
         root.after(delay_ms, tick)
 
+    def _activate() -> None:
+        try:
+            root.deiconify()
+            root.lift()
+            root.focus_force()
+            # Briefly set always-on-top so the window comes to front, then disable
+            root.attributes("-topmost", True)
+            root.after(300, lambda: root.attributes("-topmost", False))
+        except Exception:
+            pass
+
+    root.after(0, _activate)
     root.after(0, tick)
     root.mainloop()
