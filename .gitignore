@@ -8,3 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Skip screenshots
+asciiquarium_*.png
+
+.DS_Store

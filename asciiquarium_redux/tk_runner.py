@@ -117,6 +117,35 @@ def run_tk(settings) -> None:
                     app.rebuild(screen)  # type: ignore[arg-type]
                 if k in ("h", "H", "?"):
                     app._show_help = not app._show_help
+                if k in ("s", "S"):
+                    # Save a screenshot of the canvas area into the current directory
+                    import os
+                    def _next_png_name() -> str:
+                        i = 1
+                        while True:
+                            name = f"asciiquarium_{i}.png"
+                            if not os.path.exists(name):
+                                return name
+                            i += 1
+                    out_png = _next_png_name()
+                    try:
+                        from PIL import ImageGrab  # type: ignore
+                        x0 = canvas.winfo_rootx()
+                        y0 = canvas.winfo_rooty()
+                        x1 = x0 + canvas.winfo_width()
+                        y1 = y0 + canvas.winfo_height()
+                        img = ImageGrab.grab(bbox=(x0, y0, x1, y1))
+                        img.save(out_png)
+                        print(f"Saved screenshot to {out_png}")
+                    except Exception as e:
+                        # Fallback: PostScript dump (requires external conversion)
+                        base = os.path.splitext(out_png)[0]
+                        out_ps = f"{base}.ps"
+                        try:
+                            canvas.postscript(file=out_ps, colormode='color')
+                            print(f"Saved PostScript screenshot to {out_ps} (convert to PNG with Ghostscript)")
+                        except Exception as e2:
+                            print(f"Screenshot failed: {e} / {e2}")
                 if k == " ":
                     from .entities.specials import FishHook, spawn_fishhook
                     hooks = [a for a in app.specials if isinstance(a, FishHook) and a.active]

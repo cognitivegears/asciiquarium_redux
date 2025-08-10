@@ -1,30 +1,27 @@
-# Asciiquarium Redux (Python)
+# Asciiquarium Redux 🐠
 
-A Python-based port of the classic terminal animation “Asciiquarium,” implemented with the asciimatics library. It renders a waterline, castle, seaweed sway, fish with occasional bubbles, and basic controls.
+A joyful, colorful Python reimagining of the classic terminal aquarium. Watch fish swim, seaweed sway, hooks drop, sharks prowl, and bubbles pop—right in your terminal or a windowed Tk screen.
 
 Original Asciiquarium by Kirk Baucom (Perl): [robobunny.com/projects/asciiquarium](https://robobunny.com/projects/asciiquarium/html/)
 
-Status: Playable port with CLI options, help overlay, and config support.
+Status: Playable, configurable, and window-ready (Tk). Bring your own snacks (for the ducks).
 
+![Preview – Asciiquarium Redux](docs/screenshot.png)
 
 ## Why a Redux?
 
 - Keep the whimsical aquarium alive on modern terminals and platforms
 - Offer configurable FPS, colors, sizes, and deterministic playback (seeded RNG)
-- Provide a cleaner architecture with tests and a small CLI
 - Ship as an installable Python package for easy use (e.g., `pipx install`)
 
+## Features
 
-## Feature goals
-
-- Faithful animations: fish, sharks, whales, submarines, jellyfish, bubbles, treasure chests
-- Color output with sensible fallbacks (auto-detect 16/256/truecolor)
-- Adaptive to window resizes and various terminal fonts
-- Configurable parameters (speed/FPS, density, palette, RNG seed, scene length)
-- Controls at runtime (pause, speed up/down, quit, reset)
-- Deterministic mode for demos/recordings
-- Cross-platform: macOS, Linux; Windows via `windows-curses` (planned)
-
+- Faithful animations: fish (with color masks), seaweed lifecycle/sway, waterline, castle, bubbles, and many specials (shark, whale, ship, ducks, swan, dolphins, monster, big fish)
+- Fishhook gameplay: one hook at a time, impact pause, configurable dwell time, collisions while lowering/dwelling/retracting
+- Smooth rendering: double-buffered terminal drawing to reduce flicker
+- Backends: terminal (asciimatics) and windowed Tk canvas (resizable, color)
+- Configurable everything: FPS, speed, density, spawn timings/weights, fish bands, colors; TOML-based config
+- Deterministic playback (seed) for captures and demos
 
 ## Quick start
 
@@ -32,11 +29,17 @@ From source using uv (already configured in this repo):
 
 ```sh
 # macOS/Linux
-uv run python main.py
+uv run python main.py  # terminal backend
 
 # Or use the repo venv directly
 source .venv/bin/activate
 python main.py
+```
+
+Windowed Tk backend:
+
+```sh
+uv run python main.py --backend tk
 ```
 
 Controls:
@@ -45,6 +48,9 @@ Controls:
 - p: pause/resume
 - r: rebuild scene (useful after resize)
 - h or ?: toggle help overlay
+- space: drop/retract fishhook (random position in terminal)
+- mouse: left-click to drop a hook at the cursor (or retract if one is active)
+- s (Tk): save a screenshot as ./asciiquarium_#.png (auto-incrementing)
 
 CLI examples:
 
@@ -52,21 +58,24 @@ CLI examples:
 uv run python main.py --fps 30 --density 1.5 --color mono --seed 123 --speed 0.7
 # Use a specific config file
 uv run python main.py --config ./sample-config.toml
+uv run python main.py --backend tk --fullscreen
 ```
 
-- --fps (int): target frames per second (default 20, clamp 5–120)
+Common flags:
+
+- --fps (int): target frames per second (default 24, clamp 5–120)
 - --density (float): density multiplier (default 1.0, clamp 0.1–5.0)
 - --color <auto|mono|16|256>: color mode (mono forces white)
 - --seed (int): deterministic RNG seed; omit for random
-- --speed (float): global speed multiplier (default 0.75; 1.0 = baseline)
-
+- --speed (float): global speed multiplier (default 0.75)
+- --backend <terminal|tk>: choose backend
+- --fullscreen: make Tk window fullscreen
 
 ## Notes
 
-- Uses `asciimatics` for portable terminal rendering and input.
-- Targets ~20 FPS. Performance depends on terminal.
+- Terminal uses `asciimatics`; Tk backend renders to a Canvas with per-cell text.
+- Tk resizes by adjusting the character grid to the window size; the scene rebuilds when size stabilizes.
 - Ensure a UTF-8 locale and a monospaced font for best results.
-
 
 ## Configuration
 
@@ -124,6 +133,9 @@ big_fish = 1.0
 fish_scale = 1.0
 seaweed_scale = 1.0
 
+[fishhook]
+dwell_seconds = 20.0
+
 [fish]
 direction_bias = 0.5   # 0..1 probability of rightward motion
 speed_min = 0.6
@@ -147,6 +159,14 @@ shrink_rate_min = 8.0
 shrink_rate_max = 16.0
 # count_base = 4        # optional count override
 # count_per_80_cols = 3.0
+
+[ui]
+backend = "terminal"   # terminal|tk
+fullscreen = false
+cols = 120
+rows = 40
+font_family = "Menlo"
+font_size = 14
 ```
 
 Run with uvx without cloning the repo:
@@ -159,17 +179,14 @@ Place a user config at one of the default paths above (e.g., `~/.config/asciiqua
 
 You can also point to a specific config with `--config` (absolute or relative path). See `sample-config.toml` in the repo for a ready-to-edit template.
 
-
 ## Differences from the original
 
-- Python 3 implementation with tests and packaging
+- Python 3 implementation
 - Config file support and richer CLI options
 - Deterministic mode for reproducible animations
 - Terminal capability detection and graceful fallbacks
-- Structured codebase for easier contribution and extensions
 
 The goal remains fidelity to the original look-and-feel first, with extras opt-in.
-
 
 ## Development
 
@@ -177,12 +194,10 @@ The goal remains fidelity to the original look-and-feel first, with extras opt-i
 - Key dep: `asciimatics`
 - Entry point: `main.py` using `Screen.wrapper`
 
-
 ## Recording a demo GIF (tips)
 
 - macOS: `brew install ffmpeg` then use `asciinema` + `agg` or `ttygif`
 - Keep background dark and font mono; target 20–30 FPS; limit palette if needed
-
 
 ## Troubleshooting
 
@@ -191,22 +206,11 @@ The goal remains fidelity to the original look-and-feel first, with extras opt-i
 - High CPU: lower `--fps` or reduce density; try `ncurses` terminfo with fewer color changes
 - Unicode issues: set `LANG`/`LC_ALL` to UTF-8 (e.g., `en_US.UTF-8`)
 
-
-## Roadmap
-
-- [ ] M1: Minimal port with core sprites and motion parity
-- [ ] M2: Config + CLI + runtime controls
-- [ ] M3: Packaging (`uv tool`), docs, and demo assets
-- [ ] M4: Windows support via `windows-curses`
-- [ ] M5: Extended creatures, events, and themes
-
-
 ## Acknowledgements
 
 - Original Asciiquarium by Kirk Baucom (Perl): [robobunny.com/projects/asciiquarium](https://robobunny.com/projects/asciiquarium/html/)
 - Community contributors and testers who keep terminal art alive
 
-
 ## License
 
-TBD. See `LICENSE` once added. The original Asciiquarium license and assets remain credited to their respective authors.
+GPL-2.0-or-later to match the original Asciiquarium’s license. See [LICENSE.md](LICENSE.md).
