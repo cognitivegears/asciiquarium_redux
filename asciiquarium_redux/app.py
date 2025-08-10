@@ -5,10 +5,12 @@ import time
 from typing import List
 
 from asciimatics.screen import Screen
+from typing import cast
 from asciimatics.event import KeyboardEvent, MouseEvent
 from asciimatics.exceptions import ResizeScreenError
 
 from .util import sprite_size, draw_sprite, draw_sprite_masked, fill_rect, draw_sprite_masked_with_bg
+from .buffer import DoubleBufferedScreen
 from .environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK, waterline_row
 from .settings import Settings
 from .entities.core import Seaweed, Bubble, Splat, Fish, random_fish_frames
@@ -344,6 +346,8 @@ class AsciiQuarium:
 
 def run(screen: Screen, settings: Settings):
     app = AsciiQuarium(settings)
+    # Wrap the screen with a double buffer to reduce flicker
+    db = DoubleBufferedScreen(screen)
     app.rebuild(screen)
 
     last = time.time()
@@ -410,9 +414,9 @@ def run(screen: Screen, settings: Settings):
         if screen.has_resized():
             raise ResizeScreenError("Screen resized")
 
-        screen.clear()
-        app.update(dt, screen, frame_no)
-        screen.refresh()
+        db.clear()
+        app.update(dt, cast(Screen, db), frame_no)
+        db.flush()
         frame_no += 1
 
         elapsed = time.time() - now
