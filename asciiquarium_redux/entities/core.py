@@ -502,7 +502,6 @@ class Fish:
             self.respawn(screen, direction=-1)
 
     def respawn(self, screen: Screen, direction: int):
-        idx = None
         # choose new frames and matching mask
         if direction > 0:
             choices = list(zip(FISH_RIGHT, FISH_RIGHT_MASKS))

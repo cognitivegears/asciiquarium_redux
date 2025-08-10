@@ -3,7 +3,6 @@ from __future__ import annotations
 import random
 import math
 from typing import List
-from dataclasses import dataclass
 from asciimatics.screen import Screen
 
 from ..util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked, aabb_overlap, randomize_colour_mask

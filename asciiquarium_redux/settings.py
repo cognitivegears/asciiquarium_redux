@@ -64,7 +64,12 @@ class Settings:
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
-    if override is not None and override.exists():
+    if override is not None:
+        # If an explicit override is provided, require it to exist and be used.
+        if override.exists():
+            return [override]
+        # Explicit path that doesn't exist should be an error; signal by returning a sentinel
+        # and letting the caller decide. We'll raise in load_settings_from_sources.
         return [override]
     paths: List[Path] = []
     cwd = Path.cwd()
@@ -99,7 +104,11 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                 override_path = Path(tok.split("=", 1)[1]).expanduser()
                 break
 
-    for p in _find_config_paths(override_path):
+    candidates = _find_config_paths(override_path)
+    # If an explicit override was provided but doesn't exist, error out clearly.
+    if override_path is not None and candidates and not candidates[0].exists():
+        raise FileNotFoundError(f"Config file not found: {override_path}")
+    for p in candidates:
         data = _load_toml(p)
         render = data.get("render", {})
         scene = data.get("scene", {})

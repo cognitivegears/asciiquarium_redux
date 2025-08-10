@@ -8,7 +8,7 @@ from asciimatics.screen import Screen
 from asciimatics.exceptions import ResizeScreenError
 
 from .util import sprite_size, draw_sprite, draw_sprite_masked
-from .environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK
+from .environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK, waterline_row
 from .settings import Settings
 from .entities.core import Seaweed, Bubble, Splat, Fish, random_fish_frames
 from .entities.base import Actor
@@ -151,10 +151,8 @@ class AsciiQuarium:
             self.fish.append(f)
 
     def draw_waterline(self, screen: Screen):
-        seg_len = len(WATER_SEGMENTS[0])
-        repeat = screen.width // seg_len + 2
-        for i, seg in enumerate(WATER_SEGMENTS):
-            row = (seg * repeat)[: screen.width]
+        for i, _ in enumerate(WATER_SEGMENTS):
+            row = waterline_row(i, screen.width)
             y = self.settings.waterline_top + i
             if y < screen.height:
                 colour = Screen.COLOUR_WHITE if self.settings.color == "mono" else Screen.COLOUR_CYAN
@@ -163,10 +161,7 @@ class AsciiQuarium:
     def _waterline_row(self, idx: int, screen: Screen) -> str:
         if idx < 0 or idx >= len(WATER_SEGMENTS):
             return ""
-        seg = WATER_SEGMENTS[idx]
-        seg_len = len(seg)
-        repeat = screen.width // seg_len + 2
-        return (seg * repeat)[: screen.width]
+        return waterline_row(idx, screen.width)
 
     def _bubble_hits_waterline(self, x: int, y: int, screen: Screen) -> bool:
         # Convert to index within waterline rows

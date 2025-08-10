@@ -44,3 +44,17 @@ CASTLE_MASK = parse_sprite(
                         yyyyyyy
 """
 )
+
+
+def waterline_row(idx: int, width: int) -> str:
+    """Build the repeated waterline row string for the given row index and width.
+
+    Pure function used by drawing and collision detection to ensure identical
+    tiling semantics in one place.
+    """
+    if idx < 0 or idx >= len(WATER_SEGMENTS):
+        return ""
+    seg = WATER_SEGMENTS[idx]
+    seg_len = len(seg)
+    repeat = width // seg_len + 2
+    return (seg * repeat)[: width]
