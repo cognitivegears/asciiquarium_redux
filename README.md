@@ -77,6 +77,62 @@ Common flags:
 - Tk resizes by adjusting the character grid to the window size; the scene rebuilds when size stabilizes.
 - Ensure a UTF-8 locale and a monospaced font for best results.
 
+## Tk backend requirements (Tkinter)
+
+This is only needed if you want to use the Tk backend (`--backend tk`). If tk is not available, the app will fall back to the terminal backend.
+
+The Tk backend needs Python built with tkinter and the system Tk libraries. If Tk isn’t available, the app automatically falls back to the terminal backend.
+
+Quick test:
+
+```sh
+python -c "import tkinter as tk; print('tk', tk.TkVersion)"
+```
+
+macOS
+
+- Recommended: Install Python from python.org (bundles a compatible Tcl/Tk).
+- Homebrew (brew):
+
+```sh
+brew install python tcl-tk
+python3 -c "import tkinter as tk; print('tk', tk.TkVersion)"
+```
+
+- If multiple Pythons are installed, ensure uv/venv uses the one with tkinter available.
+
+Linux
+
+- Debian/Ubuntu:
+
+```sh
+sudo apt install python3-tk tk
+```
+
+- Fedora/RHEL:
+
+```sh
+sudo dnf install python3-tkinter tk
+```
+
+- Arch:
+
+```sh
+sudo pacman -S tk
+```
+
+- Some distros package tkinter separately; install both Python and the tkinter/Tk packages.
+
+Windows
+
+- The official Python installer from python.org includes tkinter by default.
+- If you see "ModuleNotFoundError: _tkinter", re-run the installer and ensure “tcl/tk and IDLE” is selected.
+- Using MSYS2: install tk and Python via pacman to get tkinter support.
+
+Notes
+
+- Tkinter is not installed via pip; it’s part of the Python build and OS packages.
+
 ## Configuration
 
 Default locations checked (first wins):
