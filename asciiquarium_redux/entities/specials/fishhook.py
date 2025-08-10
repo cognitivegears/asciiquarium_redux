@@ -4,7 +4,7 @@ import random
 from asciimatics.screen import Screen
 
 from ...util import parse_sprite, draw_sprite, aabb_overlap
-from ..core import Fish
+from ..core import Fish, Splat
 from ..base import Actor
 
 
@@ -31,6 +31,7 @@ class FishHook(Actor):
     def update(self, dt: float, screen: Screen, app) -> None:
         if self.state == "lowering":
             limit_reached = False
+            # Move down towards target or depth limit
             if self._target_top_y is not None:
                 if self.y < self._target_top_y:
                     self.y += self.speed * dt
@@ -41,12 +42,17 @@ class FishHook(Actor):
                     self.y += self.speed * dt
                 else:
                     limit_reached = True
+
+            # Check for collision with regular fish using the hook tip (hx, hy)
+            if not self.caught:
                 hx = int(self.x + 1)
                 hy = int(self.y + 2)
                 for f in app.fish:
                     if f.hooked:
                         continue
                     if aabb_overlap(hx, hy, 1, 1, int(f.x), int(f.y), f.width, f.height):
+                        # Play splat animation at impact point and attach fish to hook
+                        app.splats.append(Splat(x=hx, y=hy))
                         self.caught = f
                         f.attach_to_hook(hx, hy)
                         self.state = "retracting"
@@ -60,8 +66,12 @@ class FishHook(Actor):
             if self.caught:
                 self.caught.follow_hook(hx, hy)
             if self.y <= 0:
+                # Remove the caught fish when hook returns to top
                 if self.caught and self.caught in app.fish:
-                    self.x = screen.width - 1
+                    try:
+                        app.fish.remove(self.caught)
+                    except ValueError:
+                        pass
                 self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
