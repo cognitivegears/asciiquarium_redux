@@ -232,7 +232,9 @@ class AsciiQuarium:
         for s in self.seaweed:
             tick = int(self._seaweed_tick / 0.25)
             s.draw(screen, tick, mono)
-        for f in self.fish:
+        # Draw fish back-to-front by z to mimic Perl's fish_start..fish_end layering
+        fish_to_draw = sorted(self.fish, key=lambda f: getattr(f, 'z', 0))
+        for f in fish_to_draw:
             if mono:
                 draw_sprite(screen, f.frames, int(f.x), int(f.y), Screen.COLOUR_WHITE)
             else:

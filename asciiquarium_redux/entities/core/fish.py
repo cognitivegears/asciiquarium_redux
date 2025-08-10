@@ -22,6 +22,8 @@ class Fish:
     y: float
     vx: float
     colour: int
+    # Z-depth for layering between fish (higher draws on top)
+    z: int = field(default_factory=lambda: random.randint(3, 20))
     colour_mask: List[str] | None = None
     next_bubble: float = field(default_factory=lambda: random.uniform(1.5, 4.0))
     # Hook interaction state
