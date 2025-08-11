@@ -1,0 +1,36 @@
+name: Deploy web to gh-pages
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'asciiquarium_redux/web/**'
+      - '.github/workflows/deploy-web.yml'
+      - 'pyproject.toml'
+      - 'README.md'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Build static web directory
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          rsync -a --delete asciiquarium_redux/web/ out/
+          # Improve GitHub Pages behavior
+          touch out/.nojekyll
+          cp -f out/index.html out/404.html || true
+      - name: Publish to gh-pages branch
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_branch: gh-pages
+          publish_dir: out
+          force_orphan: true

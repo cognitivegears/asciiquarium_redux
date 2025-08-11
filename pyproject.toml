@@ -49,4 +49,5 @@ exclude = [
     "devtools",
     "docs",
     "**/__pycache__",
+    "asciiquarium_redux/web/wheels/**",
 ]

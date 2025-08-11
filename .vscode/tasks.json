@@ -1,0 +1,16 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Deploy web to GitHub Pages",
+      "type": "shell",
+      "command": "bash",
+      "args": [
+        "-lc",
+        "set -euo pipefail; tmp=$(mktemp -d); rsync -a --delete asciiquarium_redux/web/ \"$tmp/\"; touch \"$tmp/.nojekyll\"; cp -f \"$tmp/index.html\" \"$tmp/404.html\" || true; origin=$(git remote get-url origin); git -C \"$tmp\" init; git -C \"$tmp\" checkout -b gh-pages; git -C \"$tmp\" add .; git -C \"$tmp\" -c user.name='gh-pages' -c user.email='gh-pages@local' commit -m 'Deploy web to GitHub Pages'; git -C \"$tmp\" remote add origin \"$origin\"; git -C \"$tmp\" push --force origin gh-pages"
+      ],
+      "problemMatcher": [],
+      "detail": "Publish asciiquarium_redux/web/ to the gh-pages branch on origin."
+    }
+  ]
+}

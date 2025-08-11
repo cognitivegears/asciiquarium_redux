@@ -75,6 +75,64 @@ Windowed Tk backend:
 uv run python main.py --backend tk
 ```
 
+## Web mode (run in your browser)
+
+You can run Asciiquarium Redux fully in the browser using Pyodide. The app starts a tiny local web server that serves a static page and installs the package into the browser runtime.
+
+Local run (opens your default browser):
+
+```sh
+# From a clone
+uv run python main.py --backend web --open
+
+# Or via the installed CLI
+asciiquarium-redux --backend web --open
+
+# Choose a port (default 8000) and open manually if you prefer
+asciiquarium-redux --backend web --port 9000
+# Then visit http://127.0.0.1:9000/
+```
+
+Notes
+
+- The web page provides simple controls (FPS, speed, density, color, chest, turn, seed). Changes apply live.
+- Keyboard/mouse controls mirror the terminal/Tk versions: q, p, r, h, space, t; click to drop/retract the hook.
+- If you update Python code, the server copies the latest wheel into `web/wheels`. Hard refresh the page to pick up changes.
+- The browser installs the local wheel first; if not present, it falls back to PyPI.
+
+### Deploy to GitHub Pages
+
+You can publish the web UI as a static site. The browser will install the package from PyPI at load time.
+
+Option A — one-click from VS Code
+
+1) Use the provided task: “Deploy web to GitHub Pages”. It creates (or overwrites) a `gh-pages` branch with the contents of `asciiquarium_redux/web/` and pushes it to `origin`.
+2) In your GitHub repo Settings → Pages, choose “Branch: gh-pages / root”.
+3) Visit <https://USERNAME.github.io/REPO/>
+
+Option B — manual commands (equivalent)
+
+```sh
+# From the repo root
+set -euo pipefail
+tmp=$(mktemp -d)
+rsync -a --delete asciiquarium_redux/web/ "$tmp/"
+cp -f "$tmp/index.html" "$tmp/404.html" || true
+origin=$(git remote get-url origin)
+git -C "$tmp" init
+git -C "$tmp" checkout -b gh-pages
+git -C "$tmp" add .
+git -C "$tmp" -c user.name='gh-pages' -c user.email='gh-pages@local' commit -m 'Deploy web to GitHub Pages'
+git -C "$tmp" remote add origin "$origin"
+git -C "$tmp" push --force origin gh-pages
+```
+
+Tips
+
+- Paths in `index.html` are relative, so project pages (`/your-repo/`) work without changes.
+- If the page can’t install the package in the browser, ensure the latest version on PyPI includes the web backend.
+- For custom forks, publishing your own release to PyPI ensures the web UI can install cleanly from Pages.
+
 Controls:
 
 - q: quit
