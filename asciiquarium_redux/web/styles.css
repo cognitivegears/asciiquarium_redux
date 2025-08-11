@@ -20,7 +20,7 @@ body {
 .settings-btn { margin-right: 8px; padding: 6px 10px; border: 1px solid #005e75; border-radius: 6px; background: #003746; color: #66f3ff; cursor: pointer; }
 .settings-btn:hover { background: #004353; }
 .controls::backdrop { background: rgba(0,0,0,0.55); }
-.controls { padding: 16px; border: 1px solid #003746; border-radius: 10px; background: rgba(0, 30, 40, 0.95); max-width: 720px; width: calc(100% - 24px); }
+.controls { padding: 16px; border: 1px solid #003746; border-radius: 10px; background: rgba(0, 30, 40, 0.95); max-width: 720px; width: calc(100% - 24px); color: #e6f7ff; }
 .controls h2 { margin: 0; font-size: 18px; }
 .dialog-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
 .close { border: none; background: transparent; color: #9fdbe2; font-size: 20px; cursor: pointer; }

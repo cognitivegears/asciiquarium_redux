@@ -221,7 +221,12 @@ v
 
   // Settings dialog open/close
   settingsBtn?.addEventListener("click", () => {
-    try { settingsDialog.showModal(); } catch { settingsDialog.show(); }
+    if (!settingsDialog.open) {
+      try { settingsDialog.showModal(); } catch { settingsDialog.show(); }
+    } else {
+      settingsDialog.close();
+      settingsBtn.focus();
+    }
   });
   closeSettings?.addEventListener("click", () => settingsDialog.close());
   requestAnimationFrame(loop);
