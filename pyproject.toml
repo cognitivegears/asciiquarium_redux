@@ -1,3 +1,7 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
 [project]
 name = "asciiquarium-redux"
 version = "0.1.0"
@@ -8,8 +12,42 @@ dependencies = [
     "asciimatics>=1.15.0",
 ]
 
+# Optional/Recommended project metadata
+authors = [{ name = "cognitivegears" }]
+license = { text = "GPL-2.0-or-later" }
+keywords = ["asciiquarium", "terminal", "asciimatics", "aquarium", "ascii-art"]
+classifiers = [
+    "License :: OSI Approved :: GNU General Public License v2 or later (GPLv2+)",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3 :: Only",
+    "Programming Language :: Python :: 3.13",
+    "Environment :: Console",
+    "Topic :: Artistic Software",
+    "Topic :: Games/Entertainment :: Simulation",
+]
+
+[project.urls]
+Homepage = "https://github.com/cognitivegears/asciiquarium_redux"
+Source = "https://github.com/cognitivegears/asciiquarium_redux"
+Issues = "https://github.com/cognitivegears/asciiquarium_redux/issues"
+
 [project.scripts]
 asciiquarium = "asciiquarium_redux.__main__:main"
+asciiquarium-redux = "asciiquarium_redux.__main__:main"
 
 [tool.uv]
 package = true
+
+[tool.hatch.build]
+include = [
+    "asciiquarium_redux",
+    "README.md",
+    "LICENSE.md",
+    "sample-config.toml",
+]
+exclude = [
+    "devtools",
+    "docs",
+    "**/__pycache__",
+]
+
