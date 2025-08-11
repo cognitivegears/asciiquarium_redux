@@ -27,6 +27,7 @@ from .entities.specials import (
     spawn_swan,
     spawn_monster,
     spawn_big_fish,
+    spawn_treasure_chest,
 )
 
 
@@ -41,6 +42,7 @@ class AsciiQuarium:
         self.bubbles = []  # type: List[Bubble]
         self.splats = []  # type: List[Splat]
         self.specials = []  # type: List[Actor]
+        self.decor = []  # type: List[Actor]  # persistent background actors (e.g., treasure chest)
         self._paused = False
         self._special_timer = random.uniform(
             self.settings.spawn_start_delay_min, self.settings.spawn_start_delay_max
@@ -60,6 +62,7 @@ class AsciiQuarium:
         self.bubbles.clear()
         self.splats.clear()
         self.specials.clear()
+        self.decor.clear()
         self._special_timer = random.uniform(self.settings.spawn_start_delay_min, self.settings.spawn_start_delay_max)
         self._seaweed_tick = 0.0
 
@@ -94,6 +97,14 @@ class AsciiQuarium:
             sw.growth_rate = random.uniform(sw.growth_rate_min_cfg, sw.growth_rate_max_cfg)
             sw.shrink_rate = random.uniform(sw.shrink_rate_min_cfg, sw.shrink_rate_max_cfg)
             self.seaweed.append(sw)
+
+        # Persistent decor: treasure chest
+        if getattr(self.settings, "chest_enabled", True):
+            try:
+                self.decor.extend(spawn_treasure_chest(screen, self))
+            except Exception:
+                # Fail-safe: ignore decor errors so app still runs
+                pass
 
         water_top = self.settings.waterline_top
         area = max(1, (screen.height - (water_top + 4)) * screen.width)
@@ -204,6 +215,13 @@ class AsciiQuarium:
             self._seaweed_tick += dt
             for s in self.seaweed:
                 s.update(dt, screen)
+            # Update decor (e.g., treasure chest) so it can emit bubbles
+            for d in self.decor:
+                try:
+                    d.update(dt, screen, self)
+                except TypeError:
+                    # Support actors with older update signatures
+                    d.update(dt, screen)  # type: ignore[misc]
             for f in self.fish:
                 f.update(dt, screen, self.bubbles)
             survivors: List[Bubble] = []
@@ -233,6 +251,16 @@ class AsciiQuarium:
         # Draw pass
         self.draw_waterline(screen)
         mono = self.settings.color == "mono"
+        # Draw seaweed first so it does not appear in front of decor like the treasure chest
+        for s in self.seaweed:
+            tick = int(self._seaweed_tick / 0.25)
+            s.draw(screen, tick, mono)
+        # Draw decor behind fish so fish appear in front, but in front of seaweed
+        for d in self.decor:
+            try:
+                d.draw(screen, mono)  # type: ignore[call-arg]
+            except TypeError:
+                d.draw(screen)
         # Draw fish back-to-front by z to mimic Perl's fish_start..fish_end layering
         fish_to_draw = sorted(self.fish, key=lambda f: getattr(f, 'z', 0))
         for f in fish_to_draw:
@@ -240,10 +268,7 @@ class AsciiQuarium:
                 draw_sprite(screen, f.frames, int(f.x), int(f.y), Screen.COLOUR_WHITE)
             else:
                 f.draw(screen)
-        # Seaweed and castle are rendered above fish in Perl (higher depth)
-        for s in self.seaweed:
-            tick = int(self._seaweed_tick / 0.25)
-            s.draw(screen, tick, mono)
+        # Castle is rendered above fish in Perl (higher depth)
         self.draw_castle(screen)
         for b in self.bubbles:
             if mono:

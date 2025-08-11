@@ -13,6 +13,7 @@ from .specials import (  # type: ignore[F401]
     Monster,
     Ship,
     BigFish,
+    TreasureChest,
     spawn_shark,
     spawn_fishhook,
     spawn_whale,
@@ -22,6 +23,7 @@ from .specials import (  # type: ignore[F401]
     spawn_monster,
     spawn_ship,
     spawn_big_fish,
+    spawn_treasure_chest,
 )
 
 __all__ = [
@@ -34,6 +36,7 @@ __all__ = [
     "Monster",
     "Ship",
     "BigFish",
+    "TreasureChest",
     "spawn_shark",
     "spawn_fishhook",
     "spawn_whale",
@@ -43,4 +46,5 @@ __all__ = [
     "spawn_monster",
     "spawn_ship",
     "spawn_big_fish",
+    "spawn_treasure_chest",
 ]

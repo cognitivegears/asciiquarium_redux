@@ -35,6 +35,9 @@ class Settings:
     seaweed_scale: float = 1.0  # additional multiplier for seaweed count
     # Waterline
     waterline_top: int = 5
+    # Decor: treasure chest
+    chest_enabled: bool = True
+    chest_burst_seconds: float = 60.0
     # Fish controls
     fish_direction_bias: float = 0.5  # 0..1; probability of rightward motion
     fish_speed_min: float = 0.6
@@ -186,6 +189,17 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
         if "waterline_top" in scene:
             try:
                 s.waterline_top = int(scene.get("waterline_top", s.waterline_top))
+            except Exception:
+                pass
+        # treasure chest (decor) settings
+        if "chest_enabled" in scene:
+            try:
+                s.chest_enabled = bool(scene.get("chest_enabled"))
+            except Exception:
+                pass
+        if "chest_burst_seconds" in scene:
+            try:
+                s.chest_burst_seconds = float(scene.get("chest_burst_seconds"))
             except Exception:
                 pass
         # fish section

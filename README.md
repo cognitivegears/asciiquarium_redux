@@ -17,6 +17,7 @@ Status: Playable, configurable, and window-ready (Tk). Bring your own snacks (fo
 ## Features
 
 - Faithful animations: fish (with color masks), seaweed lifecycle/sway, waterline, castle, bubbles, and many specials (shark, whale, ship, ducks, swan, dolphins, monster, big fish)
+- Decor: treasure chest that sits on the seabed, occasionally bubbles, and periodically opens to release a stream of bubbles (drawn behind fish)
 - Fishhook gameplay: one hook at a time, impact pause, configurable dwell time, collisions while lowering/dwelling/retracting
 - Smooth rendering: double-buffered terminal drawing to reduce flicker
 - Backends: terminal (asciimatics) and windowed Tk canvas (resizable, color)
@@ -153,6 +154,8 @@ density = 1.2     # 0.1..5.0
 seed = 42         # or "random" (string) for non-deterministic
 speed = 0.75      # 0.1..3.0 (lower = slower)
 waterline_top = 5 # top row of waterline
+chest_enabled = true         # show treasure chest decor
+chest_burst_seconds = 60.0   # seconds between lid bursts
 
 [spawn]
 # Initial delay range before the first special appears (seconds):
@@ -234,6 +237,16 @@ uvx asciiquarium-redux
 Place a user config at one of the default paths above (e.g., `~/.config/asciiquarium-redux/config.toml`) to change spawn weights, timing, or scaling without modifying code.
 
 You can also point to a specific config with `--config` (absolute or relative path). See `sample-config.toml` in the repo for a ready-to-edit template.
+
+## Treasure chest (decor)
+
+- Behavior
+  - Sits near the seabed (like the castle) and is drawn behind fish, so fish swim in front of it.
+  - Emits occasional small bubbles while closed.
+  - On a periodic timer, the lid opens briefly and a stream of bubbles pops out, then it closes again.
+- Configuration
+  - `scene.chest_enabled` (bool, default `true`): toggle the treasure chest on/off.
+  - `scene.chest_burst_seconds` (float, default `60.0`): seconds between lid openings.
 
 ## Differences from the original
 

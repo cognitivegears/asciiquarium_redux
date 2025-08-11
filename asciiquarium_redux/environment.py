@@ -58,3 +58,47 @@ def waterline_row(idx: int, width: int) -> str:
     seg_len = len(seg)
     repeat = width // seg_len + 2
     return (seg * repeat)[: width]
+
+
+# Treasure chest sprites (closed and open) and a simple silhouette mask.
+# Drawn near the seabed; opaque like the castle.
+CHEST_CLOSED = parse_sprite(
+    r"""
+
+
+      _________
+    / /______  \\
+   /_/______/\  \\
+   | |______|  | |
+   |___________|_|
+    \___________/
+"""
+)
+
+CHEST_OPEN = parse_sprite(
+    r"""
+      _________
+    /--------- \\
+    )            )
+    ) _________  )
+   | |______|  | |
+   |___________|_|
+    \___________/
+
+"""
+)
+
+CHEST_MASK = parse_sprite(
+    r"""
+                    yy
+                 yyyyyy
+                yyyyyyyy
+               yyyyyyyyyy
+               yyyyyyyyyy
+               yyyyyyyyyy
+               yyyyyyyyyy
+                yyyyyyyyy
+    yyyyyyyyyyyyy
+    yy
+"""
+)

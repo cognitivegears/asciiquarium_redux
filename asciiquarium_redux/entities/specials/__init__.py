@@ -7,6 +7,7 @@ from .swan import Swan, spawn_swan
 from .monster import Monster, spawn_monster
 from .ship import Ship, spawn_ship
 from .big_fish import BigFish, spawn_big_fish
+from .treasure_chest import TreasureChest, spawn_treasure_chest
 
 __all__ = [
     "Shark",
@@ -28,4 +29,6 @@ __all__ = [
     "spawn_monster",
     "spawn_ship",
     "spawn_big_fish",
+    "TreasureChest",
+    "spawn_treasure_chest",
 ]

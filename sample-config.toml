@@ -15,6 +15,8 @@ density = 1.0     # 0.1..5.0
 seed = "random"  # or an int for deterministic playback
 speed = 0.75      # 0.1..3.0
 waterline_top = 5 # top row of waterline (0 = very top)
+chest_enabled = true         # show treasure chest decor
+chest_burst_seconds = 60.0   # seconds between lid bursts
 
 # Special spawn timing and scaling
 # - start_delay_*: initial delay before first special (seconds)
