@@ -23,7 +23,7 @@ body {
 .controls button { margin-top: 6px; padding: 6px 10px; border: 1px solid #005e75; border-radius: 6px; background: #003746; color: #66f3ff; cursor: pointer; }
 .controls button:hover { background: #004353; }
 .stage { grid-area: stage; display: grid; place-items: center; padding: 16px; }
-#aquarium { width: 100%; height: 100%; max-width: 1400px; max-height: 900px; background: #000; box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 0 1px #003746 inset; border-radius: 8px; }
+#aquarium { width: 100%; height: 100%; max-width: 1400px; max-height: 900px; background: #000; box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 0 1px #003746 inset; border-radius: 8px; font-variant-ligatures: none; font-kerning: none; text-rendering: optimizeLegibility; image-rendering: pixelated; }
 .hint { grid-area: hint; padding: 10px 16px; font-size: 12px; color: #9fdbe2; border-top: 1px solid #003746; }
 
 @media (max-width: 900px) {

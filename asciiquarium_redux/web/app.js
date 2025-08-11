@@ -3,23 +3,41 @@
 
 const canvas = document.getElementById("aquarium");
 const ctx2d = canvas.getContext("2d", { alpha: false, desynchronized: true });
-const state = { cols: 120, rows: 40, cellW: 12, cellH: 18, fps: 24, running: false };
+const state = { cols: 120, rows: 40, cellW: 12, cellH: 18, baseline: 4, fps: 24, running: false };
 
-function measureCell(font = "16px Menlo, monospace") {
+function measureCell(font = "16px Menlo, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace") {
+  // Ensure metrics are in CSS pixels (identity transform)
+  ctx2d.setTransform(1, 0, 0, 1, 0, 0);
   ctx2d.font = font;
-  const w = ctx2d.measureText("M").width;
-  const h = 18; // can refine with DOM text measure if needed
-  return { w: Math.ceil(w), h };
+  const m = ctx2d.measureText("M");
+  const w = Math.round(m.width);
+  const ascent = Math.ceil(m.actualBoundingBoxAscent || 13);
+  const descent = Math.ceil(m.actualBoundingBoxDescent || 3);
+  const h = ascent + descent + 2; // small padding for descenders
+  state.baseline = Math.ceil(descent + 1);
+  return { w: Math.ceil(w), h: Math.ceil(h) };
+}
+
+function applyHiDPIScale() {
+  const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+  ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
 function resizeCanvasToGrid() {
   const { w, h } = measureCell();
-  state.cellW = w; state.cellH = h;
+  state.cellW = Math.round(w); state.cellH = Math.round(h);
   const rect = canvas.getBoundingClientRect();
-  const cols = Math.max(40, Math.floor(rect.width / w));
-  const rows = Math.max(20, Math.floor(rect.height / h));
+  const cols = Math.max(40, Math.floor(rect.width / state.cellW));
+  const rows = Math.max(20, Math.floor(rect.height / state.cellH));
   state.cols = cols; state.rows = rows;
-  canvas.width = cols * w; canvas.height = rows * h;
+  const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
+  // Set CSS size
+  canvas.style.width = `${cols * state.cellW}px`;
+  canvas.style.height = `${rows * state.cellH}px`;
+  // Set backing store size in device pixels
+  canvas.width = cols * state.cellW * dpr;
+  canvas.height = rows * state.cellH * dpr;
+  applyHiDPIScale();
   if (window.pyodide) window.pyodide.runPython(`import importlib; web_backend = importlib.import_module('asciiquarium_redux.web_backend'); web_backend.web_app.resize(${cols}, ${rows})`);
 }
 
@@ -29,14 +47,25 @@ function jsFlushHook(batches) {
   ctx2d.fillRect(0, 0, canvas.width, canvas.height);
   // Draw runs
   ctx2d.textBaseline = "alphabetic";
-  ctx2d.font = "16px Menlo, monospace";
+  ctx2d.textAlign = "left";
+  ctx2d.font = "16px Menlo, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
   // Convert Pyodide PyProxy (Python list[dict]) to plain JS if needed
   const items = batches && typeof batches.toJs === "function"
     ? batches.toJs({ dict_converter: Object.fromEntries, create_proxies: false })
     : batches;
   for (const b of items) {
     ctx2d.fillStyle = b.colour;
-    ctx2d.fillText(b.text, b.x * state.cellW, (b.y + 1) * state.cellH - 4);
+    const baseX = Math.round(b.x * state.cellW);
+    const baseY = Math.round((b.y + 1) * state.cellH - state.baseline);
+    const text = b.text || "";
+    // Draw per character to enforce exact monospaced column width regardless of font metrics
+    for (let i = 0; i < text.length; i++) {
+      const ch = text[i];
+      if (ch !== " ") {
+        const px = baseX + i * state.cellW;
+        ctx2d.fillText(ch, px, baseY);
+      }
+    }
   }
 }
 
