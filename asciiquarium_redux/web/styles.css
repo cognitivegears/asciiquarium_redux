@@ -17,10 +17,20 @@ body {
 .hero .tag { padding: 2px 8px; border-radius: 10px; background: #003746; color: #66f3ff; font-size: 12px; }
 .controls { grid-area: controls; padding: 16px; border-right: 1px solid #003746; backdrop-filter: blur(6px); }
 .controls h2 { margin-top: 0; font-size: 16px; }
-.controls label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; margin: 10px 0; font-size: 14px; }
-.controls input[type="text"] { width: 120px; padding: 6px 8px; border: 1px solid #004a5e; border-radius: 6px; background: #001c24; color: #e6f7ff; }
-.controls input[type="range"], .controls select { width: 140px; }
-.controls button { margin-top: 6px; padding: 6px 10px; border: 1px solid #005e75; border-radius: 6px; background: #003746; color: #66f3ff; cursor: pointer; }
+.control-form { display: grid; gap: 14px; }
+.group { border: 1px solid #003746; border-radius: 8px; padding: 10px 12px; background: rgba(0, 30, 40, 0.35); box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset; }
+.group > h3, .group > summary { margin: 0 0 8px 0; font-size: 13px; color: #9fdbe2; letter-spacing: 0.3px; }
+.group[open] > summary { color: #66f3ff; }
+.group summary { cursor: pointer; list-style: none; }
+.group summary::-webkit-details-marker { display: none; }
+.field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 10px; margin: 8px 0; font-size: 14px; }
+.field input[type="text"], .field select { width: 150px; padding: 6px 8px; border: 1px solid #004a5e; border-radius: 6px; background: #001c24; color: #e6f7ff; }
+.field input[type="range"] { width: 160px; }
+.field input[type="checkbox"] { width: 18px; height: 18px; accent-color: #20b8d4; }
+.subgrid { display: grid; grid-template-columns: 1fr; gap: 4px; }
+.subgrid .subheader { margin: 6px 0 2px; font-size: 12px; color: #9fdbe2; }
+.actions { display: flex; gap: 8px; }
+.controls button { padding: 6px 10px; border: 1px solid #005e75; border-radius: 6px; background: #003746; color: #66f3ff; cursor: pointer; }
 .controls button:hover { background: #004353; }
 .stage { grid-area: stage; display: grid; place-items: center; padding: 16px; }
 #aquarium { width: 100%; height: 100%; max-width: 1400px; max-height: 900px; background: #000; box-shadow: 0 8px 30px rgba(0,0,0,0.4), 0 0 0 1px #003746 inset; border-radius: 8px; font-variant-ligatures: none; font-kerning: none; text-rendering: optimizeLegibility; image-rendering: pixelated; }

@@ -181,18 +181,80 @@ v
 }
 
 function collectOptionsFromUI() {
+  const byId = (id) => document.getElementById(id);
+  const num = (id) => Number(byId(id).value);
+  const val = (id) => byId(id).value;
+  const chk = (id) => byId(id).checked;
   return {
-    fps: Number(document.getElementById("fps").value),
-    speed: Number(document.getElementById("speed").value),
-    density: Number(document.getElementById("density").value),
-    color: document.getElementById("color").value,
-    chest: document.getElementById("chest").checked,
-    turn: document.getElementById("turn").checked,
-    seed: document.getElementById("seed").value || null
+    // Basics
+    fps: num("fps"),
+    speed: num("speed"),
+    density: num("density"),
+    color: val("color"),
+    seed: val("seed") || null,
+    chest: chk("chest"),
+    turn: chk("turn"),
+    // Fish
+    fish_direction_bias: num("fish_direction_bias"),
+    fish_speed_min: num("fish_speed_min"),
+    fish_speed_max: num("fish_speed_max"),
+    fish_bubble_min: num("fish_bubble_min"),
+    fish_bubble_max: num("fish_bubble_max"),
+    fish_turn_chance_per_second: num("fish_turn_chance_per_second"),
+    fish_turn_min_interval: num("fish_turn_min_interval"),
+    fish_turn_shrink_seconds: num("fish_turn_shrink_seconds"),
+    fish_turn_expand_seconds: num("fish_turn_expand_seconds"),
+    fish_scale: num("fish_scale"),
+    // Seaweed
+    seaweed_scale: num("seaweed_scale"),
+    seaweed_sway_min: num("seaweed_sway_min"),
+    seaweed_sway_max: num("seaweed_sway_max"),
+    seaweed_lifetime_min: num("seaweed_lifetime_min"),
+    seaweed_lifetime_max: num("seaweed_lifetime_max"),
+    seaweed_regrow_delay_min: num("seaweed_regrow_delay_min"),
+    seaweed_regrow_delay_max: num("seaweed_regrow_delay_max"),
+    seaweed_growth_rate_min: num("seaweed_growth_rate_min"),
+    seaweed_growth_rate_max: num("seaweed_growth_rate_max"),
+    seaweed_shrink_rate_min: num("seaweed_shrink_rate_min"),
+    seaweed_shrink_rate_max: num("seaweed_shrink_rate_max"),
+    // Scene & spawn
+    waterline_top: num("waterline_top"),
+    chest_burst_seconds: num("chest_burst_seconds"),
+    spawn_start_delay_min: num("spawn_start_delay_min"),
+    spawn_start_delay_max: num("spawn_start_delay_max"),
+    spawn_interval_min: num("spawn_interval_min"),
+    spawn_interval_max: num("spawn_interval_max"),
+    spawn_max_concurrent: num("spawn_max_concurrent"),
+    spawn_cooldown_global: num("spawn_cooldown_global"),
+    w_shark: num("w_shark"),
+    w_fishhook: num("w_fishhook"),
+    w_whale: num("w_whale"),
+    w_ship: num("w_ship"),
+    w_ducks: num("w_ducks"),
+    w_dolphins: num("w_dolphins"),
+    w_swan: num("w_swan"),
+    w_monster: num("w_monster"),
+    w_big_fish: num("w_big_fish"),
+    // Fishhook
+    fishhook_dwell_seconds: num("fishhook_dwell_seconds")
   };
 }
 
-  ["fps","speed","density","color","chest","turn","seed"].forEach(id => {
+  [
+    // basics
+    "fps","speed","density","color","chest","turn","seed",
+    // fish
+    "fish_direction_bias","fish_speed_min","fish_speed_max","fish_bubble_min","fish_bubble_max",
+    "fish_turn_chance_per_second","fish_turn_min_interval","fish_turn_shrink_seconds","fish_turn_expand_seconds","fish_scale",
+    // seaweed
+    "seaweed_scale","seaweed_sway_min","seaweed_sway_max","seaweed_lifetime_min","seaweed_lifetime_max",
+    "seaweed_regrow_delay_min","seaweed_regrow_delay_max","seaweed_growth_rate_min","seaweed_growth_rate_max","seaweed_shrink_rate_min","seaweed_shrink_rate_max",
+    // scene & spawn
+    "waterline_top","chest_burst_seconds","spawn_start_delay_min","spawn_start_delay_max","spawn_interval_min","spawn_interval_max",
+    "spawn_max_concurrent","spawn_cooldown_global","w_shark","w_fishhook","w_whale","w_ship","w_ducks","w_dolphins","w_swan","w_monster","w_big_fish",
+    // fishhook
+    "fishhook_dwell_seconds"
+  ].forEach(id => {
   const el = document.getElementById(id);
   el.addEventListener("input", () => {
     const opts = collectOptionsFromUI();
@@ -207,5 +269,16 @@ function collectOptionsFromUI() {
 });
 
 document.getElementById("reset").addEventListener("click", () => location.reload());
+
+// Accordion: only one details group open at a time
+document.querySelectorAll('.controls details.group').forEach((d) => {
+  d.addEventListener('toggle', () => {
+    if (d.open) {
+      document.querySelectorAll('.controls details.group').forEach((other) => {
+        if (other !== d) other.open = false;
+      });
+    }
+  });
+});
 
 boot();

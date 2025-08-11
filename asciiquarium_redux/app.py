@@ -118,65 +118,7 @@ class AsciiQuarium:
             fcount = max(2, int(area // 350 * self.settings.density * self.settings.fish_scale))
         colours = self._palette(screen)
         for _ in range(fcount):
-            # Direction with configurable bias towards rightward
-            direction = 1 if random.random() < float(self.settings.fish_direction_bias) else -1
-            frames = random_fish_frames(direction)
-            w, h = sprite_size(frames)
-            # initial y will be refined by Fish.respawn; use temp fallback
-            y = random.randint(max(water_top + 3, 1), max(water_top + 3, screen.height - h - 2))
-            x = (-w if direction > 0 else screen.width)
-            vx = random.uniform(self.settings.fish_speed_min, self.settings.fish_speed_max) * direction
-            colour = random.choice(colours)
-            # Build initial colour mask consistent with frames
-            from .entities.core import (
-                FISH_RIGHT, FISH_LEFT, FISH_RIGHT_MASKS, FISH_LEFT_MASKS,
-            )
-            if direction > 0:
-                pairs = list(zip(FISH_RIGHT, FISH_RIGHT_MASKS))
-            else:
-                pairs = list(zip(FISH_LEFT, FISH_LEFT_MASKS))
-            # Find matching mask for chosen frames
-            mask = None
-            for fset, mset in pairs:
-                if fset is frames:
-                    mask = mset
-                    break
-            # If identity didn't match (due to equality semantics), fallback by size index
-            if mask is None:
-                try:
-                    idx = (FISH_RIGHT if direction > 0 else FISH_LEFT).index(frames)
-                    mask = (FISH_RIGHT_MASKS if direction > 0 else FISH_LEFT_MASKS)[idx]
-                except ValueError:
-                    mask = None
-            colour_mask = None
-            if mask is not None and self.settings.color != "mono":
-                from .util import randomize_colour_mask
-                colour_mask = randomize_colour_mask(mask)
-            f = Fish(
-                frames=frames,
-                x=x,
-                y=y,
-                vx=vx,
-                colour=colour,
-                colour_mask=colour_mask,
-                speed_min=self.settings.fish_speed_min,
-                speed_max=self.settings.fish_speed_max,
-                bubble_min=self.settings.fish_bubble_min,
-                bubble_max=self.settings.fish_bubble_max,
-                band_low_frac=(self.settings.fish_y_band[0] if self.settings.fish_y_band else 0.0),
-                band_high_frac=(self.settings.fish_y_band[1] if self.settings.fish_y_band else 1.0),
-                waterline_top=self.settings.waterline_top,
-                water_rows=len(WATER_SEGMENTS),
-            )
-            # Initialize bubble timer from configured range
-            f.next_bubble = random.uniform(self.settings.fish_bubble_min, self.settings.fish_bubble_max)
-            # Pass turning behavior config
-            f.turn_enabled = bool(getattr(self.settings, "fish_turn_enabled", True))
-            f.turn_chance_per_second = float(getattr(self.settings, "fish_turn_chance_per_second", 0.01))
-            f.turn_min_interval = float(getattr(self.settings, "fish_turn_min_interval", 6.0))
-            f.turn_shrink_seconds = float(getattr(self.settings, "fish_turn_shrink_seconds", 0.35))
-            f.turn_expand_seconds = float(getattr(self.settings, "fish_turn_expand_seconds", 0.35))
-            self.fish.append(f)
+            self.fish.append(self._make_one_fish(screen, colours))
 
     def draw_waterline(self, screen: Screen):
         for i, _ in enumerate(WATER_SEGMENTS):
@@ -373,6 +315,137 @@ class AsciiQuarium:
         for i, row in enumerate(lines, start=1):
             screen.print_at("|" + row.ljust(width - 2) + "|", x, y + i, colour=Screen.COLOUR_WHITE)
         screen.print_at("+" + "-" * (width - 2) + "+", x, y + height - 1, colour=Screen.COLOUR_WHITE)
+
+    # --- Live population management helpers ---
+    def _compute_target_counts(self, screen: Screen) -> tuple[int, int]:
+        """Return (fish_count, seaweed_count) desired for current settings and screen size."""
+        # Seaweed
+        if self.settings.seaweed_count_base is not None and self.settings.seaweed_count_per_80_cols is not None:
+            units = max(1.0, screen.width / 80.0)
+            base = self.settings.seaweed_count_base
+            per = self.settings.seaweed_count_per_80_cols
+            sw_count = max(1, int((base + per * units) * self.settings.density * self.settings.seaweed_scale))
+        else:
+            sw_count = max(1, int((screen.width // 15) * self.settings.density * self.settings.seaweed_scale))
+
+        # Fish
+        water_top = self.settings.waterline_top
+        area = max(1, (screen.height - (water_top + 4)) * screen.width)
+        if self.settings.fish_count_base is not None and self.settings.fish_count_per_80_cols is not None:
+            units = max(1.0, screen.width / 80.0)
+            base = int(self.settings.fish_count_base)
+            per = float(self.settings.fish_count_per_80_cols)
+            fcount = max(2, int((base + per * units) * self.settings.density * self.settings.fish_scale))
+        else:
+            fcount = max(2, int(area // 350 * self.settings.density * self.settings.fish_scale))
+        return fcount, sw_count
+
+    def _make_one_fish(self, screen: Screen, palette: List[int] | None = None) -> Fish:
+        # Direction with configurable bias towards rightward
+        direction = 1 if random.random() < float(self.settings.fish_direction_bias) else -1
+        frames = random_fish_frames(direction)
+        w, h = sprite_size(frames)
+        water_top = self.settings.waterline_top
+        # initial y will be refined by Fish.respawn; use temp fallback
+        y = random.randint(max(water_top + 3, 1), max(water_top + 3, screen.height - h - 2))
+        x = (-w if direction > 0 else screen.width)
+        vx = random.uniform(self.settings.fish_speed_min, self.settings.fish_speed_max) * direction
+        colours = palette or self._palette(screen)
+        colour = random.choice(colours)
+        # Build initial colour mask consistent with frames
+        from .entities.core import (
+            FISH_RIGHT, FISH_LEFT, FISH_RIGHT_MASKS, FISH_LEFT_MASKS,
+        )
+        if direction > 0:
+            pairs = list(zip(FISH_RIGHT, FISH_RIGHT_MASKS))
+        else:
+            pairs = list(zip(FISH_LEFT, FISH_LEFT_MASKS))
+        # Find matching mask for chosen frames
+        mask = None
+        for fset, mset in pairs:
+            if fset is frames:
+                mask = mset
+                break
+        # If identity didn't match (due to equality semantics), fallback by size index
+        if mask is None:
+            try:
+                idx = (FISH_RIGHT if direction > 0 else FISH_LEFT).index(frames)
+                mask = (FISH_RIGHT_MASKS if direction > 0 else FISH_LEFT_MASKS)[idx]
+            except ValueError:
+                mask = None
+        colour_mask = None
+        if mask is not None and self.settings.color != "mono":
+            from .util import randomize_colour_mask
+            colour_mask = randomize_colour_mask(mask)
+        f = Fish(
+            frames=frames,
+            x=x,
+            y=y,
+            vx=vx,
+            colour=colour,
+            colour_mask=colour_mask,
+            speed_min=self.settings.fish_speed_min,
+            speed_max=self.settings.fish_speed_max,
+            bubble_min=self.settings.fish_bubble_min,
+            bubble_max=self.settings.fish_bubble_max,
+            band_low_frac=(self.settings.fish_y_band[0] if self.settings.fish_y_band else 0.0),
+            band_high_frac=(self.settings.fish_y_band[1] if self.settings.fish_y_band else 1.0),
+            waterline_top=self.settings.waterline_top,
+            water_rows=len(WATER_SEGMENTS),
+        )
+        # Initialize bubble timer from configured range
+        f.next_bubble = random.uniform(self.settings.fish_bubble_min, self.settings.fish_bubble_max)
+        # Pass turning behavior config
+        f.turn_enabled = bool(getattr(self.settings, "fish_turn_enabled", True))
+        f.turn_chance_per_second = float(getattr(self.settings, "fish_turn_chance_per_second", 0.01))
+        f.turn_min_interval = float(getattr(self.settings, "fish_turn_min_interval", 6.0))
+        f.turn_shrink_seconds = float(getattr(self.settings, "fish_turn_shrink_seconds", 0.35))
+        f.turn_expand_seconds = float(getattr(self.settings, "fish_turn_expand_seconds", 0.35))
+        return f
+
+    def _make_one_seaweed(self, screen: Screen) -> Seaweed:
+        h = random.randint(3, 6)
+        x = random.randint(1, max(1, screen.width - 3))
+        base_y = screen.height - 2
+        sw = Seaweed(x=x, base_y=base_y, height=h, phase=random.randint(0, 1))
+        # Apply configured lifecycle ranges (and initialize current params within those ranges)
+        sw.sway_min = self.settings.seaweed_sway_min
+        sw.sway_max = self.settings.seaweed_sway_max
+        sw.lifetime_min_cfg = self.settings.seaweed_lifetime_min
+        sw.lifetime_max_cfg = self.settings.seaweed_lifetime_max
+        sw.regrow_delay_min_cfg = self.settings.seaweed_regrow_delay_min
+        sw.regrow_delay_max_cfg = self.settings.seaweed_regrow_delay_max
+        sw.growth_rate_min_cfg = self.settings.seaweed_growth_rate_min
+        sw.growth_rate_max_cfg = self.settings.seaweed_growth_rate_max
+        sw.shrink_rate_min_cfg = self.settings.seaweed_shrink_rate_min
+        sw.shrink_rate_max_cfg = self.settings.seaweed_shrink_rate_max
+        # initialize current dynamics based on configured ranges
+        sw.sway_speed = random.uniform(sw.sway_min, sw.sway_max)
+        sw.lifetime_max = random.uniform(sw.lifetime_min_cfg, sw.lifetime_max_cfg)
+        sw.regrow_delay_max = random.uniform(sw.regrow_delay_min_cfg, sw.regrow_delay_max_cfg)
+        sw.growth_rate = random.uniform(sw.growth_rate_min_cfg, sw.growth_rate_max_cfg)
+        sw.shrink_rate = random.uniform(sw.shrink_rate_min_cfg, sw.shrink_rate_max_cfg)
+        return sw
+
+    def adjust_populations(self, screen: Screen):
+        """Incrementally add/remove fish and seaweed to match target counts without a full rebuild."""
+        target_fish, target_sw = self._compute_target_counts(screen)
+        # Adjust seaweed first (background)
+        cur_sw = len(self.seaweed)
+        if target_sw > cur_sw:
+            for _ in range(target_sw - cur_sw):
+                self.seaweed.append(self._make_one_seaweed(screen))
+        elif target_sw < cur_sw:
+            # Remove from end for predictability
+            del self.seaweed[target_sw:]
+        # Adjust fish
+        cur_fish = len(self.fish)
+        if target_fish > cur_fish:
+            palette = self._palette(screen)
+            for _ in range(target_fish - cur_fish):
+                self.fish.append(self._make_one_fish(screen, palette))
+        elif target_fish < cur_fish:
+            del self.fish[target_fish:]
 
 
 def run(screen: Screen, settings: Settings):

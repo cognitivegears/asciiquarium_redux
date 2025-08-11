@@ -14,21 +14,85 @@
 
   <aside class="controls">
     <h2>Controls</h2>
-    <label>FPS <input id="fps" type="range" min="5" max="60" value="24" /></label>
-    <label>Speed <input id="speed" type="range" min="0.2" max="2.0" step="0.05" value="0.75" /></label>
-    <label>Density <input id="density" type="range" min="0.1" max="3.0" step="0.1" value="1.0" /></label>
-    <label>Color
-      <select id="color">
-        <option value="auto">auto</option>
-        <option value="mono">mono</option>
-        <option value="16">16</option>
-        <option value="256">256</option>
-      </select>
-    </label>
-    <label><input id="chest" type="checkbox" checked /> Treasure chest</label>
-    <label><input id="turn" type="checkbox" checked /> Fish turning</label>
-    <label>Seed <input id="seed" type="text" placeholder="random" /></label>
-    <button id="reset">Reset</button>
+    <form class="control-form" onsubmit="return false;">
+      <section class="group">
+        <h3>Basics</h3>
+        <div class="field"><label for="fps">FPS</label><input class="opt" id="fps" type="range" min="5" max="60" value="24"></div>
+        <div class="field"><label for="speed">Speed</label><input class="opt" id="speed" type="range" min="0.1" max="3.0" step="0.05" value="0.75"></div>
+        <div class="field"><label for="density">Density</label><input class="opt" id="density" type="range" min="0.1" max="5.0" step="0.1" value="1.0"></div>
+        <div class="field"><label for="color">Color</label>
+          <select class="opt" id="color">
+            <option value="auto" selected>auto</option>
+            <option value="mono">mono</option>
+            <option value="16">16</option>
+            <option value="256">256</option>
+          </select>
+        </div>
+        <div class="field"><label for="seed">Seed</label><input class="opt" id="seed" type="text" placeholder="random"></div>
+        <div class="field"><label for="chest">Treasure chest</label><input class="opt" id="chest" type="checkbox" checked></div>
+        <div class="field"><label for="turn">Fish turning</label><input class="opt" id="turn" type="checkbox" checked></div>
+      </section>
+
+      <details class="group">
+        <summary>Fish</summary>
+        <div class="field"><label for="fish_direction_bias">Direction bias</label><input class="opt" id="fish_direction_bias" type="range" min="0" max="1" step="0.05" value="0.5"></div>
+        <div class="field"><label for="fish_speed_min">Speed min</label><input class="opt" id="fish_speed_min" type="range" min="0.1" max="5.0" step="0.1" value="0.6"></div>
+        <div class="field"><label for="fish_speed_max">Speed max</label><input class="opt" id="fish_speed_max" type="range" min="0.5" max="5.0" step="0.1" value="2.5"></div>
+        <div class="field"><label for="fish_bubble_min">Bubble min (s)</label><input class="opt" id="fish_bubble_min" type="range" min="0" max="10" step="0.1" value="2.0"></div>
+        <div class="field"><label for="fish_bubble_max">Bubble max (s)</label><input class="opt" id="fish_bubble_max" type="range" min="0" max="10" step="0.1" value="5.0"></div>
+        <div class="field"><label for="fish_turn_chance_per_second">Turn chance (/s)</label><input class="opt" id="fish_turn_chance_per_second" type="range" min="0" max="0.2" step="0.005" value="0.01"></div>
+        <div class="field"><label for="fish_turn_min_interval">Turn min interval (s)</label><input class="opt" id="fish_turn_min_interval" type="range" min="1" max="30" step="0.5" value="6.0"></div>
+        <div class="field"><label for="fish_turn_shrink_seconds">Turn shrink (s)</label><input class="opt" id="fish_turn_shrink_seconds" type="range" min="0.05" max="1.5" step="0.05" value="0.35"></div>
+        <div class="field"><label for="fish_turn_expand_seconds">Turn expand (s)</label><input class="opt" id="fish_turn_expand_seconds" type="range" min="0.05" max="1.5" step="0.05" value="0.35"></div>
+        <div class="field"><label for="fish_scale">Fish scale</label><input class="opt" id="fish_scale" type="range" min="0.1" max="3.0" step="0.1" value="1.0"></div>
+      </details>
+
+      <details class="group">
+        <summary>Seaweed</summary>
+        <div class="field"><label for="seaweed_scale">Seaweed scale</label><input class="opt" id="seaweed_scale" type="range" min="0.1" max="3.0" step="0.1" value="1.0"></div>
+        <div class="field"><label for="seaweed_sway_min">Sway min</label><input class="opt" id="seaweed_sway_min" type="range" min="0.05" max="1.0" step="0.01" value="0.18"></div>
+        <div class="field"><label for="seaweed_sway_max">Sway max</label><input class="opt" id="seaweed_sway_max" type="range" min="0.1" max="1.5" step="0.01" value="0.5"></div>
+        <div class="field"><label for="seaweed_lifetime_min">Life min (s)</label><input class="opt" id="seaweed_lifetime_min" type="range" min="5" max="120" step="1" value="25.0"></div>
+        <div class="field"><label for="seaweed_lifetime_max">Life max (s)</label><input class="opt" id="seaweed_lifetime_max" type="range" min="10" max="180" step="1" value="60.0"></div>
+        <div class="field"><label for="seaweed_regrow_delay_min">Regrow min (s)</label><input class="opt" id="seaweed_regrow_delay_min" type="range" min="1" max="30" step="0.5" value="4.0"></div>
+        <div class="field"><label for="seaweed_regrow_delay_max">Regrow max (s)</label><input class="opt" id="seaweed_regrow_delay_max" type="range" min="1" max="60" step="0.5" value="12.0"></div>
+        <div class="field"><label for="seaweed_growth_rate_min">Growth min</label><input class="opt" id="seaweed_growth_rate_min" type="range" min="2" max="20" step="0.5" value="6.0"></div>
+        <div class="field"><label for="seaweed_growth_rate_max">Growth max</label><input class="opt" id="seaweed_growth_rate_max" type="range" min="2" max="30" step="0.5" value="12.0"></div>
+        <div class="field"><label for="seaweed_shrink_rate_min">Shrink min</label><input class="opt" id="seaweed_shrink_rate_min" type="range" min="2" max="30" step="0.5" value="8.0"></div>
+        <div class="field"><label for="seaweed_shrink_rate_max">Shrink max</label><input class="opt" id="seaweed_shrink_rate_max" type="range" min="2" max="40" step="0.5" value="16.0"></div>
+      </details>
+
+      <details class="group">
+        <summary>Scene & Spawn</summary>
+        <div class="field"><label for="waterline_top">Waterline top (row)</label><input class="opt" id="waterline_top" type="range" min="2" max="20" step="1" value="5"></div>
+        <div class="field"><label for="chest_burst_seconds">Chest burst (s)</label><input class="opt" id="chest_burst_seconds" type="range" min="10" max="300" step="5" value="60"></div>
+        <div class="field"><label for="spawn_start_delay_min">Start delay min (s)</label><input class="opt" id="spawn_start_delay_min" type="range" min="0" max="20" step="0.5" value="3.0"></div>
+        <div class="field"><label for="spawn_start_delay_max">Start delay max (s)</label><input class="opt" id="spawn_start_delay_max" type="range" min="0" max="30" step="0.5" value="8.0"></div>
+        <div class="field"><label for="spawn_interval_min">Interval min (s)</label><input class="opt" id="spawn_interval_min" type="range" min="2" max="40" step="0.5" value="8.0"></div>
+        <div class="field"><label for="spawn_interval_max">Interval max (s)</label><input class="opt" id="spawn_interval_max" type="range" min="4" max="60" step="0.5" value="20.0"></div>
+        <div class="field"><label for="spawn_max_concurrent">Max concurrent specials</label><input class="opt" id="spawn_max_concurrent" type="range" min="0" max="5" step="1" value="1"></div>
+        <div class="field"><label for="spawn_cooldown_global">Global cooldown (s)</label><input class="opt" id="spawn_cooldown_global" type="range" min="0" max="30" step="0.5" value="0.0"></div>
+        <div class="subgrid">
+          <div class="subheader">Special weights (0 disables)</div>
+          <div class="field"><label for="w_shark">Shark</label><input class="opt" id="w_shark" type="range" min="0" max="2.0" step="0.1" value="1.0"></div>
+          <div class="field"><label for="w_fishhook">Fishhook</label><input class="opt" id="w_fishhook" type="range" min="0" max="2.0" step="0.1" value="1.0"></div>
+          <div class="field"><label for="w_whale">Whale</label><input class="opt" id="w_whale" type="range" min="0" max="2.0" step="0.1" value="1.0"></div>
+          <div class="field"><label for="w_ship">Ship</label><input class="opt" id="w_ship" type="range" min="0" max="2.0" step="0.1" value="1.0"></div>
+          <div class="field"><label for="w_ducks">Ducks</label><input class="opt" id="w_ducks" type="range" min="0" max="2.0" step="0.1" value="1.0"></div>
+          <div class="field"><label for="w_dolphins">Dolphins</label><input class="opt" id="w_dolphins" type="range" min="0" max="2.0" step="0.1" value="1.0"></div>
+          <div class="field"><label for="w_swan">Swan</label><input class="opt" id="w_swan" type="range" min="0" max="2.0" step="0.1" value="1.0"></div>
+          <div class="field"><label for="w_monster">Monster</label><input class="opt" id="w_monster" type="range" min="0" max="2.0" step="0.1" value="1.0"></div>
+          <div class="field"><label for="w_big_fish">Big Fish</label><input class="opt" id="w_big_fish" type="range" min="0" max="2.0" step="0.1" value="1.0"></div>
+        </div>
+      </details>
+
+      <details class="group">
+        <summary>Fishhook</summary>
+        <div class="field"><label for="fishhook_dwell_seconds">Hook dwell (s)</label><input class="opt" id="fishhook_dwell_seconds" type="range" min="2" max="60" step="1" value="20.0"></div>
+      </details>
+
+      <div class="actions"><button id="reset" type="button">Reset</button></div>
+    </form>
   </aside>
 
   <main class="stage">
