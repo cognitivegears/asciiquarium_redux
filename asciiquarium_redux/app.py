@@ -170,6 +170,12 @@ class AsciiQuarium:
             )
             # Initialize bubble timer from configured range
             f.next_bubble = random.uniform(self.settings.fish_bubble_min, self.settings.fish_bubble_max)
+            # Pass turning behavior config
+            f.turn_enabled = bool(getattr(self.settings, "fish_turn_enabled", True))
+            f.turn_chance_per_second = float(getattr(self.settings, "fish_turn_chance_per_second", 0.01))
+            f.turn_min_interval = float(getattr(self.settings, "fish_turn_min_interval", 6.0))
+            f.turn_shrink_seconds = float(getattr(self.settings, "fish_turn_shrink_seconds", 0.35))
+            f.turn_expand_seconds = float(getattr(self.settings, "fish_turn_expand_seconds", 0.35))
             self.fish.append(f)
 
     def draw_waterline(self, screen: Screen):
@@ -396,6 +402,15 @@ def run(screen: Screen, settings: Settings):
             app.rebuild(screen)
         if key in (ord("h"), ord("H"), ord("?")):
             app._show_help = not app._show_help
+        # 't': force a random fish to start turning (debug/verification)
+        if key in (ord("t"), ord("T")):
+            candidates = [f for f in app.fish if not getattr(f, 'hooked', False)]
+            if candidates:
+                f = random.choice(candidates)
+                try:
+                    f.start_turn()
+                except Exception:
+                    pass
         # Spacebar: drop fishhook at random position (like random special)
         if key == ord(" "):
             # If a hook exists and is not retracting, command it to retract immediately

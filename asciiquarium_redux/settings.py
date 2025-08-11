@@ -44,6 +44,12 @@ class Settings:
     fish_speed_max: float = 2.5
     fish_bubble_min: float = 2.0
     fish_bubble_max: float = 5.0
+    # Fish turning behavior
+    fish_turn_enabled: bool = True
+    fish_turn_chance_per_second: float = 0.01
+    fish_turn_min_interval: float = 6.0
+    fish_turn_shrink_seconds: float = 0.35
+    fish_turn_expand_seconds: float = 0.35
     fish_count_base: Optional[int] = None
     fish_count_per_80_cols: Optional[float] = None
     fish_y_band: Optional[Tuple[float, float]] = None  # fractions of screen height [0..1]
@@ -211,12 +217,21 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                 ("speed_max", "fish_speed_max"),
                 ("bubble_min", "fish_bubble_min"),
                 ("bubble_max", "fish_bubble_max"),
+                ("turn_chance_per_second", "fish_turn_chance_per_second"),
+                ("turn_min_interval", "fish_turn_min_interval"),
+                ("turn_shrink_seconds", "fish_turn_shrink_seconds"),
+                ("turn_expand_seconds", "fish_turn_expand_seconds"),
             ]:
                 if key in fish:
                     try:
                         setattr(s, attr, float(fish.get(key)))
                     except Exception:
                         pass
+            if "turn_enabled" in fish:
+                try:
+                    s.fish_turn_enabled = bool(fish.get("turn_enabled"))
+                except Exception:
+                    pass
             if "y_band" in fish and isinstance(fish.get("y_band"), (list, tuple)):
                 try:
                     band = tuple(float(x) for x in fish.get("y_band"))  # type: ignore[arg-type]

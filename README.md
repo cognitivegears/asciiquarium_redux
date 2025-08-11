@@ -23,6 +23,7 @@ Status: Playable, configurable, and window-ready (Tk). Bring your own snacks (fo
 - Backends: terminal (asciimatics) and windowed Tk canvas (resizable, color)
 - Configurable everything: FPS, speed, density, spawn timings/weights, fish bands, colors; TOML-based config
 - Deterministic playback (seed) for captures and demos
+- Fish turning: fish can occasionally turn around with a smooth shrink/flip/expand animation (configurable)
 
 ## Quick start
 
@@ -52,6 +53,7 @@ Controls:
 - space: drop/retract fishhook (random position in terminal)
 - mouse: left-click to drop a hook at the cursor (or retract if one is active)
 - s (Tk): save a screenshot as ./asciiquarium_#.png (auto-incrementing)
+- t: force a random fish to turn (useful to preview the turning animation)
 
 CLI examples:
 
@@ -201,6 +203,12 @@ speed_min = 0.6
 speed_max = 2.5
 bubble_min = 2.0
 bubble_max = 5.0
+# Turning behavior
+turn_enabled = true
+turn_chance_per_second = 0.01   # per-second chance (scaled by dt)
+turn_min_interval = 6.0         # cooldown between turns (seconds)
+turn_shrink_seconds = 0.35      # time to shrink to center
+turn_expand_seconds = 0.35      # time to expand after flip
 # y_band = [0.2, 0.9]   # optional band (fractions of height)
 # count_base = 6        # optional count override
 # count_per_80_cols = 3.0
@@ -241,12 +249,26 @@ You can also point to a specific config with `--config` (absolute or relative pa
 ## Treasure chest (decor)
 
 - Behavior
-  - Sits near the seabed (like the castle) and is drawn behind fish, so fish swim in front of it.
+  - Sits near the seabed (like the castle). Drawn in front of seaweed and behind fish, so fish swim in front of it.
   - Emits occasional small bubbles while closed.
   - On a periodic timer, the lid opens briefly and a stream of bubbles pops out, then it closes again.
 - Configuration
   - `scene.chest_enabled` (bool, default `true`): toggle the treasure chest on/off.
   - `scene.chest_burst_seconds` (float, default `60.0`): seconds between lid openings.
+
+## Fish turning
+
+- Behavior
+  - Occasionally, a fish slows down while its body visually “collapses” to a single center column, flips to the opposite direction, then expands back out and accelerates the other way.
+  - The center stays visually anchored during the animation to avoid popping.
+- Controls
+  - Press `t` to force a random fish to turn immediately (handy to preview the effect).
+- Configuration (under `[fish]`)
+  - `turn_enabled` (bool, default `true`)
+  - `turn_chance_per_second` (float, default `0.01`): random chance per second (scaled by frame time).
+  - `turn_min_interval` (float, default `6.0`): minimum seconds between turns per fish.
+  - `turn_shrink_seconds` (float, default `0.35`): time to shrink to the middle.
+  - `turn_expand_seconds` (float, default `0.35`): time to expand after flipping.
 
 ## Differences from the original
 
