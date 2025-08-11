@@ -73,12 +73,15 @@ class Settings:
     # Fishhook behavior
     fishhook_dwell_seconds: float = 20.0
     # UI/backend
-    ui_backend: str = "terminal"  # terminal|tk
+    ui_backend: str = "terminal"  # terminal|tk|web
     ui_fullscreen: bool = False
     ui_cols: int = 120
     ui_rows: int = 40
     ui_font_family: str = "Menlo"
     ui_font_size: int = 14
+    # Web backend options
+    web_open: bool = False
+    web_port: int = 8000
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
@@ -320,7 +323,10 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
     parser.add_argument("--color", choices=["auto", "mono", "16", "256"])
     parser.add_argument("--seed", type=int)
     parser.add_argument("--speed", type=float)
-    parser.add_argument("--backend", choices=["terminal", "tk"])
+    parser.add_argument("--backend", choices=["terminal", "tk", "web"])
+    # Web backend extras
+    parser.add_argument("--open", dest="web_open", action="store_true")
+    parser.add_argument("--port", dest="web_port", type=int)
     parser.add_argument("--fullscreen", action="store_true")
     args = parser.parse_args(argv)
 
@@ -338,4 +344,13 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
         s.ui_backend = args.backend
     if args.fullscreen:
         s.ui_fullscreen = True
+    # Web extras
+    try:
+        if getattr(args, "web_open", False):
+            s.web_open = True
+        vp = getattr(args, "web_port", None)
+        if isinstance(vp, int) and vp:
+            s.web_port = vp
+    except Exception:
+        pass
     return s

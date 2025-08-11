@@ -1,0 +1,187 @@
+// Pyodide is loaded via a classic <script> tag in index.html.
+// Use the global window.loadPyodide to initialize.
+
+const canvas = document.getElementById("aquarium");
+const ctx2d = canvas.getContext("2d", { alpha: false, desynchronized: true });
+const state = { cols: 120, rows: 40, cellW: 12, cellH: 18, fps: 24, running: false };
+
+function measureCell(font = "16px Menlo, monospace") {
+  ctx2d.font = font;
+  const w = ctx2d.measureText("M").width;
+  const h = 18; // can refine with DOM text measure if needed
+  return { w: Math.ceil(w), h };
+}
+
+function resizeCanvasToGrid() {
+  const { w, h } = measureCell();
+  state.cellW = w; state.cellH = h;
+  const rect = canvas.getBoundingClientRect();
+  const cols = Math.max(40, Math.floor(rect.width / w));
+  const rows = Math.max(20, Math.floor(rect.height / h));
+  state.cols = cols; state.rows = rows;
+  canvas.width = cols * w; canvas.height = rows * h;
+  if (window.pyodide) window.pyodide.runPython(`import importlib; web_backend = importlib.import_module('asciiquarium_redux.web_backend'); web_backend.web_app.resize(${cols}, ${rows})`);
+}
+
+function jsFlushHook(batches) {
+  // Clear
+  ctx2d.fillStyle = "#000";
+  ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+  // Draw runs
+  ctx2d.textBaseline = "alphabetic";
+  ctx2d.font = "16px Menlo, monospace";
+  // Convert Pyodide PyProxy (Python list[dict]) to plain JS if needed
+  const items = batches && typeof batches.toJs === "function"
+    ? batches.toJs({ dict_converter: Object.fromEntries, create_proxies: false })
+    : batches;
+  for (const b of items) {
+    ctx2d.fillStyle = b.colour;
+    ctx2d.fillText(b.text, b.x * state.cellW, (b.y + 1) * state.cellH - 4);
+  }
+}
+
+let last = performance.now();
+function loop(now) {
+  const dt = now - last;
+  const frameInterval = 1000 / state.fps;
+  if (dt >= frameInterval && state.running) {
+    window.pyodide.runPython(`from asciiquarium_redux import web_backend; web_backend.web_app.tick(${dt})`);
+    last = now;
+  }
+  requestAnimationFrame(loop);
+}
+
+async function boot() {
+  const pyodide = await window.loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/" });
+  window.pyodide = pyodide;
+  await pyodide.loadPackage("micropip");
+  // Try to install from local wheel path (served alongside the page). Fallback to PyPI if needed.
+  try {
+  // Purge any previously installed copy to force reinstall of the latest local wheel
+  await pyodide.runPythonAsync(`
+import sys, shutil, pathlib
+for p in list(sys.modules):
+  if p.startswith('asciiquarium_redux'):
+    del sys.modules[p]
+site_pkgs = [path for path in sys.path if 'site-packages' in path]
+for sp in site_pkgs:
+  d = pathlib.Path(sp)
+  pkg = d / 'asciiquarium_redux'
+  if pkg.exists():
+    shutil.rmtree(pkg, ignore_errors=True)
+  for info in d.glob('asciiquarium_redux-*.dist-info'):
+    shutil.rmtree(info, ignore_errors=True)
+`);
+  // Prefer the exact wheel name from manifest to satisfy micropip filename parsing
+  // Add a cache-busting parameter so the browser/micropip won’t reuse an old wheel
+  const nonce = Date.now();
+  let wheelUrl = new URL(`./wheels/asciiquarium_redux-latest.whl?t=${nonce}` , window.location.href).toString();
+    try {
+      const m = await fetch(new URL("./wheels/manifest.json", window.location.href).toString(), { cache: "no-store" });
+      if (m.ok) {
+  const { wheel } = await m.json();
+  if (wheel) wheelUrl = new URL(`./wheels/${wheel}?t=${nonce}` , window.location.href).toString();
+      }
+    } catch {}
+    // Fetch wheel to avoid any Content-Type/CORS issues and install via file:// URI
+    let installed = false;
+  try {
+      const resp = await fetch(wheelUrl, { cache: "no-store" });
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+  const buf = new Uint8Array(await resp.arrayBuffer());
+  const wheelName = decodeURIComponent(new URL(wheelUrl).pathname.split('/').pop() || 'asciiquarium_redux.whl');
+  const wheelPath = `/tmp/${wheelName}`;
+            pyodide.FS.writeFile(wheelPath, buf);
+            await pyodide.runPythonAsync(`import micropip; await micropip.install('${wheelUrl}')`);
+      installed = true;
+  console.log('Installed local wheel');
+    } catch (e) {
+      console.warn("Local wheel install failed, falling back to PyPI:", e);
+    }
+    if (!installed) {
+      await pyodide.runPythonAsync(`import micropip; await micropip.install('asciiquarium-redux')`);
+      console.log('Installed from PyPI');
+    }
+    await pyodide.runPythonAsync(`import importlib; web_backend = importlib.import_module('asciiquarium_redux.web_backend')`);
+  } catch (e) {
+    console.error("Failed to install package:", e);
+    return;
+  }
+  try {
+    const version = await pyodide.runPythonAsync(`
+import importlib.metadata as md
+v = 'unknown'
+try:
+    v = md.version('asciiquarium-redux')
+except Exception:
+    pass
+v
+`);
+    console.log("asciiquarium-redux version:", version);
+  } catch (e) {
+    console.warn("Could not determine installed version:", e);
+  }
+  // Provide the flush hook
+  // Ensure module is in globals and then set js hook via pyimport
+  // Workaround: set via pyodide.globals
+  const mod = pyodide.pyimport("asciiquarium_redux.web_backend");
+  mod.set_js_flush_hook(jsFlushHook);
+
+  resizeCanvasToGrid();
+  const opts = collectOptionsFromUI();
+  // Convert JS object to a real Python dict to avoid JSON true/false/null issues
+  const pyOpts = pyodide.toPy(opts);
+  try {
+    pyodide.globals.set("W_OPTS", pyOpts);
+  } finally {
+    pyOpts.destroy();
+  }
+  pyodide.runPython(`web_backend.web_app.start(${state.cols}, ${state.rows}, W_OPTS)`);
+  // Visual smoke test: ensure hook draws something
+  ctx2d.fillStyle = '#003246';
+  ctx2d.fillRect(0, 0, canvas.width, canvas.height);
+  ctx2d.fillStyle = '#66f3ff';
+  ctx2d.fillText('Booted Pyodide...', 10, 20);
+  state.running = true;
+
+  canvas.addEventListener("click", ev => {
+    const x = Math.floor(ev.offsetX / state.cellW);
+    const y = Math.floor(ev.offsetY / state.cellH);
+  pyodide.runPython(`web_backend.web_app.on_mouse(${x}, ${y}, 1)`);
+  });
+  window.addEventListener("keydown", ev => {
+  pyodide.runPython(`web_backend.web_app.on_key("${ev.key}")`);
+  });
+  new ResizeObserver(resizeCanvasToGrid).observe(canvas);
+  requestAnimationFrame(loop);
+}
+
+function collectOptionsFromUI() {
+  return {
+    fps: Number(document.getElementById("fps").value),
+    speed: Number(document.getElementById("speed").value),
+    density: Number(document.getElementById("density").value),
+    color: document.getElementById("color").value,
+    chest: document.getElementById("chest").checked,
+    turn: document.getElementById("turn").checked,
+    seed: document.getElementById("seed").value || null
+  };
+}
+
+  ["fps","speed","density","color","chest","turn","seed"].forEach(id => {
+  const el = document.getElementById(id);
+  el.addEventListener("input", () => {
+    const opts = collectOptionsFromUI();
+      const pyOpts = pyodide.toPy(opts);
+      try {
+        pyodide.globals.set("W_OPTS", pyOpts);
+      } finally {
+        pyOpts.destroy();
+      }
+      window.pyodide?.runPython(`web_backend.web_app.set_options(W_OPTS)`);
+  });
+});
+
+document.getElementById("reset").addEventListener("click", () => location.reload());
+
+boot();

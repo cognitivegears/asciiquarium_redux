@@ -34,7 +34,13 @@ def main(argv: list[str] | None = None) -> None:
         sys.exit(2)
     if settings.seed is not None:
         random.seed(settings.seed)
-    if getattr(settings, "ui_backend", "terminal") == "tk":
+    backend = getattr(settings, "ui_backend", "terminal")
+    if backend == "web":
+        # Simple local server to host the web assets
+        from .web_server import serve_web
+        serve_web(port=int(getattr(settings, 'web_port', 8000)), open_browser=bool(getattr(settings, 'web_open', False)))
+        return
+    if backend == "tk":
         try:
             # Preflight to provide a clearer error if Tk isn't present
             import tkinter  # type: ignore
