@@ -13,13 +13,17 @@
       <span class="tag">Web (WASM)</span>
     </div>
     <nav class="links">
+      <button id="settingsBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="settingsDialog">Settings</button>
       <a class="repo" href="https://github.com/cognitivegears/asciiquarium_redux" target="_blank" rel="noopener noreferrer" title="Repository">GitHub</a>
     </nav>
   </header>
 
-  <aside class="controls">
-    <h2>Controls</h2>
-    <form class="control-form" onsubmit="return false;">
+  <dialog id="settingsDialog" class="controls" aria-label="Settings">
+    <form class="control-form" method="dialog" onsubmit="return false;">
+      <div class="dialog-head">
+        <h2>Settings</h2>
+        <button id="closeSettings" class="close" value="cancel" aria-label="Close">×</button>
+      </div>
       <section class="group">
         <h3>Basics</h3>
         <div class="field"><label for="fps">FPS</label><input class="opt" id="fps" type="range" min="5" max="60" value="24"></div>
@@ -93,7 +97,7 @@
 
       <div class="actions"><button id="reset" type="button">Reset</button></div>
     </form>
-  </aside>
+  </dialog>
 
   <main class="stage">
     <canvas id="aquarium" tabindex="0" aria-label="Asciiquarium Redux"></canvas>

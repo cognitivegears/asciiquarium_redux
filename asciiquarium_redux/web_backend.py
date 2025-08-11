@@ -189,10 +189,12 @@ class WebApp:
         rows = int(rows)
         if self.screen.width == cols and self.screen.height == rows:
             return
+        # Mark a rebuild pending at next tick to coalesce with any option changes
         self.screen.width = cols
         self.screen.height = rows
         self.screen._alloc()
-        self.app.rebuild(self.screen)  # type: ignore[arg-type]
+        # Defer rebuild to tick loop to avoid cascading rebuilds
+        self._schedule_rebuild(delay=0.0)
 
     def set_options(self, options: dict):
         needs_rebuild = self._apply_options(options)

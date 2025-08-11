@@ -2,6 +2,10 @@
 // Use the global window.loadPyodide to initialize.
 
 const canvas = document.getElementById("aquarium");
+const stage = document.querySelector(".stage");
+const settingsDialog = document.getElementById("settingsDialog");
+const settingsBtn = document.getElementById("settingsBtn");
+const closeSettings = document.getElementById("closeSettings");
 const ctx2d = canvas.getContext("2d", { alpha: false, desynchronized: true });
 const state = { cols: 120, rows: 40, cellW: 12, cellH: 18, baseline: 4, fps: 24, running: false };
 
@@ -23,22 +27,52 @@ function applyHiDPIScale() {
   ctx2d.setTransform(dpr, 0, 0, dpr, 0, 0);
 }
 
+let resizeTimer = null;
 function resizeCanvasToGrid() {
-  const { w, h } = measureCell();
-  state.cellW = Math.round(w); state.cellH = Math.round(h);
-  const rect = canvas.getBoundingClientRect();
-  const cols = Math.max(40, Math.floor(rect.width / state.cellW));
-  const rows = Math.max(20, Math.floor(rect.height / state.cellH));
+  // Ensure measurement reflects container size, not prior fixed canvas pixels
+  const prevInlineW = canvas.style.width;
+  const prevInlineH = canvas.style.height;
+  canvas.style.width = "100%";
+  canvas.style.height = "100%";
+  // Use client dimensions in CSS pixels
+  const rect = stage.getBoundingClientRect();
+  const st = window.getComputedStyle(stage);
+  const padX = (parseFloat(st.paddingLeft) || 0) + (parseFloat(st.paddingRight) || 0);
+  const padY = (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0);
+  const cssW = Math.max(0, rect.width - padX);
+  const cssH = Math.max(0, rect.height - padY);
+  const cols = Math.max(40, Math.floor(cssW / state.cellW));
+  const rows = Math.max(20, Math.floor(cssH / state.cellH));
+  const prevCols = state.cols;
+  const prevRows = state.rows;
   state.cols = cols; state.rows = rows;
   const dpr = Math.max(1, Math.floor(window.devicePixelRatio || 1));
   // Set CSS size
-  canvas.style.width = `${cols * state.cellW}px`;
-  canvas.style.height = `${rows * state.cellH}px`;
+  const cssWidthPx = cols * state.cellW;
+  const cssHeightPx = rows * state.cellH;
+  if (canvas.style.width !== `${cssWidthPx}px`) canvas.style.width = `${cssWidthPx}px`;
+  if (canvas.style.height !== `${cssHeightPx}px`) canvas.style.height = `${cssHeightPx}px`;
   // Set backing store size in device pixels
-  canvas.width = cols * state.cellW * dpr;
-  canvas.height = rows * state.cellH * dpr;
+  const backingW = cssWidthPx * dpr;
+  const backingH = cssHeightPx * dpr;
+  if (canvas.width !== backingW) canvas.width = backingW;
+  if (canvas.height !== backingH) canvas.height = backingH;
   applyHiDPIScale();
-  if (window.pyodide) window.pyodide.runPython(`import importlib; web_backend = importlib.import_module('asciiquarium_redux.web_backend'); web_backend.web_app.resize(${cols}, ${rows})`);
+  // Only notify backend if grid size actually changed
+  if ((cols !== prevCols || rows !== prevRows) && window.pyodide) {
+    window.pyodide.runPython(`from asciiquarium_redux import web_backend; web_backend.web_app.resize(${cols}, ${rows})`);
+  }
+}
+function scheduleResize() {
+  if (resizeTimer) clearTimeout(resizeTimer);
+  // Debounce to coalesce rapid layout changes
+  resizeTimer = setTimeout(() => {
+    resizeTimer = null;
+    const r = stage.getBoundingClientRect();
+    if (r.width > 0 && r.height > 0) {
+      resizeCanvasToGrid();
+    }
+  }, 100);
 }
 
 function jsFlushHook(batches) {
@@ -155,7 +189,11 @@ v
   // Workaround: set via pyodide.globals
   const mod = pyodide.pyimport("asciiquarium_redux.web_backend");
   mod.set_js_flush_hook(jsFlushHook);
-
+  // Measure cell metrics once for a stable grid
+  const m = measureCell();
+  state.cellW = Math.round(m.w);
+  state.cellH = Math.round(m.h);
+  // Apply initial layout
   resizeCanvasToGrid();
   const opts = collectOptionsFromUI();
   // Convert JS object to a real Python dict to avoid JSON true/false/null issues
@@ -176,7 +214,16 @@ v
   window.addEventListener("keydown", ev => {
   pyodide.runPython(`web_backend.web_app.on_key("${ev.key}")`);
   });
-  new ResizeObserver(resizeCanvasToGrid).observe(canvas);
+  // Observe canvas box size and window resize; debounce like Tk runner
+  const ro = new ResizeObserver(() => scheduleResize());
+  ro.observe(stage);
+  window.addEventListener("resize", scheduleResize);
+
+  // Settings dialog open/close
+  settingsBtn?.addEventListener("click", () => {
+    try { settingsDialog.showModal(); } catch { settingsDialog.show(); }
+  });
+  closeSettings?.addEventListener("click", () => settingsDialog.close());
   requestAnimationFrame(loop);
 }
 
