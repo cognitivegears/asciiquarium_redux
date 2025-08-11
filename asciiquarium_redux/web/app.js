@@ -166,11 +166,6 @@ v
     pyOpts.destroy();
   }
   pyodide.runPython(`web_backend.web_app.start(${state.cols}, ${state.rows}, W_OPTS)`);
-  // Visual smoke test: ensure hook draws something
-  ctx2d.fillStyle = '#003246';
-  ctx2d.fillRect(0, 0, canvas.width, canvas.height);
-  ctx2d.fillStyle = '#66f3ff';
-  ctx2d.fillText('Booted Pyodide...', 10, 20);
   state.running = true;
 
   canvas.addEventListener("click", ev => {
