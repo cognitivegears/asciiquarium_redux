@@ -50,4 +50,3 @@ exclude = [
     "docs",
     "**/__pycache__",
 ]
-

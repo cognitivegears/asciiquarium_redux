@@ -38,6 +38,37 @@ source .venv/bin/activate
 python main.py
 ```
 
+Install-free run from PyPI with uvx:
+
+```sh
+# Latest published version
+uvx asciiquarium-redux
+
+# Pass CLI flags to the app directly
+uvx asciiquarium-redux --fps 30 --density 1.2 --seed 123
+
+# Windowed Tk backend
+uvx asciiquarium-redux --backend tk
+
+# Refresh cached app to the newest release
+uvx --refresh asciiquarium-redux
+```
+
+Run with pipx:
+
+```sh
+pipx install asciiquarium-redux
+
+# Run
+asciiquarium-redux
+
+# Tk backend
+asciiquarium-redux --backend tk
+
+# Upgrade later
+pipx upgrade asciiquarium-redux
+```
+
 Windowed Tk backend:
 
 ```sh
