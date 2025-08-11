@@ -193,30 +193,17 @@ function collectOptionsFromUI() {
     color: val("color"),
     seed: val("seed") || null,
     chest: chk("chest"),
+  castle: chk("castle"),
     turn: chk("turn"),
     // Fish
     fish_direction_bias: num("fish_direction_bias"),
     fish_speed_min: num("fish_speed_min"),
     fish_speed_max: num("fish_speed_max"),
-    fish_bubble_min: num("fish_bubble_min"),
-    fish_bubble_max: num("fish_bubble_max"),
-    fish_turn_chance_per_second: num("fish_turn_chance_per_second"),
-    fish_turn_min_interval: num("fish_turn_min_interval"),
-    fish_turn_shrink_seconds: num("fish_turn_shrink_seconds"),
-    fish_turn_expand_seconds: num("fish_turn_expand_seconds"),
     fish_scale: num("fish_scale"),
     // Seaweed
     seaweed_scale: num("seaweed_scale"),
-    seaweed_sway_min: num("seaweed_sway_min"),
-    seaweed_sway_max: num("seaweed_sway_max"),
-    seaweed_lifetime_min: num("seaweed_lifetime_min"),
-    seaweed_lifetime_max: num("seaweed_lifetime_max"),
-    seaweed_regrow_delay_min: num("seaweed_regrow_delay_min"),
-    seaweed_regrow_delay_max: num("seaweed_regrow_delay_max"),
-    seaweed_growth_rate_min: num("seaweed_growth_rate_min"),
-    seaweed_growth_rate_max: num("seaweed_growth_rate_max"),
-    seaweed_shrink_rate_min: num("seaweed_shrink_rate_min"),
-    seaweed_shrink_rate_max: num("seaweed_shrink_rate_max"),
+  seaweed_sway_min: num("seaweed_sway_min"),
+  seaweed_sway_max: num("seaweed_sway_max"),
     // Scene & spawn
     waterline_top: num("waterline_top"),
     chest_burst_seconds: num("chest_burst_seconds"),
@@ -235,20 +222,18 @@ function collectOptionsFromUI() {
     w_swan: num("w_swan"),
     w_monster: num("w_monster"),
     w_big_fish: num("w_big_fish"),
-    // Fishhook
-    fishhook_dwell_seconds: num("fishhook_dwell_seconds")
+  // Fishhook
+  fishhook_dwell_seconds: num("fishhook_dwell_seconds")
   };
 }
 
   [
     // basics
-    "fps","speed","density","color","chest","turn","seed",
+  "fps","speed","density","color","chest","castle","turn","seed",
     // fish
-    "fish_direction_bias","fish_speed_min","fish_speed_max","fish_bubble_min","fish_bubble_max",
-    "fish_turn_chance_per_second","fish_turn_min_interval","fish_turn_shrink_seconds","fish_turn_expand_seconds","fish_scale",
+  "fish_direction_bias","fish_speed_min","fish_speed_max","fish_scale",
     // seaweed
-    "seaweed_scale","seaweed_sway_min","seaweed_sway_max","seaweed_lifetime_min","seaweed_lifetime_max",
-    "seaweed_regrow_delay_min","seaweed_regrow_delay_max","seaweed_growth_rate_min","seaweed_growth_rate_max","seaweed_shrink_rate_min","seaweed_shrink_rate_max",
+  "seaweed_scale","seaweed_sway_min","seaweed_sway_max",
     // scene & spawn
     "waterline_top","chest_burst_seconds","spawn_start_delay_min","spawn_start_delay_max","spawn_interval_min","spawn_interval_max",
     "spawn_max_concurrent","spawn_cooldown_global","w_shark","w_fishhook","w_whale","w_ship","w_ducks","w_dolphins","w_swan","w_monster","w_big_fish",

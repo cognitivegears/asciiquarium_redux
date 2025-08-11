@@ -280,6 +280,11 @@ class WebApp:
                                     pass
             except Exception:
                 pass
+        if "castle" in options:
+            try:
+                self.settings.castle_enabled = bool(options["castle"])  # type: ignore[attr-defined]
+            except Exception:
+                pass
 
         if "turn" in options:
             try:

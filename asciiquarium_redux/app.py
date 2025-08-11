@@ -217,7 +217,8 @@ class AsciiQuarium:
             else:
                 f.draw(screen)
         # Castle is rendered above fish in Perl (higher depth)
-        self.draw_castle(screen)
+        if getattr(self.settings, "castle_enabled", True):
+            self.draw_castle(screen)
         for b in self.bubbles:
             if mono:
                 if 0 <= b.y < screen.height:

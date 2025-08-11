@@ -35,6 +35,8 @@ class Settings:
     seaweed_scale: float = 1.0  # additional multiplier for seaweed count
     # Waterline
     waterline_top: int = 5
+    # Castle (background decor)
+    castle_enabled: bool = True
     # Decor: treasure chest
     chest_enabled: bool = True
     chest_burst_seconds: float = 60.0
@@ -200,7 +202,12 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                 s.waterline_top = int(scene.get("waterline_top", s.waterline_top))
             except Exception:
                 pass
-        # treasure chest (decor) settings
+        # castle & treasure chest (decor) settings
+        if "castle_enabled" in scene:
+            try:
+                s.castle_enabled = bool(scene.get("castle_enabled"))
+            except Exception:
+                pass
         if "chest_enabled" in scene:
             try:
                 s.chest_enabled = bool(scene.get("chest_enabled"))
@@ -328,6 +335,9 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
     parser.add_argument("--open", dest="web_open", action="store_true")
     parser.add_argument("--port", dest="web_port", type=int)
     parser.add_argument("--fullscreen", action="store_true")
+    # Decor flags
+    parser.add_argument("--castle", dest="castle_enabled", action="store_true", default=None)
+    parser.add_argument("--no-castle", dest="castle_enabled", action="store_false")
     args = parser.parse_args(argv)
 
     if args.fps is not None:
@@ -344,6 +354,9 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
         s.ui_backend = args.backend
     if args.fullscreen:
         s.ui_fullscreen = True
+    # Decor flags (only apply if explicitly set)
+    if getattr(args, "castle_enabled", None) is not None:
+        s.castle_enabled = bool(args.castle_enabled)
     # Web extras
     try:
         if getattr(args, "web_open", False):
