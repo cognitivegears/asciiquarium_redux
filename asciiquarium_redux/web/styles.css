@@ -27,8 +27,11 @@ body {
 .control-form { display: grid; gap: 14px; max-height: min(70vh, 720px); overflow: auto; padding: 2px; }
 .group { border: 1px solid #003746; border-radius: 10px; padding: 12px; background: rgba(0, 30, 40, 0.35); box-shadow: 0 1px 0 rgba(255,255,255,0.04) inset; }
 .group > h3, .group > summary { margin: 0 0 8px 0; font-size: 13px; color: #9fdbe2; letter-spacing: 0.3px; }
-.group[open] > summary { color: #66f3ff; }
-.group summary { cursor: pointer; list-style: none; }
+.group summary { cursor: pointer; list-style: none; display: block; padding: 10px 12px 12px 12px; margin: -12px -12px 0 -12px; border-radius: 8px; }
+.group:not([open]) > summary { margin-bottom: -12px; padding-bottom: 24px; }
+.group summary:hover { background: rgba(0, 52, 65, 0.5); }
+.group summary:focus-visible { outline: 2px solid #66f3ff; outline-offset: 2px; }
+.group[open] > summary { color: #66f3ff; background: rgba(0, 52, 65, 0.35); }
 .group summary::-webkit-details-marker { display: none; }
 .field { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 12px; margin: 6px 0; font-size: 14px; }
 .field input[type="text"], .field select { width: 150px; padding: 6px 8px; border: 1px solid #004a5e; border-radius: 6px; background: #001c24; color: #e6f7ff; }
