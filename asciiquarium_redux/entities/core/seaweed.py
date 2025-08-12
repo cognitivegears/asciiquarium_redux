@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 from typing import List, Tuple
-from asciimatics.screen import Screen
+from ...screen_compat import Screen
 
 
 @dataclass

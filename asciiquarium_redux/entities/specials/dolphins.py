@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 import math
-from asciimatics.screen import Screen
+from ...screen_compat import Screen
 
 from ...util import parse_sprite, draw_sprite, draw_sprite_masked
 from ..base import Actor

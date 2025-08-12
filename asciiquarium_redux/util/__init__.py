@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import List, Tuple, Optional, Dict
-from asciimatics.screen import Screen
+from ..screen_compat import Screen
 
 
 def parse_sprite(s: str) -> List[str]:
@@ -237,3 +237,15 @@ def randomize_colour_mask(mask: List[str]) -> List[str]:
 
 def aabb_overlap(ax: int, ay: int, aw: int, ah: int, bx: int, by: int, bw: int, bh: int) -> bool:
     return not (ax + aw <= bx or bx + bw <= ax or ay + ah <= by or by + bh <= ay)
+
+
+__all__ = [
+    "parse_sprite",
+    "sprite_size",
+    "draw_sprite",
+    "draw_sprite_masked",
+    "fill_rect",
+    "draw_sprite_masked_with_bg",
+    "randomize_colour_mask",
+    "aabb_overlap",
+]

@@ -69,7 +69,7 @@ function resizeCanvasToGrid() {
   applyHiDPIScale();
   // Only notify backend if grid size actually changed
   if ((cols !== prevCols || rows !== prevRows) && window.pyodide) {
-    window.pyodide.runPython(`from asciiquarium_redux import web_backend; web_backend.web_app.resize(${cols}, ${rows})`);
+    window.pyodide.runPython(`web_backend.web_app.resize(${cols}, ${rows})`);
   }
 }
 function scheduleResize() {
@@ -117,7 +117,7 @@ function loop(now) {
   const dt = now - last;
   const frameInterval = 1000 / state.fps;
   if (dt >= frameInterval && state.running) {
-    window.pyodide.runPython(`from asciiquarium_redux import web_backend; web_backend.web_app.tick(${dt})`);
+  window.pyodide.runPython(`web_backend.web_app.tick(${dt})`);
     last = now;
   }
   requestAnimationFrame(loop);
@@ -174,7 +174,18 @@ for sp in site_pkgs:
       await pyodide.runPythonAsync(`import micropip; await micropip.install('asciiquarium-redux')`);
       console.log('Installed from PyPI');
     }
-    await pyodide.runPythonAsync(`import importlib; web_backend = importlib.import_module('asciiquarium_redux.web_backend')`);
+  await pyodide.runPythonAsync(`
+import sys, types, importlib
+# Compatibility shim: old wheels import asciiquarium_redux.environment; re-export from new location.
+if 'asciiquarium_redux.environment' not in sys.modules:
+    try:
+        mod = types.ModuleType('asciiquarium_redux.environment')
+        exec("from asciiquarium_redux.entities.environment import *", mod.__dict__)
+        sys.modules['asciiquarium_redux.environment'] = mod
+    except Exception:
+        pass
+web_backend = importlib.import_module('asciiquarium_redux.backend.web.web_backend')
+`);
   } catch (e) {
     console.error("Failed to install package:", e);
     return;
@@ -196,7 +207,7 @@ v
   // Provide the flush hook
   // Ensure module is in globals and then set js hook via pyimport
   // Workaround: set via pyodide.globals
-  const mod = pyodide.pyimport("asciiquarium_redux.web_backend");
+  const mod = pyodide.pyimport("asciiquarium_redux.backend.web.web_backend");
   mod.set_js_flush_hook(jsFlushHook);
   // Measure cell metrics for a stable grid, but re-measure if font size changes (mobile)
   function updateCellMetrics() {

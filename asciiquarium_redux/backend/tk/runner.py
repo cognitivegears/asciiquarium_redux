@@ -5,10 +5,9 @@ import tkinter as tk
 from tkinter import font as tkfont
 from typing import Any, cast
 
-from asciimatics.screen import Screen
-
-from .app import AsciiQuarium
-from .backends import TkRenderContext, TkEventStream
+from ...screen_compat import Screen
+from ...app import AsciiQuarium
+from ..term import TkRenderContext, TkEventStream
 
 
 class ScreenShim:
@@ -105,7 +104,7 @@ def run_tk(settings) -> None:
 
         # Handle events
         for ev in events.poll():
-            from .backends import KeyEvent as KEv, MouseEvent as MEv
+            from ..term import KeyEvent as KEv, MouseEvent as MEv
             if isinstance(ev, KEv):
                 k = ev.key
                 if k in ("q", "Q"):
@@ -147,7 +146,7 @@ def run_tk(settings) -> None:
                         except Exception as e2:
                             print(f"Screenshot failed: {e} / {e2}")
                 if k == " ":
-                    from .entities.specials import FishHook, spawn_fishhook
+                    from ...entities.specials import FishHook, spawn_fishhook
                     hooks = [a for a in app.specials if isinstance(a, FishHook) and a.active]
                     if hooks:
                         for h in hooks:
@@ -162,7 +161,7 @@ def run_tk(settings) -> None:
                     click_y = int(getattr(ev, "y", 0))
                     water_top = settings.waterline_top
                     if water_top + 1 <= click_y <= screen.height - 2:
-                        from .entities.specials import FishHook, spawn_fishhook_to
+                        from ...entities.specials import FishHook, spawn_fishhook_to
                         hooks = [a for a in app.specials if isinstance(a, FishHook) and a.active]
                         if hooks:
                             for h in hooks:

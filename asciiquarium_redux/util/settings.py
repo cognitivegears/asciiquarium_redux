@@ -31,22 +31,17 @@ class Settings:
     spawn_start_delay_max: float = 8.0
     spawn_interval_min: float = 8.0
     spawn_interval_max: float = 20.0
-    fish_scale: float = 1.0     # additional multiplier for fish count
-    seaweed_scale: float = 1.0  # additional multiplier for seaweed count
-    # Waterline
+    fish_scale: float = 1.0
+    seaweed_scale: float = 1.0
     waterline_top: int = 5
-    # Castle (background decor)
     castle_enabled: bool = True
-    # Decor: treasure chest
     chest_enabled: bool = True
     chest_burst_seconds: float = 60.0
-    # Fish controls
-    fish_direction_bias: float = 0.5  # 0..1; probability of rightward motion
+    fish_direction_bias: float = 0.5
     fish_speed_min: float = 0.6
     fish_speed_max: float = 2.5
     fish_bubble_min: float = 2.0
     fish_bubble_max: float = 5.0
-    # Fish turning behavior
     fish_turn_enabled: bool = True
     fish_turn_chance_per_second: float = 0.01
     fish_turn_min_interval: float = 6.0
@@ -54,8 +49,7 @@ class Settings:
     fish_turn_expand_seconds: float = 0.35
     fish_count_base: Optional[int] = None
     fish_count_per_80_cols: Optional[float] = None
-    fish_y_band: Optional[Tuple[float, float]] = None  # fractions of screen height [0..1]
-    # Seaweed controls
+    fish_y_band: Optional[Tuple[float, float]] = None
     seaweed_count_base: Optional[int] = None
     seaweed_count_per_80_cols: Optional[float] = None
     seaweed_sway_min: float = 0.18
@@ -68,31 +62,24 @@ class Settings:
     seaweed_growth_rate_max: float = 12.0
     seaweed_shrink_rate_min: float = 8.0
     seaweed_shrink_rate_max: float = 16.0
-    # Spawn concurrency/cooldowns
     spawn_max_concurrent: int = 1
     spawn_cooldown_global: float = 0.0
     specials_cooldowns: Dict[str, float] = field(default_factory=dict)
-    # Fishhook behavior
     fishhook_dwell_seconds: float = 20.0
-    # UI/backend
-    ui_backend: str = "terminal"  # terminal|tk|web
+    ui_backend: str = "terminal"
     ui_fullscreen: bool = False
     ui_cols: int = 120
     ui_rows: int = 40
     ui_font_family: str = "Menlo"
     ui_font_size: int = 14
-    # Web backend options
     web_open: bool = False
     web_port: int = 8000
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
     if override is not None:
-        # If an explicit override is provided, require it to exist and be used.
         if override.exists():
             return [override]
-        # Explicit path that doesn't exist should be an error; signal by returning a sentinel
-        # and letting the caller decide. We'll raise in load_settings_from_sources.
         return [override]
     paths: List[Path] = []
     cwd = Path.cwd()
@@ -115,10 +102,8 @@ def _load_toml(path: Path) -> dict:
 
 def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
     s = Settings()
-    # Pre-scan argv for a --config path to prefer that file first
     override_path: Optional[Path] = None
     if argv:
-        # support --config /path and --config=/path
         for i, tok in enumerate(argv):
             if tok == "--config" and i + 1 < len(argv):
                 override_path = Path(str(argv[i + 1])).expanduser()
@@ -128,7 +113,6 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                 break
 
     candidates = _find_config_paths(override_path)
-    # If an explicit override was provided but doesn't exist, error out clearly.
     if override_path is not None and candidates and not candidates[0].exists():
         raise FileNotFoundError(f"Config file not found: {override_path}")
     for p in candidates:
@@ -156,10 +140,8 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                 s.speed = float(scene.get("speed", s.speed))
             except Exception:
                 pass
-        # Spawn/scaling config
         specials = spawn.get("specials")
         if isinstance(specials, dict):
-            # copy known keys; ignore unknown
             for k in list(s.specials_weights.keys()):
                 v = specials.get(k)
                 if isinstance(v, (int, float)):
@@ -181,13 +163,11 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                     setattr(s, attr, float(spawn.get(key)))
                 except Exception:
                     pass
-        # max_concurrent is an int
         if "max_concurrent" in spawn:
             try:
                 s.spawn_max_concurrent = int(spawn.get("max_concurrent"))
             except Exception:
                 pass
-        # per-type cooldowns
         per_type = spawn.get("per_type")
         if isinstance(per_type, dict):
             for k, v in per_type.items():
@@ -195,14 +175,11 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                     s.specials_cooldowns[k] = float(v)
                 except Exception:
                     pass
-
-        # waterline
         if "waterline_top" in scene:
             try:
                 s.waterline_top = int(scene.get("waterline_top", s.waterline_top))
             except Exception:
                 pass
-        # castle & treasure chest (decor) settings
         if "castle_enabled" in scene:
             try:
                 s.castle_enabled = bool(scene.get("castle_enabled"))
@@ -218,7 +195,6 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                 s.chest_burst_seconds = float(scene.get("chest_burst_seconds"))
             except Exception:
                 pass
-        # fish section
         fish = data.get("fish", {})
         if fish:
             for key, attr in [
@@ -259,7 +235,6 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                     s.fish_count_per_80_cols = float(fish.get("count_per_80_cols"))
                 except Exception:
                     pass
-        # seaweed section
         seaweed = data.get("seaweed", {})
         if seaweed:
             for key, attr in [
@@ -289,7 +264,6 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                     s.seaweed_count_per_80_cols = float(seaweed.get("count_per_80_cols"))
                 except Exception:
                     pass
-        # fishhook section (optional)
         fishhook = data.get("fishhook", {})
         if isinstance(fishhook, dict):
             if "dwell_seconds" in fishhook:
@@ -299,7 +273,6 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
                         s.fishhook_dwell_seconds = float(val)
                 except Exception:
                     pass
-        # ui section (optional)
         ui = data.get("ui", {})
         if isinstance(ui, dict):
             b = ui.get("backend")
@@ -321,7 +294,6 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
             if isinstance(v, int):
                 s.ui_font_size = max(8, min(48, v))
 
-        # use the first found config file only
         break
     parser = argparse.ArgumentParser(description="Asciiquarium Redux")
     parser.add_argument("--config", type=str, help="Path to a config TOML file")
@@ -331,11 +303,9 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
     parser.add_argument("--seed", type=int)
     parser.add_argument("--speed", type=float)
     parser.add_argument("--backend", choices=["terminal", "tk", "web"])
-    # Web backend extras
     parser.add_argument("--open", dest="web_open", action="store_true")
     parser.add_argument("--port", dest="web_port", type=int)
     parser.add_argument("--fullscreen", action="store_true")
-    # Decor flags
     parser.add_argument("--castle", dest="castle_enabled", action="store_true", default=None)
     parser.add_argument("--no-castle", dest="castle_enabled", action="store_false")
     args = parser.parse_args(argv)
@@ -354,10 +324,8 @@ def load_settings_from_sources(argv: Optional[List[str]] = None) -> Settings:
         s.ui_backend = args.backend
     if args.fullscreen:
         s.ui_fullscreen = True
-    # Decor flags (only apply if explicitly set)
     if getattr(args, "castle_enabled", None) is not None:
         s.castle_enabled = bool(args.castle_enabled)
-    # Web extras
     try:
         if getattr(args, "web_open", False):
             s.web_open = True

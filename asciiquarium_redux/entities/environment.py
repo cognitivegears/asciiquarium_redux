@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from .util import parse_sprite
+from ..util import parse_sprite
 
 WATER_SEGMENTS = [
     "~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~",
@@ -60,8 +60,6 @@ def waterline_row(idx: int, width: int) -> str:
     return (seg * repeat)[: width]
 
 
-# Treasure chest sprites (closed and open) and a simple silhouette mask.
-# Drawn near the seabed; opaque like the castle.
 CHEST_CLOSED = parse_sprite(
     r"""
 

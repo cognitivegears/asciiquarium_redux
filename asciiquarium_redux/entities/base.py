@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import Any
-from asciimatics.screen import Screen
+from ..screen_compat import Screen
 
 class Actor:
     def update(self, dt: float, screen: Screen, app: Any) -> None: ...

@@ -3,7 +3,7 @@ from __future__ import annotations
 import random
 from dataclasses import dataclass, field
 from typing import List
-from asciimatics.screen import Screen
+from ...screen_compat import Screen
 
 from ...util import draw_sprite, draw_sprite_masked, randomize_colour_mask
 from .fish_assets import (

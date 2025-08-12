@@ -11,149 +11,18 @@ accepts a list of batches: [{"y": int, "x": int, "text": str, "colour": str}].
 """
 
 import time
-from dataclasses import dataclass, field
 from typing import Callable, List, Optional
 
-# In Pyodide, the standard curses module is unavailable. Importing the real
-# asciimatics package pulls in curses. Provide a tiny shim so our core modules
-# can import colour constants and type names without importing curses.
-import sys
-import types
+from ...app import AsciiQuarium
+from ...util.settings import Settings
+from ...entities.specials import FishHook, spawn_fishhook, spawn_fishhook_to, spawn_treasure_chest
+from ...entities.specials.treasure_chest import TreasureChest
+from .web_screen import WebScreen
+from ...util.types import FlushHook, FlushBatch
 
-if 'asciimatics' not in sys.modules:
-    _am = types.ModuleType('asciimatics')
-    _screen = types.ModuleType('asciimatics.screen')
-
-    class _DummyScreen:
-        # Colour constants used throughout the app
-        COLOUR_BLACK = 0
-        COLOUR_RED = 1
-        COLOUR_GREEN = 2
-        COLOUR_YELLOW = 3
-        COLOUR_BLUE = 4
-        COLOUR_MAGENTA = 5
-        COLOUR_CYAN = 6
-        COLOUR_WHITE = 7
-
-    _screen.Screen = _DummyScreen  # type: ignore[attr-defined]
-    _event = types.ModuleType('asciimatics.event')
-
-    class _KeyboardEvent:  # placeholders for import-time references only
-        pass
-
-    class _MouseEvent:
-        pass
-
-    _event.KeyboardEvent = _KeyboardEvent  # type: ignore[attr-defined]
-    _event.MouseEvent = _MouseEvent  # type: ignore[attr-defined]
-
-    _exceptions = types.ModuleType('asciimatics.exceptions')
-
-    class _ResizeScreenError(Exception):
-        pass
-
-    _exceptions.ResizeScreenError = _ResizeScreenError  # type: ignore[attr-defined]
-
-    _am.screen = _screen  # type: ignore[attr-defined]
-    _am.event = _event  # type: ignore[attr-defined]
-    _am.exceptions = _exceptions  # type: ignore[attr-defined]
-    sys.modules['asciimatics'] = _am
-    sys.modules['asciimatics.screen'] = _screen
-    sys.modules['asciimatics.event'] = _event
-    sys.modules['asciimatics.exceptions'] = _exceptions
-
-from .app import AsciiQuarium
-from .settings import Settings
-from .entities.specials import FishHook, spawn_fishhook, spawn_fishhook_to, spawn_treasure_chest
-from .entities.specials.treasure_chest import TreasureChest
-
-
-# Minimal colour mapping compatible with Screen.COLOUR_* semantics
-COLOUR_TO_HEX = {
-    0: "#000000",  # BLACK
-    1: "#ff0000",  # RED
-    2: "#00ff00",  # GREEN
-    3: "#ffff00",  # YELLOW
-    4: "#0000ff",  # BLUE
-    5: "#ff00ff",  # MAGENTA
-    6: "#00ffff",  # CYAN
-    7: "#ffffff",  # WHITE
-}
-
-
-@dataclass
-class WebScreen:
-    width: int
-    height: int
-    colour_mode: str = "auto"
-    _chars: List[List[str]] = field(default_factory=list)
-    _fg: List[List[int]] = field(default_factory=list)
-    _batches: List[dict] = field(default_factory=list)
-
-    def __post_init__(self):
-        self._alloc()
-
-    def _alloc(self):
-        self._chars = [[" "] * self.width for _ in range(self.height)]
-        self._fg = [[7] * self.width for _ in range(self.height)]  # default white
-        self._batches = []
-
-    def clear(self):
-        for y in range(self.height):
-            row = self._chars[y]
-            for x in range(self.width):
-                row[x] = " "
-        # Don't need to reset colours every frame
-        self._batches.clear()
-
-    def print_at(self, text: str, x: int, y: int, colour: int = 7):
-        if y < 0 or y >= self.height:
-            return
-        if x >= self.width:
-            return
-        if x < 0:
-            # clip left
-            text = text[-x:]
-            x = 0
-        max_len = self.width - x
-        if max_len <= 0:
-            return
-        text = text[:max_len]
-        chars = self._chars[y]
-        fg = self._fg[y]
-        for i, ch in enumerate(text):
-            chars[x + i] = ch
-            fg[x + i] = colour
-
-    def has_resized(self) -> bool:
-        return False
-
-    def flush_batches(self) -> List[dict]:
-        # Build minimal horizontal runs per row to reduce draw calls
-        batches: List[dict] = []
-        for y in range(self.height):
-            row = self._chars[y]
-            cols = self._fg[y]
-            x = 0
-            while x < self.width:
-                col = cols[x]
-                if row[x] == " ":
-                    x += 1
-                    continue
-                start = x
-                buf_chars = [row[x]]
-                x += 1
-                while x < self.width and cols[x] == col and row[x] != " ":
-                    buf_chars.append(row[x])
-                    x += 1
-                text = "".join(buf_chars)
-                batches.append({
-                    "y": int(y),
-                    "x": int(start),
-                    "text": str(text),
-                    "colour": str(COLOUR_TO_HEX.get(col, "#ffffff")),
-                })
-        return batches
+# Rebuild delay constants to coalesce noisy changes
+REBUILD_DELAY_RESIZE = 0.0
+REBUILD_DELAY_THROTTLE = 0.15
 
 
 class WebApp:
@@ -161,15 +30,17 @@ class WebApp:
         self.app = None
         self.screen = None
         self.settings = Settings()
-        self._flush_hook = None
+        self._flush_hook: Optional[FlushHook] = None
         self._accum = 0.0
         self._target_dt = 1.0 / max(1, self.settings.fps)
         # Rebuild control for live option changes
         self._rebuild_due_at = 0.0
         self._rebuild_pending = False
+        # Numeric tolerance for float changes used in option comparisons
+        self._EPS = 1e-6
 
     # JS integration
-    def set_js_flush_hook(self, fn: Callable[[List[dict]], None]) -> None:
+    def set_js_flush_hook(self, fn: FlushHook) -> None:
         self._flush_hook = fn
 
     # Lifecycle
@@ -194,13 +65,13 @@ class WebApp:
         self.screen.height = rows
         self.screen._alloc()
         # Defer rebuild to tick loop to avoid cascading rebuilds
-        self._schedule_rebuild(delay=0.0)
+        self._schedule_rebuild(delay=REBUILD_DELAY_RESIZE)
 
     def set_options(self, options: dict):
         needs_rebuild = self._apply_options(options)
         if needs_rebuild:
             # Throttle rebuilds to avoid excessive work while dragging sliders
-            self._schedule_rebuild(delay=0.15)
+            self._schedule_rebuild(delay=REBUILD_DELAY_THROTTLE)
 
     def _schedule_rebuild(self, delay: float = 0.0):
         try:
@@ -211,46 +82,49 @@ class WebApp:
         self._rebuild_pending = True
 
     def _apply_options(self, options: dict) -> bool:
+        # Aggregate rebuild requests from sub-areas
         needs_rebuild = False
-        EPS = 1e-6
+        needs_rebuild |= self._apply_basic(options)
+        needs_rebuild |= self._apply_booleans(options)
+        needs_rebuild |= self._apply_fish(options)
+        needs_rebuild |= self._apply_seaweed(options)
+        needs_rebuild |= self._apply_scene_spawn(options)
+        self._apply_special_weights(options)
+        self._apply_fishhook(options)
+        return bool(needs_rebuild)
 
-        # Basic subset mapped to Settings
+    # ---- Option helpers ----
+    def _apply_basic(self, options: dict) -> bool:
+        needs_rebuild = False
         if "fps" in options:
             try:
                 self.settings.fps = max(5, min(120, int(options["fps"])))
-                # Update pacing immediately; no rebuild necessary
                 self._target_dt = 1.0 / max(1, self.settings.fps)
             except Exception:
                 pass
-
         if "density" in options:
             try:
                 new_val = float(options["density"])
                 old_val = float(getattr(self.settings, "density", new_val))
-                if abs(new_val - old_val) > EPS:
+                if abs(new_val - old_val) > self._EPS:
                     self.settings.density = new_val
-                    # Incremental adjustment; no rebuild needed
                     if self.app is not None and self.screen is not None:
                         try:
                             self.app.adjust_populations(self.screen)  # type: ignore[attr-defined]
                         except Exception:
-                            # Fallback to rebuild on failure
                             needs_rebuild = True
             except Exception:
                 pass
-
         if "speed" in options:
             try:
                 self.settings.speed = float(options["speed"])
             except Exception:
                 pass
-
         if "color" in options:
             try:
                 self.settings.color = str(options["color"]).lower()
             except Exception:
                 pass
-
         if "seed" in options:
             val = options["seed"]
             try:
@@ -260,21 +134,20 @@ class WebApp:
             if new_seed != getattr(self.settings, "seed", None):
                 self.settings.seed = new_seed
                 needs_rebuild = True
+        return needs_rebuild
 
-        # Web UI booleans
+    def _apply_booleans(self, options: dict) -> bool:
+        needs_rebuild = False
         if "chest" in options:
             try:
                 prev = bool(getattr(self.settings, "chest_enabled", True))
                 new_val = bool(options["chest"])  # type: ignore[attr-defined]
                 if new_val != prev:
                     self.settings.chest_enabled = new_val  # type: ignore[attr-defined]
-                    # Live toggle of treasure chest without full rebuild
                     if self.app is not None and self.screen is not None:
                         if not new_val:
-                            # Remove any existing chest from decor
                             self.app.decor = [d for d in self.app.decor if not isinstance(d, TreasureChest)]
                         else:
-                            # Add one if none present
                             if not any(isinstance(d, TreasureChest) for d in self.app.decor):
                                 try:
                                     self.app.decor.extend(spawn_treasure_chest(self.screen, self.app))  # type: ignore[arg-type]
@@ -287,15 +160,16 @@ class WebApp:
                 self.settings.castle_enabled = bool(options["castle"])  # type: ignore[attr-defined]
             except Exception:
                 pass
-
         if "turn" in options:
             try:
                 self.settings.fish_turn_enabled = bool(options["turn"])  # type: ignore[attr-defined]
             except Exception:
                 pass
+        return needs_rebuild
 
-        # Fish controls
-        for key_map in [
+    def _apply_fish(self, options: dict) -> bool:
+        needs_rebuild = False
+        for src, dst, typ in [
             ("fish_direction_bias", "fish_direction_bias", float),
             ("fish_speed_min", "fish_speed_min", float),
             ("fish_speed_max", "fish_speed_max", float),
@@ -307,12 +181,12 @@ class WebApp:
             ("fish_turn_expand_seconds", "fish_turn_expand_seconds", float),
             ("fish_scale", "fish_scale", float),
         ]:
-            src, dst, typ = key_map
             if src in options:
                 try:
                     new_val = typ(options[src])
                     old_val = getattr(self.settings, dst)
-                    if (isinstance(new_val, float) and isinstance(old_val, float) and abs(new_val - old_val) > EPS) or (not isinstance(new_val, float) and new_val != old_val):
+                    changed = (isinstance(new_val, float) and isinstance(old_val, float) and abs(new_val - old_val) > self._EPS) or (not isinstance(new_val, float) and new_val != old_val)
+                    if changed:
                         setattr(self.settings, dst, new_val)
                         if dst in ("fish_scale",) and self.app is not None and self.screen is not None:
                             try:
@@ -321,9 +195,11 @@ class WebApp:
                                 needs_rebuild = True
                 except Exception:
                     pass
+        return needs_rebuild
 
-        # Seaweed
-        for key_map in [
+    def _apply_seaweed(self, options: dict) -> bool:
+        needs_rebuild = False
+        for src, dst, typ in [
             ("seaweed_scale", "seaweed_scale", float),
             ("seaweed_sway_min", "seaweed_sway_min", float),
             ("seaweed_sway_max", "seaweed_sway_max", float),
@@ -336,12 +212,12 @@ class WebApp:
             ("seaweed_shrink_rate_min", "seaweed_shrink_rate_min", float),
             ("seaweed_shrink_rate_max", "seaweed_shrink_rate_max", float),
         ]:
-            src, dst, typ = key_map
             if src in options:
                 try:
                     new_val = typ(options[src])
                     old_val = getattr(self.settings, dst)
-                    if (isinstance(new_val, float) and isinstance(old_val, float) and abs(new_val - old_val) > EPS) or (not isinstance(new_val, float) and new_val != old_val):
+                    changed = (isinstance(new_val, float) and isinstance(old_val, float) and abs(new_val - old_val) > self._EPS) or (not isinstance(new_val, float) and new_val != old_val)
+                    if changed:
                         setattr(self.settings, dst, new_val)
                         if dst in ("seaweed_scale",) and self.app is not None and self.screen is not None:
                             try:
@@ -350,9 +226,11 @@ class WebApp:
                                 needs_rebuild = True
                 except Exception:
                     pass
+        return needs_rebuild
 
-        # Scene & spawn
-        for key_map in [
+    def _apply_scene_spawn(self, options: dict) -> bool:
+        needs_rebuild = False
+        for src, dst, typ in [
             ("waterline_top", "waterline_top", int),
             ("chest_burst_seconds", "chest_burst_seconds", float),
             ("spawn_start_delay_min", "spawn_start_delay_min", float),
@@ -362,15 +240,14 @@ class WebApp:
             ("spawn_max_concurrent", "spawn_max_concurrent", int),
             ("spawn_cooldown_global", "spawn_cooldown_global", float),
         ]:
-            src, dst, typ = key_map
             if src in options:
                 try:
                     old_val = getattr(self.settings, dst)
                     new_val = typ(options[src])
-                    if (isinstance(new_val, float) and isinstance(old_val, float) and abs(new_val - old_val) > EPS) or (not isinstance(new_val, float) and new_val != old_val):
+                    changed = (isinstance(new_val, float) and isinstance(old_val, float) and abs(new_val - old_val) > self._EPS) or (not isinstance(new_val, float) and new_val != old_val)
+                    if changed:
                         setattr(self.settings, dst, new_val)
                         if dst == "waterline_top":
-                            # Live-update fish constraints to new waterline
                             if self.app is not None:
                                 for f in getattr(self.app, "fish", []):
                                     try:
@@ -387,8 +264,9 @@ class WebApp:
                                         pass
                 except Exception:
                     pass
+        return needs_rebuild
 
-        # Special weights
+    def _apply_special_weights(self, options: dict) -> None:
         weights = {
             "shark": options.get("w_shark"),
             "fishhook": options.get("w_fishhook"),
@@ -407,14 +285,12 @@ class WebApp:
                 except Exception:
                     pass
 
-        # Fishhook
+    def _apply_fishhook(self, options: dict) -> None:
         if "fishhook_dwell_seconds" in options:
             try:
                 self.settings.fishhook_dwell_seconds = float(options["fishhook_dwell_seconds"])  # type: ignore[assignment]
             except Exception:
                 pass
-
-        return needs_rebuild
 
     def tick(self, dt_ms: float):
         if not self.app or not self.screen:
@@ -505,5 +381,6 @@ class WebApp:
 web_app = WebApp()
 
 # Convenience alias for JS to set the flush hook
+
 def set_js_flush_hook(fn):
     web_app.set_js_flush_hook(fn)

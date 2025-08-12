@@ -4,12 +4,12 @@ import random
 from dataclasses import dataclass
 from typing import List
 
-from asciimatics.screen import Screen
+from ...screen_compat import Screen
 
 from ..base import Actor
 from ..core import Bubble
 from ...util import sprite_size, draw_sprite_masked_with_bg
-from ...environment import CHEST_CLOSED, CHEST_OPEN, CHEST_MASK
+from ..environment import CHEST_CLOSED, CHEST_OPEN, CHEST_MASK
 
 
 @dataclass

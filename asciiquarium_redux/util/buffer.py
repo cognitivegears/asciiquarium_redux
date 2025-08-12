@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from typing import List, Tuple, Optional
-from asciimatics.screen import Screen
+from ..screen_compat import Screen
 
 
 Cell = Tuple[str, int]
@@ -58,8 +58,7 @@ class DoubleBufferedScreen:
             return
         if x >= self._w:
             return
-        if colour is None:
-            colour = Screen.COLOUR_WHITE
+        col: int = Screen.COLOUR_WHITE if colour is None else int(colour)
         # Clip left
         start = 0
         if x < 0:
@@ -72,7 +71,7 @@ class DoubleBufferedScreen:
         row = self._back[y]
         for i in range(max_len):
             ch = text[start + i]
-            row[x + i] = (ch, colour)
+            row[x + i] = (ch, col)
 
     def flush(self) -> None:
         """Compute diffs and emit print_at calls to the real screen, then refresh."""

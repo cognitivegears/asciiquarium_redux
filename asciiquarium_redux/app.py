@@ -4,15 +4,13 @@ import random
 import time
 from typing import List
 
-from asciimatics.screen import Screen
 from typing import cast
-from asciimatics.event import KeyboardEvent, MouseEvent
-from asciimatics.exceptions import ResizeScreenError
+from .screen_compat import Screen
 
 from .util import sprite_size, draw_sprite, draw_sprite_masked, fill_rect, draw_sprite_masked_with_bg
-from .buffer import DoubleBufferedScreen
-from .environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK, waterline_row
-from .settings import Settings
+from .util.buffer import DoubleBufferedScreen
+from .entities.environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK, waterline_row
+from .util.settings import Settings
 from .entities.core import Seaweed, Bubble, Splat, Fish, random_fish_frames
 from .entities.base import Actor
 from .entities.specials import (
@@ -450,6 +448,9 @@ class AsciiQuarium:
 
 
 def run(screen: Screen, settings: Settings):
+    # Import terminal-only dependencies lazily to keep web import graph clean.
+    from asciimatics.event import KeyboardEvent, MouseEvent  # type: ignore
+    from asciimatics.exceptions import ResizeScreenError  # type: ignore
     app = AsciiQuarium(settings)
     # Wrap the screen with a double buffer to reduce flicker
     db = DoubleBufferedScreen(screen)

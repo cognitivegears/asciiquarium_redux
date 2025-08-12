@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import random
 import sys
-from asciimatics.screen import Screen
-from asciimatics.exceptions import ResizeScreenError
+from .screen_compat import Screen
 
-from .settings import load_settings_from_sources
+from .util.settings import load_settings_from_sources
 from .app import run as _run
 
 
@@ -15,9 +14,12 @@ def run_with_resize(settings) -> None:
     This wraps Screen.wrapper and catches ResizeScreenError to recreate
     the screen, without changing application behavior.
     """
+    # Import terminal dependencies lazily to avoid import-time costs in other backends
+    from asciimatics.screen import Screen as _RealScreen  # type: ignore
+    from asciimatics.exceptions import ResizeScreenError  # type: ignore
     while True:
         try:
-            Screen.wrapper(lambda scr: _run(scr, settings))
+            _RealScreen.wrapper(lambda scr: _run(scr, settings))
             break
         except ResizeScreenError:
             continue
@@ -44,7 +46,7 @@ def main(argv: list[str] | None = None) -> None:
         try:
             # Preflight to provide a clearer error if Tk isn't present
             import tkinter  # type: ignore
-            from .tk_runner import run_tk
+            from .backend.tk import run_tk
             run_tk(settings)
             return
         except Exception as e:

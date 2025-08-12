@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import random
-from asciimatics.screen import Screen
+from ...screen_compat import Screen
 
 from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked, randomize_colour_mask
 from ..base import Actor
