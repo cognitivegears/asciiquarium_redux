@@ -31,6 +31,8 @@ class TreasureChest(Actor):
     _burst_emit_accum: float = 0.0
 
     def __post_init__(self):
+        # Validate burst_emit_rate to prevent negative values that could cause issues
+        self.burst_emit_rate = max(0.0, float(self.burst_emit_rate))
         # Randomize initial timers so multiple chests don't sync
         self._next_small = random.uniform(self.small_bubble_min, self.small_bubble_max)
         self._burst_timer = self.burst_period * random.uniform(0.7, 1.3)
@@ -66,7 +68,9 @@ class TreasureChest(Actor):
         if self._bursting:
             # Emit a stream of bubbles from the lid while open
             x_draw, y_draw, w, h = current_origin(True)
-            self._burst_emit_accum += max(0.0, float(self.burst_emit_rate)) * dt
+            # Ensure burst_emit_rate is always non-negative
+            safe_emit_rate = max(0.0, float(self.burst_emit_rate))
+            self._burst_emit_accum += safe_emit_rate * dt
             n = int(self._burst_emit_accum)
             if n > 0:
                 self._burst_emit_accum -= n

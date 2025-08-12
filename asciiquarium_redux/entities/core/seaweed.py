@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import List, Tuple
+from typing import List, Tuple, Any
 from ...screen_compat import Screen
 
 
@@ -50,7 +50,7 @@ class Seaweed:
         frame2 = [s.ljust(2) for s in b]
         return frame1, frame2
 
-    def update(self, dt: float, screen: Screen):
+    def update(self, dt: float, screen: Screen, app: Any):
         # advance sway timer
         self.sway_t += dt
         # lifecycle
@@ -86,14 +86,17 @@ class Seaweed:
     def draw(self, screen: Screen, tick: int, mono: bool = False):
         f1, f2 = self.frames()
         # compute sway toggle based on per-entity timer and speed
+        # Prevent division by zero by ensuring sway_speed is positive
         step = int(self.sway_t / max(0.05, self.sway_speed))
         sway = (step + self.phase) % 2
         rows = f1 if sway == 0 else f2
         # How many rows to draw from the bottom
-        vis = max(0, min(self.height, int(self.visible_height)))
-        start_idx = self.height - vis
-        for i in range(start_idx, self.height):
+        # Prevent negative height which could cause index errors
+        safe_height = max(1, self.height)
+        vis = max(0, min(safe_height, int(self.visible_height)))
+        start_idx = safe_height - vis
+        for i in range(start_idx, safe_height):
             row = rows[i]
-            y = self.base_y - (self.height - 1 - i)
+            y = self.base_y - (safe_height - 1 - i)
             if 0 <= y < screen.height:
                 screen.print_at(row, self.x, y, colour=Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)

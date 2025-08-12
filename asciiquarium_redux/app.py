@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import random
 import time
+import logging
 from typing import List
 
 from typing import cast
@@ -100,9 +101,9 @@ class AsciiQuarium:
         if getattr(self.settings, "chest_enabled", True):
             try:
                 self.decor.extend(spawn_treasure_chest(screen, self))
-            except Exception:
-                # Fail-safe: ignore decor errors so app still runs
-                pass
+            except Exception as e:
+                # Fail-safe: ignore decor errors so app still runs, but log the issue
+                logging.warning(f"Failed to spawn treasure chest: {e}")
 
         water_top = self.settings.waterline_top
         area = max(1, (screen.height - (water_top + 4)) * screen.width)
@@ -160,7 +161,7 @@ class AsciiQuarium:
         if not self._paused:
             self._seaweed_tick += dt
             for s in self.seaweed:
-                s.update(dt, screen)
+                s.update(dt, screen, self)
             # Update decor (e.g., treasure chest) so it can emit bubbles
             for d in self.decor:
                 try:
@@ -169,12 +170,14 @@ class AsciiQuarium:
                     # Support actors with older update signatures
                     d.update(dt, screen)  # type: ignore[misc]
             for f in self.fish:
-                f.update(dt, screen, self.bubbles)
+                f.update(dt, screen, self)
             survivors: List[Bubble] = []
             for b in self.bubbles:
-                b.update(dt)
-                # Kill bubble if it hits any visible waterline character
+                b.update(dt, screen, self)
+                # Kill bubble if it hits any visible waterline character or exceeds lifetime
                 if b.y < 0:
+                    continue
+                if not b.active:  # Check bubble lifetime to prevent memory leaks
                     continue
                 if self._bubble_hits_waterline(b.x, b.y, screen):
                     continue
@@ -184,7 +187,7 @@ class AsciiQuarium:
                 a.update(dt, screen, self)
             self.specials = [a for a in self.specials if getattr(a, "active", True)]
             for s in self.splats:
-                s.update()
+                s.update(dt, screen, self)
             self.splats = [s for s in self.splats if s.active]
             # advance app time and spawn timer regardless of current specials
             self._time += dt
@@ -484,8 +487,9 @@ def run(screen: Screen, settings: Settings):
                 f = random.choice(candidates)
                 try:
                     f.start_turn()
-                except Exception:
-                    pass
+                except Exception as e:
+                    # Log fish turning errors but continue operation
+                    logging.debug(f"Fish turn failed: {e}")
         # Spacebar: drop fishhook at random position (like random special)
         if key == ord(" "):
             # If a hook exists and is not retracting, command it to retract immediately

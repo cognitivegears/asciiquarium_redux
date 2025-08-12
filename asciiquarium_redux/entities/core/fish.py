@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Any
 from ...screen_compat import Screen
 
 from ...util import draw_sprite, draw_sprite_masked, randomize_colour_mask
@@ -61,7 +61,7 @@ class Fish:
     def height(self) -> int:
         return len(self.frames)
 
-    def update(self, dt: float, screen: Screen, bubbles: List[Bubble]):
+    def update(self, dt: float, screen: Screen, app: Any):
         # Handle turn timer/chance
         if not self.hooked and self.turn_enabled:
             self.next_turn_ok_in = max(0.0, self.next_turn_ok_in - dt)
@@ -86,7 +86,7 @@ class Fish:
         if self.next_bubble <= 0:
             by = int(self.y + self.height // 2)
             bx = int(self.x + (self.width if self.vx > 0 else -1))
-            bubbles.append(Bubble(x=bx, y=by))
+            app.bubbles.append(Bubble(x=bx, y=by))
             self.next_bubble = random.uniform(self.bubble_min, self.bubble_max)
         if self.vx > 0 and self.x > screen.width:
             self.respawn(screen, direction=1)
@@ -122,7 +122,13 @@ class Fish:
         if high < low:
             low = max(1, default_low)
             high = max(low, screen.height - self.height - 2)
-        self.y = random.randint(low, max(low, high))
+
+        # Ensure bounds are valid to prevent infinite loops or crashes
+        if high < low or screen.height < self.height + 4:
+            # Fallback for very small screens: place fish in middle
+            self.y = max(1, min(screen.height - self.height - 1, screen.height // 2))
+        else:
+            self.y = random.randint(low, max(low, high))
         self.x = -self.width if direction > 0 else screen.width
         # Reset turning animation state on respawn, but keep cooldown timer so turns still happen across respawns
         self.turning = False

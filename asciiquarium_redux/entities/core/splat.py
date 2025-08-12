@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import random
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Any
 from ...screen_compat import Screen
 
 from ...util import parse_sprite, draw_sprite
@@ -56,7 +56,7 @@ class Splat:
         ]
     )
 
-    def update(self):
+    def update(self, dt: float, screen: Screen, app: Any):
         self.age_frames += 1
 
     @property
