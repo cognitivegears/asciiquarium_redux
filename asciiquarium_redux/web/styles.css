@@ -53,7 +53,10 @@ body {
 .hint .repo { margin-left: auto; color: #9fdbe2; text-decoration: none; }
 .hint .repo:hover { color: #66f3ff; }
 
-@media (max-width: 900px) {
+@media (max-width: 600px) {
+  #aquarium {
+    font-size: 10px !important;
+  }
   .controls { width: calc(100% - 16px); }
   .field input[type="range"] { width: 100%; }
 }

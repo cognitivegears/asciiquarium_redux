@@ -12,16 +12,21 @@ const aboutContent = document.getElementById("aboutContent");
 const closeSettings = document.getElementById("closeSettings");
 const ctx2d = canvas.getContext("2d", { alpha: false, desynchronized: true });
 const state = { cols: 120, rows: 40, cellW: 12, cellH: 18, baseline: 4, fps: 24, running: false };
+let lastFontSize = null;
 
-function measureCell(font = "16px Menlo, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace") {
-  // Ensure metrics are in CSS pixels (identity transform)
+function getAquariumFont() {
+  // Get computed font-size for the canvas (may be set by media query)
+  const style = window.getComputedStyle(canvas);
+  return `${style.fontSize} Menlo, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace`;
+}
+function measureCell(font) {
   ctx2d.setTransform(1, 0, 0, 1, 0, 0);
   ctx2d.font = font;
   const m = ctx2d.measureText("M");
   const w = Math.round(m.width);
   const ascent = Math.ceil(m.actualBoundingBoxAscent || 13);
   const descent = Math.ceil(m.actualBoundingBoxDescent || 3);
-  const h = ascent + descent + 2; // small padding for descenders
+  const h = ascent + descent + 2;
   state.baseline = Math.ceil(descent + 1);
   return { w: Math.ceil(w), h: Math.ceil(h) };
 }
@@ -193,12 +198,31 @@ v
   // Workaround: set via pyodide.globals
   const mod = pyodide.pyimport("asciiquarium_redux.web_backend");
   mod.set_js_flush_hook(jsFlushHook);
-  // Measure cell metrics once for a stable grid
-  const m = measureCell();
-  state.cellW = Math.round(m.w);
-  state.cellH = Math.round(m.h);
+  // Measure cell metrics for a stable grid, but re-measure if font size changes (mobile)
+  function updateCellMetrics() {
+    const font = getAquariumFont();
+    const style = window.getComputedStyle(canvas);
+    const fontSize = style.fontSize;
+    if (lastFontSize !== fontSize) {
+      const m = measureCell(font);
+      state.cellW = Math.round(m.w);
+      state.cellH = Math.round(m.h);
+      lastFontSize = fontSize;
+    }
+  }
+  updateCellMetrics();
   // Apply initial layout
   resizeCanvasToGrid();
+
+  // On resize/orientation change, re-measure font and grid
+  window.addEventListener("resize", () => {
+    updateCellMetrics();
+    resizeCanvasToGrid();
+  });
+  window.addEventListener("orientationchange", () => {
+    updateCellMetrics();
+    resizeCanvasToGrid();
+  });
   const opts = collectOptionsFromUI();
   // Convert JS object to a real Python dict to avoid JSON true/false/null issues
   const pyOpts = pyodide.toPy(opts);
