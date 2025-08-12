@@ -42,7 +42,7 @@ package = true
 include = [
     "asciiquarium_redux",
     "README.md",
-    "LICENSE.md",
+    "LICENSE",
     "sample-config.toml",
 ]
 exclude = [

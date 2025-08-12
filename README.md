@@ -1,10 +1,14 @@
 # Asciiquarium Redux 🐠
 
+[![PyPI version](https://img.shields.io/pypi/v/asciiquarium-redux.svg)](https://pypi.org/project/asciiquarium-redux/) [![Live demo](https://img.shields.io/badge/web%20demo-open-0aaac0?logo=githubpages&logoColor=white)](https://cognitivegears.github.io/asciiquarium_redux/) [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/) [![CI](https://github.com/cognitivegears/asciiquarium_redux/actions/workflows/ci.yml/badge.svg)](https://github.com/cognitivegears/asciiquarium_redux/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/cognitivegears/asciiquarium_redux.svg)](LICENSE)
+
 A joyful, colorful Python reimagining of the classic terminal aquarium. Watch fish swim, seaweed sway, hooks drop, sharks prowl, and bubbles pop—right in your terminal or a windowed Tk screen.
 
 Original Asciiquarium by Kirk Baucom (Perl): [robobunny.com/projects/asciiquarium](https://robobunny.com/projects/asciiquarium/html/)
 
 Status: Playable, configurable, and window-ready (Tk). Bring your own snacks (for the ducks).
+
+👉 Try it in your browser (no install): [Live web version](https://cognitivegears.github.io/asciiquarium_redux/)
 
 ![Preview – Asciiquarium Redux](docs/screenshot.png)
 
@@ -370,9 +374,75 @@ The goal remains fidelity to the original look-and-feel first, with extras opt-i
 
 ## Development
 
-- Python 3.13 (repo venv managed by uv)
+Prereqs
+
+- Python 3.11+ (3.13 recommended)
+- [uv](https://github.com/astral-sh/uv) for env + builds (fast, zero-hassle)
+- No Node required (web UI is static)
+
+Setup
+
+```sh
+# Clone and enter the repo
+git clone https://github.com/cognitivegears/asciiquarium_redux.git
+cd asciiquarium_redux
+
+# Create a local venv and install deps
+uv sync
+```
+
+Run (terminal/Tk)
+
+```sh
+# Terminal backend
+uv run python main.py
+
+# Tk backend (windowed)
+uv run python main.py --backend tk
+```
+
+Web development
+
+```sh
+# 1) Build a wheel (the browser installs the wheel)
+uv build
+
+# 2) Start the local web server (auto-copies latest wheel to web/wheels/)
+uv run python -c "from asciiquarium_redux.web_server import serve_web; serve_web(port=8000, open_browser=True)"
+# or
+uv run python main.py --backend web --open
+```
+
+Dev loop tips (web)
+
+- Changing Python code: `uv build`, then restart the web server so it refreshes `web/wheels/`. Hard-refresh the page to reinstall the wheel.
+- Changing HTML/CSS/JS: just refresh the browser.
+- The browser first tries the local wheel (when served locally); on GitHub Pages it installs from PyPI.
+
+Config and CLI
+
+```sh
+# Example CLI flags
+uv run python main.py --fps 30 --density 1.5 --seed 123
+
+# Use a config file (see sample-config.toml)
+uv run python main.py --config ./sample-config.toml
+```
+
+Deploy the web UI
+
+- VS Code task: “Deploy web to GitHub Pages” (publishes `asciiquarium_redux/web/` to `gh-pages`).
+- Or follow the manual commands in “Deploy to GitHub Pages” above.
+
+Misc
+
 - Key dep: `asciimatics`
-- Entry point: `main.py` using `Screen.wrapper`
+- Entry points: `main.py` (CLI), `asciiquarium_redux/web_server.py` (local web serving)
+- Optional sanity check:
+
+```sh
+uv run python devtools/verify_shark_evasion.py
+```
 
 ## Recording a demo GIF (tips)
 
@@ -393,4 +463,4 @@ The goal remains fidelity to the original look-and-feel first, with extras opt-i
 
 ## License
 
-GPL-2.0-or-later to match the original Asciiquarium’s license. See [LICENSE.md](LICENSE.md).
+GPL-2.0-or-later to match the original Asciiquarium’s license. See [LICENSE](LICENSE).

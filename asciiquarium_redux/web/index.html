@@ -14,6 +14,7 @@
     </div>
     <nav class="links">
       <button id="settingsBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="settingsDialog">Settings</button>
+  <button id="aboutBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="aboutDialog">About</button>
       <a class="repo" href="https://github.com/cognitivegears/asciiquarium_redux" target="_blank" rel="noopener noreferrer" title="Repository">GitHub</a>
     </nav>
   </header>
@@ -102,6 +103,19 @@
   <main class="stage">
     <canvas id="aquarium" tabindex="0" aria-label="Asciiquarium Redux"></canvas>
   </main>
+
+  <dialog id="aboutDialog" class="controls" aria-label="About">
+    <div class="dialog-head">
+      <h2>About</h2>
+      <button id="closeAbout" class="close" value="cancel" aria-label="Close">×</button>
+    </div>
+    <article id="aboutContent" class="md-content" aria-live="polite">
+      Loading README…
+    </article>
+    <div class="actions">
+      <a class="repo" href="https://github.com/cognitivegears/asciiquarium_redux#readme" target="_blank" rel="noopener noreferrer">Open README on GitHub</a>
+    </div>
+  </dialog>
 
   <footer class="hint">
     <div class="keys">q quit · p pause · space hook · click hook · t turn · h help</div>

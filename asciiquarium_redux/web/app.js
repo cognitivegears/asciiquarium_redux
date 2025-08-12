@@ -5,6 +5,10 @@ const canvas = document.getElementById("aquarium");
 const stage = document.querySelector(".stage");
 const settingsDialog = document.getElementById("settingsDialog");
 const settingsBtn = document.getElementById("settingsBtn");
+const aboutBtn = document.getElementById("aboutBtn");
+const aboutDialog = document.getElementById("aboutDialog");
+const closeAbout = document.getElementById("closeAbout");
+const aboutContent = document.getElementById("aboutContent");
 const closeSettings = document.getElementById("closeSettings");
 const ctx2d = canvas.getContext("2d", { alpha: false, desynchronized: true });
 const state = { cols: 120, rows: 40, cellW: 12, cellH: 18, baseline: 4, fps: 24, running: false };
@@ -228,6 +232,42 @@ v
       settingsBtn.focus();
     }
   });
+  // About dialog toggle + lazy load README on first open
+  let aboutLoaded = false;
+  async function ensureAboutLoaded() {
+    if (aboutLoaded) return;
+    try {
+      // Try local paths first (dev server), then fallback to GitHub raw (Pages)
+      const candidates = [
+        './README.md', 'README.md', '../README.md', '../../README.md',
+        'https://raw.githubusercontent.com/cognitivegears/asciiquarium_redux/main/README.md'
+      ];
+      let md = null;
+      for (const url of candidates) {
+        try {
+          const r = await fetch(url, { cache: 'no-store' });
+          if (r.ok) { md = await r.text(); break; }
+        } catch {}
+      }
+      if (!md) throw new Error('README not found');
+      // Minimal markdown to HTML converter for headings, lists, code blocks; keep it simple
+      const html = renderMarkdownBasic(md);
+      aboutContent.innerHTML = html;
+      aboutLoaded = true;
+    } catch (e) {
+      aboutContent.textContent = 'Failed to load README.';
+    }
+  }
+  aboutBtn?.addEventListener("click", async () => {
+    if (!aboutDialog.open) {
+      await ensureAboutLoaded();
+      try { aboutDialog.showModal(); } catch { aboutDialog.show(); }
+    } else {
+      aboutDialog.close();
+      aboutBtn.focus();
+    }
+  });
+  closeAbout?.addEventListener("click", () => aboutDialog.close());
   closeSettings?.addEventListener("click", () => settingsDialog.close());
   requestAnimationFrame(loop);
 }
@@ -319,3 +359,49 @@ document.querySelectorAll('.controls details.group').forEach((d) => {
 });
 
 boot();
+
+// Very small markdown renderer (headings, code blocks, inline code, paragraphs, links, lists)
+function renderMarkdownBasic(md) {
+  // Strip top badges row if present to keep dialog compact
+  md = md.replace(/^\s*\[!\[.*\n/, '');
+  const lines = md.split(/\r?\n/);
+  const out = [];
+  let inCode = false;
+  let listOpen = false;
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+    if (line.startsWith('```')) {
+      if (!inCode) { out.push('<pre><code>'); inCode = true; }
+      else { out.push('</code></pre>'); inCode = false; }
+      continue;
+    }
+    if (inCode) { out.push(escapeHtml(line) + '\n'); continue; }
+    if (/^\s*#\s+/.test(line)) { out.push(`<h1>${escapeHtml(line.replace(/^\s*#\s+/, ''))}</h1>`); continue; }
+    if (/^\s*##\s+/.test(line)) { out.push(`<h2>${escapeHtml(line.replace(/^\s*##\s+/, ''))}</h2>`); continue; }
+    if (/^\s*###\s+/.test(line)) { out.push(`<h3>${escapeHtml(line.replace(/^\s*###\s+/, ''))}</h3>`); continue; }
+    if (/^\s*[-*]\s+/.test(line)) {
+      if (!listOpen) { out.push('<ul>'); listOpen = true; }
+      out.push(`<li>${inlineMd(line.replace(/^\s*[-*]\s+/, ''))}</li>`);
+      // If next line isn’t a list item, close
+      const next = lines[i+1] || '';
+      if (!/^\s*[-*]\s+/.test(next)) { out.push('</ul>'); listOpen = false; }
+      continue;
+    }
+    if (/^\s*$/.test(line)) { out.push(''); continue; }
+    out.push(`<p>${inlineMd(line)}</p>`);
+  }
+  return out.join('\n');
+}
+function inlineMd(s) {
+  // links [text](url)
+  s = s.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer">$1<\/a>');
+  // inline code
+  s = s.replace(/`([^`]+)`/g, '<code>$1<\/code>');
+  return escapeHtmlPreserveTags(s);
+}
+function escapeHtml(s) {
+  return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+}
+function escapeHtmlPreserveTags(s) {
+  return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])).replace(/&lt;(\/?)(a|code|pre|h1|h2|h3|ul|li)&gt;/g, '<$1$2>');
+}
