@@ -1,10 +1,111 @@
 from __future__ import annotations
 
-from typing import Any
-from ..screen_compat import Screen
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ..protocols import ScreenProtocol, AsciiQuariumProtocol
 
 class Actor:
-    def update(self, dt: float, screen: Screen, app: Any) -> None: ...
-    def draw(self, screen: Screen, mono: bool = False) -> None: ...
+    """Base protocol defining the interface for all animated entities in the aquarium.
+
+    The Actor protocol establishes a common interface that all entities must implement
+    to participate in the aquarium's update/render cycle. This protocol enables
+    polymorphic entity management and ensures consistent behavior across different
+    entity types.
+
+    Design Philosophy:
+        The Actor protocol follows the "composition over inheritance" principle,
+        allowing entities to implement the required interface without forcing
+        a specific inheritance hierarchy. This design provides flexibility for
+        diverse entity implementations while maintaining system consistency.
+
+    Protocol Methods:
+        All implementing classes must provide these three core methods to integrate
+        with the entity management system. The protocol ensures type safety and
+        consistent interfaces across the entire entity hierarchy.
+
+    Performance:
+        The protocol interface is designed for high-frequency calls (20-60 FPS)
+        with minimal overhead. Method signatures are optimized for common use
+        cases while providing necessary flexibility for diverse entity behaviors.
+
+    Implementation Examples:
+        - Fish: Complex movement, bubble generation, and interaction behaviors
+        - Seaweed: Lifecycle management with growth/death animations
+        - Bubble: Simple upward movement with automatic cleanup
+        - Special Entities: Sharks, whales, ships with unique behaviors
+        - Environmental: Static decorations like treasure chests and castles
+
+    Usage Pattern:
+        ```python
+        # Entity collections use the common Actor interface
+        entities: List[Actor] = [fish1, seaweed1, bubble1, shark1]
+
+        # Polymorphic updates and rendering
+        for entity in entities:
+            entity.update(dt, screen, app)
+            if entity.active:
+                entity.draw(screen, mono=color_mode == "mono")
+            else:
+                entities.remove(entity)  # Cleanup inactive entities
+        ```
+
+    See Also:
+        - Fish, Seaweed, Bubble: Core entity implementations
+        - AsciiQuarium: Main class that manages Actor collections
+        - Entity System Documentation: docs/ENTITY_SYSTEM.md
+    """
+
+    def update(self, dt: float, screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> None:
+        """Update entity state for the current frame.
+
+        Called once per frame to advance entity animations, handle physics,
+        process interactions, and manage entity-specific state changes.
+
+        Args:
+            dt: Time elapsed since last update (in seconds)
+            screen: Screen abstraction for dimension and rendering context
+            app: Reference to main AsciiQuarium instance for global state access
+
+        Implementation Notes:
+            - Must handle variable dt for frame-rate independence
+            - Should update position, animation timers, and internal state
+            - May spawn new entities (bubbles, effects) via app reference
+            - Should handle edge cases like screen boundary conditions
+        """
+        ...
+
+    def draw(self, screen: "ScreenProtocol", mono: bool = False) -> None:
+        """Render entity visual representation to the screen.
+
+        Called once per frame after update() to draw the entity's current
+        visual state. Must handle different color modes and screen constraints.
+
+        Args:
+            screen: Screen abstraction for rendering operations
+            mono: Whether to use monochrome rendering (no colors)
+
+        Implementation Notes:
+            - Must respect screen boundaries and handle clipping
+            - Should support both color and monochrome rendering modes
+            - May use screen.print_at() for text or draw_sprite() for graphics
+            - Should handle transparency and layering appropriately
+        """
+        ...
+
     @property
-    def active(self) -> bool: ...
+    def active(self) -> bool:
+        """Check if entity should remain in the simulation.
+
+        Returns True if the entity should continue updating and rendering,
+        False if it should be removed from entity collections for cleanup.
+
+        Returns:
+            bool: True to keep entity active, False to mark for removal
+
+        Implementation Notes:
+            - Used by entity management system for automatic cleanup
+            - Should return False when entity is off-screen, expired, or destroyed
+            - Enables automatic memory management without manual tracking
+        """
+        ...

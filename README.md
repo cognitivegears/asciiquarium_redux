@@ -29,6 +29,22 @@ Status: Playable, configurable, and window-ready (Tk). Bring your own snacks (fo
 - Deterministic playback (seed) for captures and demos
 - Fish turning: fish can occasionally turn around with a smooth shrink/flip/expand animation (configurable)
 
+## 📚 Documentation
+
+### Quick Start
+- **[Getting Started Guide](docs/DEVELOPER_GUIDE.md)** - Setup, installation, and first steps
+- **[Configuration Guide](docs/CONFIGURATION.md)** - Complete settings reference and customization
+- **[Backend Comparison](docs/BACKENDS.md)** - Terminal vs Web vs TkInter backends
+
+### Technical Reference
+- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and component relationships
+- **[API Reference](docs/API_REFERENCE.md)** - Public interfaces and usage examples
+- **[Entity System](docs/ENTITY_SYSTEM.md)** - Fish, seaweed, bubbles, and special entity details
+
+### Deployment & Advanced
+- **[Web Deployment](docs/WEB_DEPLOYMENT.md)** - Browser setup and GitHub Pages deployment
+- **[Sample Configuration](sample-config.toml)** - Example TOML configuration file
+
 ## Quick start
 
 From source using uv (already configured in this repo):

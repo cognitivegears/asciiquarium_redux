@@ -6,6 +6,16 @@ from ...screen_compat import Screen
 from ...util import parse_sprite, draw_sprite, aabb_overlap
 from ..core import Fish, Splat
 from ..base import Actor
+from ...constants import (
+    FISHHOOK_SPEED,
+    FISHHOOK_IMPACT_PAUSE_DURATION,
+    FISHHOOK_DWELL_TIME_DEFAULT,
+    FISHHOOK_DEPTH_LIMIT_FRACTION,
+    FISHHOOK_TIP_OFFSET_X,
+    FISHHOOK_TIP_OFFSET_Y,
+    FISHHOOK_LINE_TOP,
+    FISHHOOK_LINE_OFFSET_X,
+)
 
 
 class FishHook(Actor):
@@ -18,7 +28,7 @@ class FishHook(Actor):
             self.x = random.randint(10, max(11, screen.width - 10))
         self.y = -4
         self.state = "lowering"
-        self.speed = 15.0
+        self.speed = FISHHOOK_SPEED
         self.caught = None
         self._active = True
         # Optional targeted drop (hook point to reach target_y)
@@ -26,7 +36,7 @@ class FishHook(Actor):
         # Short pause after impact to show splat before retracting
         self.pause_timer = 0.0
         # Dwell timer when reaching bottom (seconds); pulled from app.settings
-        self.dwell_timer = float(getattr(app.settings, "fishhook_dwell_seconds", 20.0))
+        self.dwell_timer = float(getattr(app.settings, "fishhook_dwell_seconds", FISHHOOK_DWELL_TIME_DEFAULT))
 
     def retract_now(self):
         if self.state != "retracting":
@@ -46,15 +56,15 @@ class FishHook(Actor):
                 else:
                     limit_reached = True
             else:
-                if self.y + 6 < int(screen.height * 0.75):
+                if self.y + 6 < int(screen.height * FISHHOOK_DEPTH_LIMIT_FRACTION):
                     self.y += self.speed * dt
                 else:
                     limit_reached = True
 
             # Check for collision with regular fish using the hook tip (hx, hy)
             if not self.caught:
-                hx = int(self.x + 1)
-                hy = int(self.y + 2)
+                hx = int(self.x + FISHHOOK_TIP_OFFSET_X)
+                hy = int(self.y + FISHHOOK_TIP_OFFSET_Y)
                 for f in app.fish:
                     if f.hooked:
                         continue
@@ -65,15 +75,15 @@ class FishHook(Actor):
                         f.attach_to_hook(hx, hy)
                         # Pause briefly so the splat is visible
                         self.state = "impact_pause"
-                        self.pause_timer = 0.35
+                        self.pause_timer = FISHHOOK_IMPACT_PAUSE_DURATION
                         break
             if not self.caught and limit_reached:
                 # Start dwelling at bottom instead of retracting immediately
                 self.state = "dwelling"
         elif self.state == "impact_pause":
             # Hold position briefly; keep attached fish aligned with tip
-            hx = int(self.x + 1)
-            hy = int(self.y + 2)
+            hx = int(self.x + FISHHOOK_TIP_OFFSET_X)
+            hy = int(self.y + FISHHOOK_TIP_OFFSET_Y)
             if self.caught:
                 self.caught.follow_hook(hx, hy)
             self.pause_timer -= dt
@@ -81,8 +91,8 @@ class FishHook(Actor):
                 self.state = "retracting"
         elif self.state == "dwelling":
             # Stay put at bottom for a while; keep fish (if any) aligned
-            hx = int(self.x + 1)
-            hy = int(self.y + 2)
+            hx = int(self.x + FISHHOOK_TIP_OFFSET_X)
+            hy = int(self.y + FISHHOOK_TIP_OFFSET_Y)
             if self.caught:
                 self.caught.follow_hook(hx, hy)
             else:
@@ -96,15 +106,15 @@ class FishHook(Actor):
                         f.attach_to_hook(hx, hy)
                         # Brief impact pause before retracting for visibility
                         self.state = "impact_pause"
-                        self.pause_timer = 0.35
+                        self.pause_timer = FISHHOOK_IMPACT_PAUSE_DURATION
                         break
             self.dwell_timer -= dt
             if self.dwell_timer <= 0:
                 self.state = "retracting"
         else:
             self.y -= self.speed * dt
-            hx = int(self.x + 1)
-            hy = int(self.y + 2)
+            hx = int(self.x + FISHHOOK_TIP_OFFSET_X)
+            hy = int(self.y + FISHHOOK_TIP_OFFSET_Y)
             if self.caught:
                 self.caught.follow_hook(hx, hy)
             else:
@@ -118,7 +128,7 @@ class FishHook(Actor):
                         f.attach_to_hook(hx, hy)
                         # Brief pause to show the splat, then continue retracting
                         self.state = "impact_pause"
-                        self.pause_timer = 0.35
+                        self.pause_timer = FISHHOOK_IMPACT_PAUSE_DURATION
                         break
             if self.y <= 0:
                 # Remove the caught fish when hook returns to top
@@ -130,12 +140,12 @@ class FishHook(Actor):
                 self._active = False
 
     def draw(self, screen: Screen, mono: bool = False) -> None:
-        top = -50
+        top = FISHHOOK_LINE_TOP
         line_len = int(self.y) - top
         for i in range(line_len):
             ly = top + i
             if 0 <= ly < screen.height:
-                screen.print_at("|", self.x + 7, ly, colour=Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)
+                screen.print_at("|", self.x + FISHHOOK_LINE_OFFSET_X, ly, colour=Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)
         hook = parse_sprite(
             r"""
        o

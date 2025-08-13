@@ -1,10 +1,21 @@
 from __future__ import annotations
 
-from typing import List, Tuple, Optional, Dict
+from typing import List, Tuple, Optional, Dict, TYPE_CHECKING
 from ..screen_compat import Screen
+
+if TYPE_CHECKING:
+    pass  # Keep for future forward references if needed
 
 
 def parse_sprite(s: str) -> List[str]:
+    """Parse a sprite string into a list of lines with leading/trailing empty lines removed.
+
+    Args:
+        s: Raw sprite string with potential empty lines
+
+    Returns:
+        List of non-empty sprite lines
+    """
     lines = s.splitlines()
     while lines and not lines[0].strip():
         lines.pop(0)
@@ -14,6 +25,14 @@ def parse_sprite(s: str) -> List[str]:
 
 
 def sprite_size(lines: List[str]) -> Tuple[int, int]:
+    """Calculate the size (width, height) of a sprite from its lines.
+
+    Args:
+        lines: List of sprite lines
+
+    Returns:
+        Tuple of (width, height) where width is max line length
+    """
     if not lines:
         return 0, 0
     return max(len(l) for l in lines), len(lines)
@@ -23,6 +42,13 @@ def draw_sprite(screen: Screen, lines: List[str], x: int, y: int, colour: int) -
     """Draw an unmasked sprite, treating spaces as transparent.
 
     Only non-space characters are printed so background/sprites behind are preserved.
+
+    Args:
+        screen: Screen object to draw on
+        lines: Sprite lines to draw
+        x: X position to draw at
+        y: Y position to draw at
+        colour: Color to use for drawing
     """
     max_y = screen.height - 1
     max_x = screen.width - 1
@@ -37,9 +63,9 @@ def draw_sprite(screen: Screen, lines: List[str], x: int, y: int, colour: int) -
         if end_idx <= start_idx:
             continue
         # Print contiguous non-space runs only
-        run_start = None
+        run_start: Optional[int] = None
         for cx in range(start_idx, end_idx + 1):  # sentinel at end
-            ch = row[cx] if cx < end_idx else None  # type: ignore
+            ch: Optional[str] = row[cx] if cx < end_idx else None
             if cx < end_idx and ch != ' ':
                 if run_start is None:
                     run_start = cx
@@ -67,6 +93,13 @@ def _mask_char_to_colour(ch: str, default_colour: int) -> Optional[int]:
     """Translate a single mask character to a Screen colour.
 
     Returns None to indicate transparency (skip draw) when mask char is space.
+
+    Args:
+        ch: Mask character to translate
+        default_colour: Default colour to use for spaces
+
+    Returns:
+        Color code or None for transparency
     """
     if ch == ' ':
         # Space in mask means: draw using default colour (not transparent).
@@ -87,6 +120,14 @@ def draw_sprite_masked(
     The mask must be the same size as lines. Mask characters map to colours
     using _MASK_COLOUR_MAP; spaces in the mask mean "use default_colour" for
     any non-space glyphs in the sprite.
+
+    Args:
+        screen: Screen object to draw on
+        lines: Sprite lines to draw
+        mask: Color mask lines corresponding to sprite
+        x: X position to draw at
+        y: Y position to draw at
+        default_colour: Default color for unmasked areas
     """
     if not lines:
         return
@@ -134,6 +175,14 @@ def fill_rect(screen: Screen, x: int, y: int, w: int, h: int, colour: int) -> No
 
     This mimics Perl's default (non-transparent) entity rendering where spaces
     overwrite what's behind. Useful for solids like the castle.
+
+    Args:
+        screen: Screen object to draw on
+        x: X position of rectangle
+        y: Y position of rectangle
+        w: Width of rectangle
+        h: Height of rectangle
+        colour: Color to fill with
     """
     if w <= 0 or h <= 0:
         return

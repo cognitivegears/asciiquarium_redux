@@ -1,8 +1,10 @@
 from __future__ import annotations
 
-from typing import List, Tuple, Optional
+from typing import List, Tuple, Optional, TYPE_CHECKING
 from ..screen_compat import Screen
 
+if TYPE_CHECKING:
+    pass  # Keep for future forward references if needed
 
 Cell = Tuple[str, int]
 
@@ -15,7 +17,7 @@ class DoubleBufferedScreen:
     print_at, clear, and a flush() method to push the back buffer to the front.
     """
 
-    def __init__(self, screen: Screen):
+    def __init__(self, screen: Screen) -> None:
         self._s = screen
         self._w = screen.width
         self._h = screen.height

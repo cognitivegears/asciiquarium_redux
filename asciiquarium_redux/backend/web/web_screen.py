@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List
+from typing import List, Dict, Any
 from ...util.types import FlushBatch, ScreenProtocol
 
 # Minimal colour mapping compatible with Screen.COLOUR_* semantics
-COLOUR_TO_HEX = {
+COLOUR_TO_HEX: Dict[int, str] = {
     0: "#000000",  # BLACK
     1: "#ff0000",  # RED
     2: "#00ff00",  # GREEN
@@ -26,15 +26,15 @@ class WebScreen:
     _fg: List[List[int]] = field(default_factory=list)
     _batches: List[FlushBatch] = field(default_factory=list)
 
-    def __post_init__(self):
+    def __post_init__(self) -> None:
         self._alloc()
 
-    def _alloc(self):
+    def _alloc(self) -> None:
         self._chars = [[" "] * self.width for _ in range(self.height)]
         self._fg = [[7] * self.width for _ in range(self.height)]  # default white
         self._batches = []
 
-    def clear(self):
+    def clear(self) -> None:
         for y in range(self.height):
             row = self._chars[y]
             for x in range(self.width):
@@ -42,7 +42,7 @@ class WebScreen:
         # Don't need to reset colours every frame
         self._batches.clear()
 
-    def print_at(self, text: str, x: int, y: int, colour: int = 7):
+    def print_at(self, text: str, x: int, y: int, colour: int = 7) -> None:
         if y < 0 or y >= self.height:
             return
         if x >= self.width:

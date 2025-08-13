@@ -6,12 +6,20 @@ from ...screen_compat import Screen
 from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked
 from ..core import Splat, Fish
 from ..base import Actor
+from ...constants import (
+    SHARK_SPEED,
+    MOVEMENT_MULTIPLIER,
+    SHARK_TEETH_OFFSET_RIGHT_X,
+    SHARK_TEETH_OFFSET_RIGHT_Y,
+    SHARK_TEETH_OFFSET_LEFT_X,
+    SHARK_TEETH_OFFSET_LEFT_Y,
+)
 
 
 class Shark(Actor):
     def __init__(self, screen: Screen, app):
         self.dir = random.choice([-1, 1])
-        self.speed = 2.0 * self.dir
+        self.speed = SHARK_SPEED * self.dir
         self.y = random.randint(max(9, 1), max(9, screen.height - 10))
 
         # Shark images and masks copied from asciiquarium.pl (@shark_image/@shark_mask),
@@ -79,10 +87,10 @@ class Shark(Actor):
         # Left-moving:  teeth X = x + 9 => dx=9; dy=7
         self.mask_right = right_mask_raw
         self.mask_left = left_mask_raw
-        self._teeth_dx_right = 44
-        self._teeth_dy_right = 7
-        self._teeth_dx_left = 9
-        self._teeth_dy_left = 7
+        self._teeth_dx_right = SHARK_TEETH_OFFSET_RIGHT_X
+        self._teeth_dy_right = SHARK_TEETH_OFFSET_RIGHT_Y
+        self._teeth_dx_left = SHARK_TEETH_OFFSET_LEFT_X
+        self._teeth_dy_left = SHARK_TEETH_OFFSET_LEFT_Y
 
         # Dimensions and spawn X based on direction (use per-direction widths)
         wr, hr = sprite_size(self.img_right)
@@ -97,7 +105,7 @@ class Shark(Actor):
         return self._active
 
     def update(self, dt: float, screen: Screen, app) -> None:
-        self.x += self.speed * dt * 20.0
+        self.x += self.speed * dt * MOVEMENT_MULTIPLIER
         # Collision parity: a single point collider at the teeth location
         if self.dir > 0:
             tx = int(self.x) + self._teeth_dx_right

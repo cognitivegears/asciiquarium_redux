@@ -1,7 +1,11 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
-from typing import Protocol, Tuple
+from typing import Protocol, Tuple, Union, List, Dict, Any, Optional, TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from ...screen_compat import Screen
+    from ...util.buffer import DoubleBufferedScreen
 
 
 class RenderContext(Protocol):
@@ -31,12 +35,12 @@ class MouseEvent:
 
 
 class EventStream(Protocol):
-    def poll(self) -> list[KeyEvent | MouseEvent]:
+    def poll(self) -> List[Union[KeyEvent, MouseEvent]]:
         ...
 
 
 class TerminalRenderContext:
-    def __init__(self, screen, db_screen):
+    def __init__(self, screen: "Screen", db_screen: "DoubleBufferedScreen") -> None:
         self._screen = screen
         self._db = db_screen
 
@@ -48,18 +52,18 @@ class TerminalRenderContext:
 
     def print_at(self, x: int, y: int, ch: str, colour: int | None = None) -> None:
         # colour is handled internally by app/util for terminal path
-        self._db.print_at(x, y, ch, colour)
+        self._db.print_at(ch, x, y, colour)
 
     def flush(self) -> None:
         self._db.flush()
 
 
 class TerminalEventStream:
-    def __init__(self, screen):
+    def __init__(self, screen: "Screen") -> None:
         self._screen = screen
 
-    def poll(self) -> list[KeyEvent | MouseEvent]:
-        events: list[KeyEvent | MouseEvent] = []
+    def poll(self) -> List[Union[KeyEvent, MouseEvent]]:
+        events: List[Union[KeyEvent, MouseEvent]] = []
         while True:
             ev = self._screen.get_event()
             if not ev:
@@ -84,7 +88,7 @@ class TerminalEventStream:
 
 
 class TkRenderContext:
-    def __init__(self, tk_root, canvas, cols: int, rows: int, cell_w: int, cell_h: int, font=None):
+    def __init__(self, tk_root: Any, canvas: Any, cols: int, rows: int, cell_w: int, cell_h: int, font: Any = None) -> None:
         self.root = tk_root
         self.canvas = canvas
         self.cols = cols
@@ -93,10 +97,10 @@ class TkRenderContext:
         self.cell_h = cell_h
         self.font = font
         # Back buffers
-        self._buffer: list[list[str]] = [[" "] * cols for _ in range(rows)]
-        self._colbuf: list[list[int]] = [[7] * cols for _ in range(rows)]  # default white
-        self._dirty: set[tuple[int, int]] = set()
-        self._text_ids: dict[tuple[int, int], int] = {}
+        self._buffer: List[List[str]] = [[" "] * cols for _ in range(rows)]
+        self._colbuf: List[List[int]] = [[7] * cols for _ in range(rows)]  # default white
+        self._dirty: set[Tuple[int, int]] = set()
+        self._text_ids: Dict[Tuple[int, int], int] = {}
 
     def size(self) -> Tuple[int, int]:
         return self.cols, self.rows
@@ -111,7 +115,7 @@ class TkRenderContext:
                     self._dirty.add((x, y))
                 crow[x] = 7
 
-    def print_at(self, x: int, y: int, text: str, colour: int | None = None) -> None:
+    def print_at(self, x: int, y: int, text: str, colour: Optional[int] = None) -> None:
         if text is None:
             return
         if y < 0 or y >= self.rows or x >= self.cols:
@@ -187,18 +191,18 @@ def _colour_to_fill(col: int) -> str:
 
 
 class TkEventStream:
-    def __init__(self, tk_root):
+    def __init__(self, tk_root: Any) -> None:
         self.root = tk_root
-        self._queue: list[KeyEvent | MouseEvent] = []
+        self._queue: List[Union[KeyEvent, MouseEvent]] = []
         # Bind events
         self.root.bind("<Key>", self._on_key)
         self.root.bind("<Button-1>", self._on_click)
 
-    def _on_key(self, event):
+    def _on_key(self, event: Any) -> None:
         if event.char:
             self._queue.append(KeyEvent(key=event.char))
 
-    def _on_click(self, event):
+    def _on_click(self, event: Any) -> None:
         # Convert pixel to cell based on a stored grid on the root
         cell_w = getattr(self.root, "_cell_w", 10)
         cell_h = getattr(self.root, "_cell_h", 18)
@@ -206,7 +210,7 @@ class TkEventStream:
         y = int(event.y // cell_h)
         self._queue.append(MouseEvent(x=x, y=y, button=1))
 
-    def poll(self) -> list[KeyEvent | MouseEvent]:
+    def poll(self) -> List[Union[KeyEvent, MouseEvent]]:
         evs = self._queue
         self._queue = []
         return evs
