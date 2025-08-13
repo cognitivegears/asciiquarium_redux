@@ -11,6 +11,7 @@ accepts a list of batches: [{"y": int, "x": int, "text": str, "colour": str}].
 """
 
 import time
+import logging
 from typing import Callable, List, Optional
 
 from ...app import AsciiQuarium
@@ -151,8 +152,8 @@ class WebApp:
                             if not any(isinstance(d, TreasureChest) for d in self.app.decor):
                                 try:
                                     self.app.decor.extend(spawn_treasure_chest(self.screen, self.app))  # type: ignore[arg-type]
-                                except Exception:
-                                    pass
+                                except Exception as e:
+                                    logging.warning(f"Failed to spawn treasure chest: {e}")
             except Exception:
                 pass
         if "castle" in options:
@@ -347,8 +348,8 @@ class WebApp:
                 f = random.choice(candidates)
                 try:
                     f.start_turn()
-                except Exception:
-                    pass
+                except Exception as e:
+                    logging.warning(f"Failed to start fish turn: {e}")
             return
         if k == " ":
             # Space: toggle hook (retract if present, else spawn)

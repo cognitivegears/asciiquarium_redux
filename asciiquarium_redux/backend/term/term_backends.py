@@ -2,6 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 from typing import Protocol, Tuple, Union, List, Dict, Any, Optional, TYPE_CHECKING
+import logging
+from ..shared import CommonKeyEvent, CommonMouseEvent, EventProcessor
 
 if TYPE_CHECKING:
     from ...screen_compat import Screen
@@ -15,7 +17,8 @@ class RenderContext(Protocol):
     def clear(self) -> None:
         ...
 
-    def print_at(self, x: int, y: int, ch: str, colour: int | None = None) -> None:
+    def print_at(self, text: str, x: int, y: int, colour: Optional[int] = None) -> None:
+        """Print text at specific coordinates."""
         ...
 
     def flush(self) -> None:
@@ -50,9 +53,10 @@ class TerminalRenderContext:
     def clear(self) -> None:
         self._db.clear()
 
-    def print_at(self, x: int, y: int, ch: str, colour: int | None = None) -> None:
+    def print_at(self, text: str, x: int, y: int, colour: Optional[int] = None) -> None:
+        """Print text at specific coordinates."""
         # colour is handled internally by app/util for terminal path
-        self._db.print_at(ch, x, y, colour)
+        self._db.print_at(text, x, y, colour)
 
     def flush(self) -> None:
         self._db.flush()
@@ -61,6 +65,15 @@ class TerminalRenderContext:
 class TerminalEventStream:
     def __init__(self, screen: "Screen") -> None:
         self._screen = screen
+        self._event_processor = EventProcessor()
+
+    def register_key_handler(self, key: str, handler) -> None:
+        """Register a handler for a specific key using shared event processing."""
+        self._event_processor.register_key_handler(key, handler)
+
+    def register_mouse_handler(self, handler) -> None:
+        """Register a handler for mouse events using shared event processing."""
+        self._event_processor.register_mouse_handler(handler)
 
     def poll(self) -> List[Union[KeyEvent, MouseEvent]]:
         events: List[Union[KeyEvent, MouseEvent]] = []
@@ -76,14 +89,26 @@ class TerminalEventStream:
                 except Exception:
                     ch = ""
                 if ch:
-                    events.append(KeyEvent(key=ch))
+                    key_event = KeyEvent(key=ch)
+                    events.append(key_event)
+
+                    # Process through shared event handler if registered
+                    common_event = CommonKeyEvent.from_char(ch)
+                    self._event_processor.process_key_event(common_event)
+
             elif et == "MouseEvent":
                 x = getattr(ev, "x", 0)
                 y = getattr(ev, "y", 0)
                 b = getattr(ev, "buttons", 0)
                 # Normalize to 1 for left if any button
                 btn = 1 if b else 0
-                events.append(MouseEvent(x=x, y=y, button=btn))
+                mouse_event = MouseEvent(x=x, y=y, button=btn)
+                events.append(mouse_event)
+
+                # Process through shared event handler if registered
+                common_event = CommonMouseEvent.from_coords(x, y, btn)
+                self._event_processor.process_mouse_event(common_event)
+
         return events
 
 
@@ -115,7 +140,7 @@ class TkRenderContext:
                     self._dirty.add((x, y))
                 crow[x] = 7
 
-    def print_at(self, x: int, y: int, text: str, colour: Optional[int] = None) -> None:
+    def print_at(self, text: str, x: int, y: int, colour: Optional[int] = None) -> None:
         if text is None:
             return
         if y < 0 or y >= self.rows or x >= self.cols:
@@ -171,8 +196,8 @@ class TkRenderContext:
         self._text_ids.clear()
         try:
             self.canvas.delete("all")
-        except Exception:
-            pass
+        except Exception as e:
+            logging.warning(f"Failed to clear TkInter canvas: {e}")
 
 
 def _colour_to_fill(col: int) -> str:

@@ -106,3 +106,15 @@ class DoubleBufferedScreen:
             # Copy back->front row
             self._front[y] = list(back_row)
         self._s.refresh()
+
+    def refresh(self) -> None:
+        """Update the physical display with current buffer contents."""
+        self.flush()
+
+    def get_event(self):
+        """Get the next input event from the event queue."""
+        return self._s.get_event()
+
+    def has_resized(self) -> bool:
+        """Check if the screen has been resized since last check."""
+        return self._s.has_resized()

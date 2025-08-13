@@ -29,7 +29,8 @@ class ScreenShim:
         return self._ctx.size()[1]
 
     def print_at(self, text: str, x: int, y: int, colour: int | None = None, *args: Any, **kwargs: Any) -> None:
-        self._ctx.print_at(x, y, text, colour)
+        """Print text at specific coordinates."""
+        self._ctx.print_at(text, x, y, colour)
 
 
 def run_tk(settings) -> None:

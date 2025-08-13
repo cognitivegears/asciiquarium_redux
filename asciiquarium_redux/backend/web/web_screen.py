@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional, Union
 from ...util.types import FlushBatch, ScreenProtocol
 
 # Minimal colour mapping compatible with Screen.COLOUR_* semantics
@@ -42,7 +42,8 @@ class WebScreen:
         # Don't need to reset colours every frame
         self._batches.clear()
 
-    def print_at(self, text: str, x: int, y: int, colour: int = 7) -> None:
+    def print_at(self, text: str, x: int, y: int, colour: Optional[Union[int, Any]] = None, *args: Any, **kwargs: Any) -> None:
+        colour = 7 if colour is None else int(colour)
         if y < 0 or y >= self.height:
             return
         if x >= self.width:
@@ -90,3 +91,13 @@ class WebScreen:
                     "colour": str(COLOUR_TO_HEX.get(col, "#ffffff")),
                 })
         return batches
+
+    def refresh(self) -> None:
+        """Update the physical display with current buffer contents."""
+        # For web backend, refresh is handled by flush_batches()
+        pass
+
+    def get_event(self) -> Any:
+        """Get the next input event from the event queue."""
+        # Web backend handles events via WebSocket, not direct polling
+        return None
