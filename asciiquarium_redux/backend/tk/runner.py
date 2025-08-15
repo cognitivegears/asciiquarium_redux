@@ -118,6 +118,8 @@ def run_tk(settings) -> None:
         _install_signal(signal.SIGTERM)
     if hasattr(signal, "SIGHUP"):
         _install_signal(signal.SIGHUP)
+    if hasattr(signal, "SIGQUIT"):
+        _install_signal(signal.SIGQUIT)
 
     # Suppress noisy tracebacks from Tk callbacks on KeyboardInterrupt
     def _report_callback_exception(exc, val, tb):  # type: ignore[no-redef]
