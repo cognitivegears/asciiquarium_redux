@@ -278,6 +278,7 @@ class Settings:
     ui_rows: int = 40
     ui_font_family: str = "Menlo"
     ui_font_size: int = 14
+    ui_font_auto: bool = True
     web_open: bool = False
     web_port: int = 8000
 
@@ -639,6 +640,10 @@ def _parse_ui_settings(s: Settings, ui: dict) -> None:
     if isinstance(v, int):
         s.ui_font_size = max(8, min(48, v))
 
+    b = ui.get("font_auto")
+    if isinstance(b, bool):
+        s.ui_font_auto = b
+
 
 def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     """Apply command line argument overrides to settings.
@@ -658,6 +663,7 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--open", dest="web_open", action="store_true")
     parser.add_argument("--port", dest="web_port", type=int)
     parser.add_argument("--fullscreen", action="store_true")
+    parser.add_argument("--no-fullscreen", dest="fullscreen", action="store_false")
     parser.add_argument("--castle", dest="castle_enabled", action="store_true", default=None)
     parser.add_argument("--no-castle", dest="castle_enabled", action="store_false")
     args = parser.parse_args(argv)
@@ -674,8 +680,8 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
         s.speed = max(0.1, min(3.0, args.speed))
     if args.backend is not None:
         s.ui_backend = args.backend
-    if args.fullscreen:
-        s.ui_fullscreen = True
+    if getattr(args, "fullscreen", None) is not None:
+        s.ui_fullscreen = bool(args.fullscreen)
     if getattr(args, "castle_enabled", None) is not None:
         s.castle_enabled = bool(args.castle_enabled)
     try:

@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import signal
+import sys
 import time
 import tkinter as tk
 from tkinter import font as tkfont
@@ -7,6 +9,8 @@ from typing import Any, cast
 
 from ...screen_compat import Screen
 from ...app import AsciiQuarium
+from ...util import sprite_size
+from ...entities.environment import CASTLE, WATER_SEGMENTS
 from ..term import TkRenderContext, TkEventStream
 
 
@@ -37,14 +41,49 @@ def run_tk(settings) -> None:
     # Window setup
     root = tk.Tk()
     root.title("Asciiquarium Redux")
-    # Determine cell size from font
+    MIN_CELL_H = 7  # Allow smaller fonts on very short windows
+    # Determine cell size from font; optionally auto-scale font to fit minimum rows
     family = getattr(settings, "ui_font_family", "Menlo")
-    size = getattr(settings, "ui_font_size", 14)
-    fnt = tkfont.Font(family=family, size=size)
+    req_size = int(getattr(settings, "ui_font_size", 14))
+    fnt = tkfont.Font(family=family, size=req_size)
     cell_w = max(8, int(fnt.measure("W")))
-    cell_h = max(12, int(fnt.metrics("linespace")))
-    cols = getattr(settings, "ui_cols", 120)
-    rows = getattr(settings, "ui_rows", 40)
+    cell_h = max(MIN_CELL_H, int(fnt.metrics("linespace")))
+    cols = int(getattr(settings, "ui_cols", 120))
+    rows = int(getattr(settings, "ui_rows", 40))
+
+    # Compute a dynamic minimum rows requirement so all key elements fit.
+    # total_needed = air (waterline_top) + water rows + tallest decor/special + bottom margin
+    castle_h = sprite_size(CASTLE)[1]
+    tallest_special_h = castle_h  # currently castle is the tallest element we must fit
+    min_rows_required = int(getattr(settings, "waterline_top", 5)) + len(WATER_SEGMENTS) + tallest_special_h + 2
+    target_rows = max(rows, min_rows_required)
+
+    # If auto font is enabled, try to ensure at least target rows based on current screen height
+    if getattr(settings, "ui_font_auto", True):
+        try:
+            # Use the monitor's available height for the initial window if not fullscreen
+            screen_h_px = root.winfo_screenheight()
+            # Reserve a bit of margin for window chrome (titlebar etc.)
+            chrome_px = 64
+            max_cell_h = max(10, (screen_h_px - chrome_px) // target_rows)
+            # Binary search a font size that gives cell_h <= max_cell_h
+            lo, hi = 4, max(10, req_size * 2)
+            best = req_size
+            while lo <= hi:
+                mid = (lo + hi) // 2
+                test = tkfont.Font(family=family, size=mid)
+                th = max(MIN_CELL_H, int(test.metrics("linespace")))
+                if th <= max_cell_h:
+                    best = mid
+                    lo = mid + 1
+                else:
+                    hi = mid - 1
+            if best != req_size:
+                fnt = tkfont.Font(family=family, size=best)
+                cell_w = max(8, int(fnt.measure("W")))
+                cell_h = max(MIN_CELL_H, int(fnt.metrics("linespace")))
+        except Exception:
+            pass
     canvas = tk.Canvas(root, width=cols * cell_w, height=rows * cell_h, bg="black", highlightthickness=0)
     canvas.pack(fill=tk.BOTH, expand=True)
 
@@ -60,6 +99,41 @@ def run_tk(settings) -> None:
     events = TkEventStream(root)
     app = AsciiQuarium(settings)
     app.rebuild(screen)  # type: ignore[arg-type]
+
+    # SIGINT (Ctrl-C) handling: set a flag and let the tick loop exit cleanly.
+    stop_requested = False
+
+    def _on_sigint(_signum: int, _frame: Any) -> None:  # type: ignore[override]
+        nonlocal stop_requested
+        stop_requested = True
+
+    def _install_signal(sig: int) -> None:
+        try:
+            signal.signal(sig, _on_sigint)
+        except Exception:
+            pass
+
+    _install_signal(getattr(signal, "SIGINT", None) or signal.SIGINT)
+    if hasattr(signal, "SIGTERM"):
+        _install_signal(signal.SIGTERM)
+    if hasattr(signal, "SIGHUP"):
+        _install_signal(signal.SIGHUP)
+
+    # Suppress noisy tracebacks from Tk callbacks on KeyboardInterrupt
+    def _report_callback_exception(exc, val, tb):  # type: ignore[no-redef]
+        if exc is KeyboardInterrupt or isinstance(val, KeyboardInterrupt):
+            try:
+                root.destroy()
+            except Exception:
+                pass
+            return
+        # Defer to default excepthook for other exceptions
+        sys.__excepthook__(exc, val, tb)
+
+    try:
+        root.report_callback_exception = _report_callback_exception  # type: ignore[attr-defined]
+    except Exception:
+        pass
 
     last = time.time()
     frame_no = 0
@@ -77,11 +151,51 @@ def run_tk(settings) -> None:
         resize_job = root.after(120, _do_resize)
 
     def _do_resize() -> None:
-        nonlocal resize_job
+        nonlocal resize_job, fnt, cell_w, cell_h
         resize_job = None
         # Use current canvas size in pixels
         w = max(1, int(canvas.winfo_width()))
         h = max(1, int(canvas.winfo_height()))
+        # If auto font is enabled, reduce font size if needed so target_rows fit vertically
+        if getattr(settings, "ui_font_auto", True):
+            # Recompute target rows in case settings changed at runtime
+            _castle_h = sprite_size(CASTLE)[1]
+            _target_rows = max(int(getattr(settings, "ui_rows", 40)), int(getattr(settings, "waterline_top", 5)) + len(WATER_SEGMENTS) + _castle_h + 2)
+            max_cell_h_now = max(6, h // max(1, _target_rows))
+            if cell_h > max_cell_h_now:
+                # Find the largest font size whose measured height <= max_cell_h_now
+                lo, hi = 4, int(fnt.cget("size"))
+                best_size = int(fnt.cget("size"))
+                while lo <= hi:
+                    mid = (lo + hi) // 2
+                    test = tkfont.Font(family=family, size=mid)
+                    th = max(MIN_CELL_H, int(test.metrics("linespace")))
+                    if th <= max_cell_h_now:
+                        best_size = mid
+                        lo = mid + 1
+                    else:
+                        hi = mid - 1
+                if best_size != int(fnt.cget("size")):
+                    # Apply new font metrics
+                    new_font = tkfont.Font(family=family, size=best_size)
+                    new_cell_w = max(8, int(new_font.measure("W")))
+                    new_cell_h = max(MIN_CELL_H, int(new_font.metrics("linespace")))
+                    # Update globals and context
+                    root._cell_w = new_cell_w  # type: ignore[attr-defined]
+                    root._cell_h = new_cell_h  # type: ignore[attr-defined]
+                    ctx.cell_w = new_cell_w
+                    ctx.cell_h = new_cell_h
+                    ctx.font = new_font
+                    # Clear all existing text items to avoid mixed-font artifacts
+                    try:
+                        canvas.delete("all")
+                        ctx._text_ids.clear()  # type: ignore[attr-defined]
+                    except Exception:
+                        pass
+                    # Overwrite captured variables for subsequent calculations
+                    fnt = new_font
+                    cell_w = new_cell_w
+                    cell_h = new_cell_h
         new_cols = max(1, w // cell_w)
         new_rows = max(1, h // cell_h)
         if new_cols != ctx.cols or new_rows != ctx.rows:
@@ -95,6 +209,7 @@ def run_tk(settings) -> None:
 
     # Listen to canvas size changes (layout or user resize)
     canvas.bind("<Configure>", lambda _e: _schedule_resize())
+    # Kick an immediate resize pass so we reflect the current window size ASAP
     root.after(0, _schedule_resize)
 
     def tick() -> None:
@@ -102,6 +217,13 @@ def run_tk(settings) -> None:
         now = time.time()
         dt = min(0.1, now - last)
         last = now
+
+        # Respect Ctrl-C requests
+        if stop_requested:
+            try:
+                root.destroy()
+            finally:
+                return
 
         # Handle events
         for ev in events.poll():
@@ -170,9 +292,16 @@ def run_tk(settings) -> None:
                                     h.retract_now()
                         else:
                             app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))  # type: ignore[arg-type]
-        ctx.clear()
-        app.update(dt, cast(Screen, screen), frame_no)
-        ctx.flush()
+        try:
+            ctx.clear()
+            app.update(dt, cast(Screen, screen), frame_no)
+            ctx.flush()
+        except KeyboardInterrupt:
+            # Graceful shutdown on Ctrl-C during a frame
+            try:
+                root.destroy()
+            finally:
+                return
         frame_no += 1
 
         # Schedule next frame
@@ -193,4 +322,8 @@ def run_tk(settings) -> None:
 
     root.after(0, _activate)
     root.after(0, tick)
-    root.mainloop()
+    try:
+        root.mainloop()
+    except KeyboardInterrupt:
+        # If SIGINT arrives outside our tick, exit quietly.
+        pass

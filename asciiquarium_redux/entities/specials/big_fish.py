@@ -1,16 +1,22 @@
 from __future__ import annotations
 
 import random
+from typing import TYPE_CHECKING
 from ...screen_compat import Screen
 
 from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked, randomize_colour_mask
 from ..base import Actor
+from ..environment import WATER_SEGMENTS
+
+if TYPE_CHECKING:
+    from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
 
 class BigFish(Actor):
-    def __init__(self, screen: Screen, app):
+    def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
         self.dir = random.choice([-1, 1])
         self.speed = 30.0 * (self.dir / abs(self.dir))
+
         if self.dir > 0:
             self.img = parse_sprite(
                 r"""
@@ -87,10 +93,18 @@ class BigFish(Actor):
 """
             )
             self.x = screen.width
+
         self.w, self.h = sprite_size(self.img)
-        max_height = 9
-        min_height = max_height if screen.height - 15 <= max_height else (screen.height - 15)
-        self.y = random.randint(max_height, max(min_height, max_height))
+
+        # Choose a vertical spawn range that guarantees full on-screen visibility
+        water_top = getattr(getattr(app, "settings", None), "waterline_top", 5)
+        below_water = water_top + len(WATER_SEGMENTS) + 1
+        min_y = max(1, below_water)
+        max_y = max(min_y, screen.height - self.h - 2)
+        if max_y < min_y:
+            max_y = min_y
+        self.y = random.randint(min_y, max_y)
+
         # Randomize mask colours once to avoid per-frame flicker
         self._rand_mask = randomize_colour_mask(self.mask)
         self._active = True
@@ -99,12 +113,12 @@ class BigFish(Actor):
     def active(self) -> bool:
         return self._active
 
-    def update(self, dt: float, screen: Screen, app) -> None:
+    def update(self, dt: float, screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> None:
         self.x += self.speed * dt
         if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x + self.w < 0):
             self._active = False
 
-    def draw(self, screen: Screen, mono: bool = False) -> None:
+    def draw(self, screen: "ScreenProtocol", mono: bool = False) -> None:
         img = self.img
         if mono:
             draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
@@ -113,5 +127,5 @@ class BigFish(Actor):
             draw_sprite_masked(screen, img, mask, int(self.x), int(self.y), Screen.COLOUR_YELLOW)
 
 
-def spawn_big_fish(screen: Screen, app):
+def spawn_big_fish(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
     return [BigFish(screen, app)]

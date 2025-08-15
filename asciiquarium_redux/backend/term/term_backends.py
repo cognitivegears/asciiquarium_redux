@@ -162,25 +162,32 @@ class TkRenderContext:
 
     def flush(self) -> None:
         # Draw dirty cells as individual text items. Simple but effective for now.
-        for (x, y) in list(self._dirty):
-            self._dirty.discard((x, y))
-            key = (x, y)
-            ch = self._buffer[y][x]
-            col = self._colbuf[y][x]
-            px = x * self.cell_w + self.cell_w // 2
-            py = y * self.cell_h + self.cell_h // 2
-            tid = self._text_ids.get(key)
-            fill = _colour_to_fill(col)
-            draw_text = "" if ch == " " else ch
-            if tid is None:
-                if self.font is not None:
-                    tid = self.canvas.create_text(px, py, text=draw_text, anchor="center", font=self.font, fill=fill)
+        try:
+            for (x, y) in list(self._dirty):
+                self._dirty.discard((x, y))
+                key = (x, y)
+                ch = self._buffer[y][x]
+                col = self._colbuf[y][x]
+                px = x * self.cell_w + self.cell_w // 2
+                py = y * self.cell_h + self.cell_h // 2
+                tid = self._text_ids.get(key)
+                fill = _colour_to_fill(col)
+                draw_text = "" if ch == " " else ch
+                if tid is None:
+                    if self.font is not None:
+                        tid = self.canvas.create_text(px, py, text=draw_text, anchor="center", font=self.font, fill=fill)
+                    else:
+                        tid = self.canvas.create_text(px, py, text=draw_text, anchor="center", fill=fill)
+                    self._text_ids[key] = tid
                 else:
-                    tid = self.canvas.create_text(px, py, text=draw_text, anchor="center", fill=fill)
-                self._text_ids[key] = tid
-            else:
-                self.canvas.itemconfigure(tid, text=draw_text, fill=fill)
-        self.canvas.update_idletasks()
+                    self.canvas.itemconfigure(tid, text=draw_text, fill=fill)
+            self.canvas.update_idletasks()
+        except KeyboardInterrupt:
+            # Allow outer layers to handle a graceful shutdown
+            raise
+        except Exception:
+            # Swallow errors that can happen during teardown (e.g., widget destroyed)
+            pass
 
     def resize(self, cols: int, rows: int) -> None:
         # Reset buffers and visual cache on resize

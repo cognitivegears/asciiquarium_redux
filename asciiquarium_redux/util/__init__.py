@@ -4,7 +4,7 @@ from typing import List, Tuple, Optional, Dict, TYPE_CHECKING
 from ..screen_compat import Screen
 
 if TYPE_CHECKING:
-    pass  # Keep for future forward references if needed
+    from ..protocols import ScreenProtocol
 
 
 def parse_sprite(s: str) -> List[str]:
@@ -38,7 +38,7 @@ def sprite_size(lines: List[str]) -> Tuple[int, int]:
     return max(len(l) for l in lines), len(lines)
 
 
-def draw_sprite(screen: Screen, lines: List[str], x: int, y: int, colour: int) -> None:
+def draw_sprite(screen: "ScreenProtocol", lines: List[str], x: int, y: int, colour: int) -> None:
     """Draw an unmasked sprite, treating spaces as transparent.
 
     Only non-space characters are printed so background/sprites behind are preserved.
@@ -108,7 +108,7 @@ def _mask_char_to_colour(ch: str, default_colour: int) -> Optional[int]:
 
 
 def draw_sprite_masked(
-    screen: Screen,
+    screen: "ScreenProtocol",
     lines: List[str],
     mask: List[str],
     x: int,
@@ -170,7 +170,7 @@ def draw_sprite_masked(
                 run_start = cx if drawable else None
                 run_colour = col if drawable else None
 
-def fill_rect(screen: Screen, x: int, y: int, w: int, h: int, colour: int) -> None:
+def fill_rect(screen: "ScreenProtocol", x: int, y: int, w: int, h: int, colour: int) -> None:
     """Fill a rectangular area with spaces in the given colour (opaque erase).
 
     This mimics Perl's default (non-transparent) entity rendering where spaces
@@ -204,7 +204,7 @@ def fill_rect(screen: Screen, x: int, y: int, w: int, h: int, colour: int) -> No
 
 
 def draw_sprite_masked_with_bg(
-    screen: Screen,
+    screen: "ScreenProtocol",
     lines: List[str],
     mask: List[str],
     x: int,
