@@ -32,6 +32,16 @@ from ...constants import (
     FISH_TURN_COOLDOWN_MAX,
 )
 
+# Optional AI imports are local to avoid import cycles at module import
+try:
+    from ...ai.brain import FishBrain
+    from ...ai.vector import Vec2
+    from ...ai.steering import SteeringConfig
+except Exception:  # pragma: no cover - AI optional
+    FishBrain = None  # type: ignore[assignment]
+    Vec2 = None  # type: ignore[assignment]
+    SteeringConfig = None  # type: ignore[assignment]
+
 
 @dataclass
 class Fish:
@@ -171,6 +181,8 @@ class Fish:
     turn_enabled: bool = True
     turn_chance_per_second: float = 0.01
     turn_min_interval: float = 6.0
+    # Optional AI brain (constructed by first update if enabled)
+    _brain: Any = None
 
     @property
     def width(self) -> int:
@@ -192,7 +204,6 @@ class Fish:
         if not self.hooked and self.turn_enabled:
             self.next_turn_ok_in = max(0.0, self.next_turn_ok_in - dt)
             if not self.turning and self.next_turn_ok_in <= 0.0:
-                # Poisson process: chance per second scaled by dt
                 if random.random() < max(0.0, self.turn_chance_per_second) * dt:
                     self.start_turn()
 
@@ -200,68 +211,153 @@ class Fish:
         speed_scale = 1.0
         if self.turning:
             if self.turn_phase == "shrink":
-                # slow down towards stop
                 speed_scale = max(0.0, 1.0 - (self.turn_t / max(0.001, self.turn_shrink_seconds)))
             elif self.turn_phase == "expand":
-                # speed up from stop
                 speed_scale = min(1.0, (self.turn_t / max(0.001, self.turn_expand_seconds)))
             else:
                 speed_scale = 0.0
+
+        # AI steering (optional)
+        if getattr(app.settings, "ai_enabled", False) and FishBrain is not None and not self.hooked:
+            if self._brain is None:
+                try:
+                    from ...ai.steering import SteeringConfig as _SteeringCfg  # local import
+                except Exception:  # pragma: no cover
+                    _SteeringCfg = None  # type: ignore[assignment]
+                max_speed = max(self.speed_min, self.speed_max)
+                cfg = (
+                    _SteeringCfg(
+                        max_speed=max_speed,
+                        max_force=max_speed,
+                        separation_radius=float(getattr(app.settings, "ai_separation_radius", 3.0)),
+                        obstacle_radius=float(getattr(app.settings, "ai_obstacle_radius", 3.0)),
+                        align_weight=float(getattr(app.settings, "ai_flock_alignment", 0.8)),
+                        cohere_weight=float(getattr(app.settings, "ai_flock_cohesion", 0.5)),
+                        separate_weight=float(getattr(app.settings, "ai_flock_separation", 1.2)),
+                        avoid_weight=float(getattr(app.settings, "ai_baseline_avoid", 0.9)),
+                        wander_weight=float(getattr(app.settings, "ai_explore_gain", 0.6)),
+                    )
+                    if _SteeringCfg is not None
+                    else None
+                )
+                import random as _rand
+                sub_seed = _rand.randrange(1 << 30)
+                rng = _rand.Random(sub_seed)
+                self._brain = FishBrain(
+                    fish_id=id(self),
+                    rng=rng,
+                    sense=app,  # type: ignore[arg-type]
+                    config=cfg,  # type: ignore[arg-type]
+                    util_temp=float(getattr(app.settings, "ai_action_temperature", 0.6)),
+                    wander_tau=float(getattr(app.settings, "ai_wander_tau", 1.2)),
+                    eat_gain=float(getattr(app.settings, "ai_eat_gain", 1.2)),
+                    hide_gain=float(getattr(app.settings, "ai_hide_gain", 1.5)),
+                    flock_alignment=float(getattr(app.settings, "ai_flock_alignment", 0.8)),
+                    flock_cohesion=float(getattr(app.settings, "ai_flock_cohesion", 0.5)),
+                    flock_separation=float(getattr(app.settings, "ai_flock_separation", 1.2)),
+                    baseline_separation=float(getattr(app.settings, "ai_baseline_separation", 0.6)),
+                    baseline_avoid=float(getattr(app.settings, "ai_baseline_avoid", 0.9)),
+                )
+            try:
+                pos = Vec2(float(self.x), float(self.y))  # type: ignore[call-arg]
+                vel = Vec2(float(self.vx), float(self.vy))  # type: ignore[call-arg]
+                new_vel = self._brain.update(dt, pos, vel)
+                v_max_ai = max(0.0, float(getattr(app.settings, "fish_vertical_speed_max", 0.3)))
+                self.vy = max(-v_max_ai, min(v_max_ai, float(new_vel.y)))
+                desired_sign = 0
+                if new_vel.x > 0:
+                    desired_sign = 1
+                elif new_vel.x < 0:
+                    desired_sign = -1
+                current_sign = 1 if self.vx >= 0 else -1
+                if desired_sign != 0 and desired_sign != current_sign:
+                    if not self.turning:
+                        self.start_turn()
+                else:
+                    self.vx = float(new_vel.x)
+            except Exception:
+                pass
+
+        # Kinematics integration (horizontal)
         self.x += self.vx * dt * MOVEMENT_MULTIPLIER * speed_scale
-        # --- Vertical drift (slow, mostly horizontal swim) ---
+
+        # Vertical drift when AI is disabled; AI controls vy otherwise
         v_max = max(0.0, float(getattr(app.settings, "fish_vertical_speed_max", 0.3)))
-        if not self.hooked and v_max > 0.0:
-            # Randomly vary vertical velocity a bit over time
-            # Chance per second to pick a new vy target
-            if random.random() < 0.8 * dt:  # ~once every 1.25 seconds on average
+        if not self.hooked and v_max > 0.0 and not getattr(app.settings, "ai_enabled", False):
+            if random.random() < 0.8 * dt:
                 new_vy = random.uniform(-v_max, v_max)
-                # Ensure a small minimum magnitude so it's perceptible
                 min_mag = min(0.3, v_max * 0.5)
                 if abs(new_vy) < min_mag:
                     new_vy = min_mag if new_vy >= 0 else -min_mag
                 self.vy = new_vy
-            # Compute allowed vertical bounds within water
-            top_bound = max(self.waterline_top + self.water_rows + 1, 1)
-            bottom_bound = max(top_bound, screen.height - self.height - 2)
-            # Predict next position and handle boundaries (level out or bounce)
-            next_y = self.y + self.vy * dt
-            if next_y < top_bound:
-                # Either level out or go downward
-                if random.random() < 0.5:
-                    self.vy = 0.0
-                else:
-                    self.vy = abs(self.vy) if self.vy != 0 else random.uniform(0.05, v_max)
-                self.y = float(top_bound)
-            elif next_y > bottom_bound:
-                if random.random() < 0.5:
-                    self.vy = 0.0
-                else:
-                    self.vy = -abs(self.vy) if self.vy != 0 else -random.uniform(0.05, v_max)
-                self.y = float(bottom_bound)
+
+        # Vertical bounds handling
+        top_bound = max(self.waterline_top + self.water_rows + 1, 1)
+        bottom_bound = max(top_bound, screen.height - self.height - 2)
+        next_y = self.y + self.vy * dt
+        if next_y < top_bound:
+            if random.random() < 0.5:
+                self.vy = 0.0
             else:
-                self.y = next_y
+                self.vy = abs(self.vy) if self.vy != 0 else random.uniform(0.05, v_max)
+            self.y = float(top_bound)
+        elif next_y > bottom_bound:
+            if random.random() < 0.5:
+                self.vy = 0.0
+            else:
+                self.vy = -abs(self.vy) if self.vy != 0 else -random.uniform(0.05, v_max)
+            self.y = float(bottom_bound)
+        else:
+            self.y = next_y
+
+        # Mouth collision with fish food flakes
+        try:
+            from ..specials import FishFoodFlake  # type: ignore
+            mx = int(self.x + (self.width - 1 if self.vx > 0 else 0))
+            my = int(self.y + self.height // 2)
+            for s in list(app.specials):
+                if isinstance(s, FishFoodFlake) and getattr(s, "active", True):
+                    sx, sy = int(getattr(s, "x", 0)), int(getattr(s, "y", 0))
+                    if abs(sx - mx) <= 1 and abs(sy - my) <= 0:
+                        setattr(s, "_active", False)
+                        if getattr(self, "_brain", None) is not None:
+                            try:
+                                self._brain.hunger = max(0.0, float(self._brain.hunger) - 0.5)
+                            except Exception:
+                                pass
+        except Exception:
+            pass
+
+        # Bubbles
         self.next_bubble -= dt
         if self.next_bubble <= 0:
             bubble_y = int(self.y + self.height // 2)
             bubble_x = int(self.x + (self.width if self.vx > 0 else -1))
             app.bubbles.append(Bubble(x=bubble_x, y=bubble_y))
             self.next_bubble = random.uniform(self.bubble_min, self.bubble_max)
+
+        # Respawn when off-screen
         if self.vx > 0 and self.x > screen.width:
             self.respawn(screen, direction=1)
         elif self.vx < 0 and self.x + self.width < 0:
             self.respawn(screen, direction=-1)
+
         # Advance turn animation
         if self.turning:
             self.turn_t += dt
             if self.turn_phase == "shrink" and self.turn_t >= self.turn_shrink_seconds:
-                # Reached middle: flip frames and direction, stop movement
                 self.finish_shrink_and_flip()
             elif self.turn_phase == "expand" and self.turn_t >= self.turn_expand_seconds:
-                # Done expanding
                 self.turning = False
                 self.turn_phase = "idle"
                 self.turn_t = 0.0
-                self.next_turn_ok_in = max(self.turn_min_interval, random.uniform(self.turn_min_interval, self.turn_min_interval + (FISH_TURN_COOLDOWN_MAX - FISH_TURN_COOLDOWN_MIN)))
+                self.next_turn_ok_in = max(
+                    self.turn_min_interval,
+                    random.uniform(
+                        self.turn_min_interval,
+                        self.turn_min_interval + (FISH_TURN_COOLDOWN_MAX - FISH_TURN_COOLDOWN_MIN),
+                    ),
+                )
 
     def respawn(self, screen: Screen, direction: int):
         # choose new frames and matching mask

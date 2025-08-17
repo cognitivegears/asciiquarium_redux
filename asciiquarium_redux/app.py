@@ -486,6 +486,98 @@ class AsciiQuarium:
         if self._show_help:
             self._draw_help(screen)
 
+    # --- AI sensing hooks (lightweight, O(1) per fish) ---
+    # These provide minimal implementations sufficient for steering; they avoid
+    # heavy neighbor searches here. For now, neighbors() returns an empty list
+    # to keep complexity O(1). Food and predator cues are approximated.
+
+    def bounds(self) -> tuple[int, int]:
+        # The double-buffer exposes Screen-like API; width/height are stable in a frame
+        # We rely on the active buffer size from recent render path.
+        # Fallback: typical UI size from settings.
+        try:
+            # mypy: ScreenProtocol provides width/height when passed in methods; here we use settings.
+            return (self.settings.ui_cols, self.settings.ui_rows)
+        except Exception:
+            return (120, 40)
+
+    def obstacles(self, fish_id: int, radius_cells: float):
+        # Approximate castle bottom-right as an obstacle center; simple point obstacle
+        # Map to a few static points near bottom corners for gentle avoid behavior.
+        cols, rows = self.bounds()
+        from .ai.vector import Vec2  # local import
+        return [Vec2(cols - 8.0, rows - 6.0)]
+
+    def neighbors(self, fish_id: int, radius_cells: float):
+        # Keep O(1) for now; could be extended with spatial hashing later.
+        return []
+
+    def nearest_food(self, fish_id: int):
+        # If fish food flakes are present, steer toward the closest flake roughly.
+        # Return (direction unit vector, distance). If none, distance=inf.
+        from math import hypot
+        from .ai.vector import Vec2
+        from .entities.specials import FishFoodFlake  # type: ignore
+        # Find the fish object by id
+        fx: float | None = None
+        fy: float | None = None
+        for f in self.fish:
+            if id(f) == fish_id:
+                fx, fy = float(f.x), float(f.y)
+                break
+        if fx is None or fy is None:
+            return (Vec2(0.0, 0.0), float("inf"))
+        # Scan specials for fish food flakes positions (cheap linear scan)
+        targets: list[tuple[float, float]] = []
+        for s in self.specials:
+            # Only consider actual fish food flakes that are active
+            if isinstance(s, FishFoodFlake) and getattr(s, "active", True):
+                targets.append((float(getattr(s, "x", 0.0)), float(getattr(s, "y", 0.0))))
+        if not targets:
+            return (Vec2(0.0, 0.0), float("inf"))
+        # Pick nearest
+        tx, ty, best_d = fx, fy, float("inf")
+        for (x, y) in targets:
+            d = hypot(x - fx, y - fy)
+            if d < best_d:
+                best_d = d
+                tx, ty = x, y
+        if best_d == float("inf") or best_d <= 1e-6:
+            return (Vec2(0.0, 0.0), best_d)
+        dir_vec = Vec2((tx - fx) / best_d, (ty - fy) / best_d)
+        return (dir_vec, best_d)
+
+    def predator_vector(self, fish_id: int):
+        # Consider shark positions as predators; flee away from the closest teeth point approximated by entity x,y.
+        from math import hypot
+        from .ai.vector import Vec2
+        fx: float | None = None
+        fy: float | None = None
+        for f in self.fish:
+            if id(f) == fish_id:
+                fx, fy = float(f.x), float(f.y)
+                break
+        if fx is None or fy is None:
+            return (Vec2(0.0, 0.0), float("inf"))
+        preds: list[tuple[float, float]] = []
+        for s in self.specials:
+            # Sharks have attributes x,y and update like other actors
+            if s.__class__.__name__.lower() == "shark" and getattr(s, "active", True):
+                preds.append((float(getattr(s, "x", 0.0)), float(getattr(s, "y", 0.0))))
+        if not preds:
+            return (Vec2(0.0, 0.0), float("inf"))
+        # Find nearest predator and return normalized away-vector
+        tx, ty, best_d = fx, fy, float("inf")
+        for (x, y) in preds:
+            d = hypot(x - fx, y - fy)
+            if d < best_d:
+                best_d = d
+                tx, ty = x, y
+        if best_d == float("inf") or best_d <= 1e-6:
+            return (Vec2(0.0, 0.0), best_d)
+        dir_away = Vec2((fx - tx) / best_d, (fy - ty) / best_d)
+        return (dir_away, best_d)
+
     def _render_seaweed(self, screen: Screen, mono: bool) -> None:
         """Render seaweed entities with animation.
 

@@ -124,3 +124,21 @@ font_size = 14
 font_min_size = 10   # lower bound for Tk auto font sizing
 font_max_size = 22   # upper bound for Tk auto font sizing
 font_auto = true     # auto-resize font to fit scene; bounded by min/max
+
+
+# AI settings (Utility AI + steering)
+# Enable to give fish simple lifelike choices and steering
+[ai]
+enabled = true
+action_temperature = 0.6
+wander_tau = 1.2
+separation_radius = 3.0
+obstacle_radius = 3.0
+flock_alignment = 0.8
+flock_cohesion = 0.5
+flock_separation = 1.2
+eat_gain = 1.2
+hide_gain = 1.5
+explore_gain = 0.6
+baseline_separation = 0.6
+baseline_avoid = 0.9

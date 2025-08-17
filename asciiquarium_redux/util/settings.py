@@ -294,6 +294,20 @@ class Settings:
     ui_font_max_size: int = 22
     web_open: bool = False
     web_port: int = 8000
+    # AI configuration (Utility AI + steering)
+    ai_enabled: bool = True
+    ai_action_temperature: float = 0.6
+    ai_wander_tau: float = 1.2
+    ai_separation_radius: float = 3.0
+    ai_obstacle_radius: float = 3.0
+    ai_flock_alignment: float = 0.8
+    ai_flock_cohesion: float = 0.5
+    ai_flock_separation: float = 1.2
+    ai_eat_gain: float = 1.2
+    ai_hide_gain: float = 1.5
+    ai_explore_gain: float = 0.6
+    ai_baseline_separation: float = 0.6
+    ai_baseline_avoid: float = 0.9
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
@@ -396,6 +410,7 @@ def _load_toml_configurations(s: Settings, override_path: Optional[Path]) -> Non
         _parse_seaweed_settings(s, data.get("seaweed", {}))
         _parse_fishhook_settings(s, data.get("fishhook", {}))
         _parse_ui_settings(s, data.get("ui", {}))
+        _parse_ai_settings(s, data.get("ai", {}))
         break  # Only process first found config file
 
 
@@ -696,6 +711,8 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--no-castle", dest="castle_enabled", action="store_false")
     parser.add_argument("--font-min", dest="ui_font_min_size", type=int)
     parser.add_argument("--font-max", dest="ui_font_max_size", type=int)
+    parser.add_argument("--ai", dest="ai_enabled", action="store_true")
+    parser.add_argument("--no-ai", dest="ai_enabled", action="store_false")
     args = parser.parse_args(argv)
 
     if args.fps is not None:
@@ -714,6 +731,8 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
         s.ui_fullscreen = bool(args.fullscreen)
     if getattr(args, "castle_enabled", None) is not None:
         s.castle_enabled = bool(args.castle_enabled)
+    if getattr(args, "ai_enabled", None) is not None:
+        s.ai_enabled = bool(args.ai_enabled)
     if getattr(args, "ui_font_min_size", None) is not None:
         s.ui_font_min_size = max(6, min(64, int(args.ui_font_min_size)))
     if getattr(args, "ui_font_max_size", None) is not None:
@@ -777,3 +796,39 @@ def _safe_set_bool(s: Settings, attr: str, data: dict) -> None:
             setattr(s, attr, bool(data.get(attr)))
         except Exception:
             pass
+
+
+def _parse_ai_settings(s: Settings, ai: dict) -> None:
+    """Parse AI section of TOML configuration.
+
+    Section keys follow:
+        enabled (bool), action_temperature, wander_tau,
+        separation_radius, obstacle_radius,
+        flock_alignment, flock_cohesion, flock_separation,
+        eat_gain, hide_gain, explore_gain,
+        baseline_separation, baseline_avoid
+    """
+    if not isinstance(ai, dict):
+        return
+    _safe_set_bool(s, "ai_enabled", ai)
+    for key, attr in [
+        ("action_temperature", "ai_action_temperature"),
+        ("wander_tau", "ai_wander_tau"),
+        ("separation_radius", "ai_separation_radius"),
+        ("obstacle_radius", "ai_obstacle_radius"),
+        ("flock_alignment", "ai_flock_alignment"),
+        ("flock_cohesion", "ai_flock_cohesion"),
+        ("flock_separation", "ai_flock_separation"),
+        ("eat_gain", "ai_eat_gain"),
+        ("hide_gain", "ai_hide_gain"),
+        ("explore_gain", "ai_explore_gain"),
+        ("baseline_separation", "ai_baseline_separation"),
+        ("baseline_avoid", "ai_baseline_avoid"),
+    ]:
+        if key in ai:
+            try:
+                val = ai.get(key)
+                if val is not None:
+                    setattr(s, attr, float(val))
+            except Exception:
+                pass

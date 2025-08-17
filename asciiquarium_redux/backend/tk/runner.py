@@ -234,6 +234,10 @@ def run_tk(settings) -> None:
                     app.rebuild(screen)  # type: ignore[arg-type]
                 if k in ("h", "H", "?"):
                     app._show_help = not app._show_help
+                if k in ("f", "F"):
+                    # Feed fish: spawn fish food flakes
+                    from ...entities.specials import spawn_fish_food
+                    app.specials.extend(spawn_fish_food(screen, app))  # type: ignore[arg-type]
                 if k in ("s", "S"):
                     # Save a screenshot of the canvas area into the current directory
                     import os
