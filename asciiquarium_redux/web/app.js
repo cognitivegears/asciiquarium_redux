@@ -11,17 +11,12 @@ const closeAbout = document.getElementById("closeAbout");
 const aboutContent = document.getElementById("aboutContent");
 const closeSettings = document.getElementById("closeSettings");
 const ctx2d = canvas.getContext("2d", { alpha: false, desynchronized: true });
-const state = { cols: 120, rows: 40, cellW: 12, cellH: 18, baseline: 4, fps: 24, running: false };
-let lastFontSize = null;
+const FONT_FAMILY = "Menlo, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
+const state = { cols: 120, rows: 40, cellW: 12, cellH: 18, baseline: 4, fps: 24, running: false, drawFontSizePx: 16 };
 
-function getAquariumFont() {
-  // Get computed font-size for the canvas (may be set by media query)
-  const style = window.getComputedStyle(canvas);
-  return `${style.fontSize} Menlo, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace`;
-}
-function measureCell(font) {
+function measureCellForSize(sizePx) {
   ctx2d.setTransform(1, 0, 0, 1, 0, 0);
-  ctx2d.font = font;
+  ctx2d.font = `${sizePx}px ${FONT_FAMILY}`;
   const m = ctx2d.measureText("M");
   const w = Math.round(m.width);
   const ascent = Math.ceil(m.actualBoundingBoxAscent || 13);
@@ -77,10 +72,7 @@ function scheduleResize() {
   // Debounce to coalesce rapid layout changes
   resizeTimer = setTimeout(() => {
     resizeTimer = null;
-    const r = stage.getBoundingClientRect();
-    if (r.width > 0 && r.height > 0) {
-      resizeCanvasToGrid();
-    }
+  recomputeFontAndGrid();
   }, 100);
 }
 
@@ -91,7 +83,7 @@ function jsFlushHook(batches) {
   // Draw runs
   ctx2d.textBaseline = "alphabetic";
   ctx2d.textAlign = "left";
-  ctx2d.font = "16px Menlo, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
+  ctx2d.font = `${state.drawFontSizePx || 16}px ${FONT_FAMILY}`;
   // Convert Pyodide PyProxy (Python list[dict]) to plain JS if needed
   const items = batches && typeof batches.toJs === "function"
     ? batches.toJs({ dict_converter: Object.fromEntries, create_proxies: false })
@@ -209,30 +201,15 @@ v
   // Workaround: set via pyodide.globals
   const mod = pyodide.pyimport("asciiquarium_redux.backend.web.web_backend");
   mod.set_js_flush_hook(jsFlushHook);
-  // Measure cell metrics for a stable grid, but re-measure if font size changes (mobile)
-  function updateCellMetrics() {
-    const font = getAquariumFont();
-    const style = window.getComputedStyle(canvas);
-    const fontSize = style.fontSize;
-    if (lastFontSize !== fontSize) {
-      const m = measureCell(font);
-      state.cellW = Math.round(m.w);
-      state.cellH = Math.round(m.h);
-      lastFontSize = fontSize;
-    }
-  }
-  updateCellMetrics();
-  // Apply initial layout
-  resizeCanvasToGrid();
+  // Initial font + grid sizing
+  recomputeFontAndGrid();
 
   // On resize/orientation change, re-measure font and grid
   window.addEventListener("resize", () => {
-    updateCellMetrics();
-    resizeCanvasToGrid();
+    recomputeFontAndGrid();
   });
   window.addEventListener("orientationchange", () => {
-    updateCellMetrics();
-    resizeCanvasToGrid();
+    recomputeFontAndGrid();
   });
   const opts = collectOptionsFromUI();
   // Convert JS object to a real Python dict to avoid JSON true/false/null issues
@@ -322,6 +299,10 @@ function collectOptionsFromUI() {
     chest: chk("chest"),
   castle: chk("castle"),
     turn: chk("turn"),
+  // UI font bounds & auto
+  font_auto: chk("font_auto"),
+  ui_font_min_size: num("ui_font_min_size"),
+  ui_font_max_size: num("ui_font_max_size"),
     // Fish
     fish_direction_bias: num("fish_direction_bias"),
     fish_speed_min: num("fish_speed_min"),
@@ -354,9 +335,52 @@ function collectOptionsFromUI() {
   };
 }
 
+function recomputeFontAndGrid() {
+  // Determine desired font size
+  const byId = (id) => document.getElementById(id);
+  // Container size
+  const rect = stage.getBoundingClientRect();
+  const st = window.getComputedStyle(stage);
+  const padY = (parseFloat(st.paddingTop) || 0) + (parseFloat(st.paddingBottom) || 0);
+  const cssH = Math.max(0, rect.height - padY);
+  // Scene constraints
+  const waterline = Number(byId("waterline_top")?.value || 5);
+  const waterRows = 4;
+  const castleRows = 13; // matches Python sprite_size(CASTLE)[1]
+  const marginRows = 2;
+  const fitRows = Math.max(1, waterline + waterRows + castleRows + marginRows);
+  const maxCellH = Math.max(6, Math.floor(cssH / fitRows));
+  // Bounds from UI
+  let minSize = Number(byId("ui_font_min_size")?.value || 10);
+  let maxSize = Number(byId("ui_font_max_size")?.value || 22);
+  if (maxSize < minSize) maxSize = minSize;
+  const fontAuto = !!byId("font_auto")?.checked;
+  let desired = state.drawFontSizePx || 16;
+  if (fontAuto) {
+    // Binary search largest size whose measured cell height fits
+    let lo = Math.max(4, minSize), hi = Math.max(minSize, maxSize), best = Math.min(Math.max(desired, lo), hi);
+    while (lo <= hi) {
+      const mid = Math.floor((lo + hi) / 2);
+      const m = measureCellForSize(mid);
+      if (m.h <= maxCellH) { best = mid; lo = mid + 1; }
+      else { hi = mid - 1; }
+    }
+    desired = best;
+  } else {
+    // Keep current, clamped to bounds
+    desired = Math.min(Math.max(desired, minSize), maxSize);
+  }
+  // Apply metrics
+  const m = measureCellForSize(desired);
+  state.drawFontSizePx = desired;
+  state.cellW = Math.round(m.w);
+  state.cellH = Math.round(m.h);
+  resizeCanvasToGrid();
+}
+
   [
     // basics
-  "fps","speed","density","color","chest","castle","turn","seed",
+  "fps","speed","density","color","chest","castle","turn","seed","font_auto","ui_font_min_size","ui_font_max_size",
     // fish
   "fish_direction_bias","fish_speed_min","fish_speed_max","fish_scale",
     // seaweed
@@ -365,10 +389,59 @@ function collectOptionsFromUI() {
     "waterline_top","chest_burst_seconds","spawn_start_delay_min","spawn_start_delay_max","spawn_interval_min","spawn_interval_max",
     "spawn_max_concurrent","spawn_cooldown_global","w_shark","w_fishhook","w_whale","w_ship","w_ducks","w_dolphins","w_swan","w_monster","w_big_fish",
     // fishhook
-    "fishhook_dwell_seconds"
+    "fishhook_dwell_seconds",
+    // UI font + scene affecting font fit
+    "font_auto","ui_font_min_size","ui_font_max_size","waterline_top"
   ].forEach(id => {
   const el = document.getElementById(id);
   el.addEventListener("input", () => {
+    // Keep font min/max sliders consistent: if the active slider crosses the other,
+    // drag the other along so min <= max always holds without blocking the user's motion.
+    if (id === "ui_font_min_size" || id === "ui_font_max_size") {
+      const minEl = document.getElementById("ui_font_min_size");
+      const maxEl = document.getElementById("ui_font_max_size");
+      const hardMinMin = Number(minEl.getAttribute("min")) || 6;
+      const hardMinMax = Number(minEl.getAttribute("max")) || 64;
+      const hardMaxMin = Number(maxEl.getAttribute("min")) || 8;
+      const hardMaxMax = Number(maxEl.getAttribute("max")) || 72;
+      let minVal = Number(minEl.value) || 0;
+      let maxVal = Number(maxEl.value) || 0;
+      if (id === "ui_font_min_size") {
+        // If dragging min to or past max, move max to follow min immediately
+        if (minVal >= maxVal) {
+          let newMax = Math.min(Math.max(minVal, hardMaxMin), hardMaxMax);
+          // Also respect min's hard max; if min is clamped by its hard max, follow it
+          minVal = Math.min(Math.max(minVal, hardMinMin), hardMinMax);
+          // If min exceeded max's hardMax, align both at that limit
+          if (minVal > hardMaxMax) {
+            minVal = hardMaxMax;
+            newMax = hardMaxMax;
+          }
+          maxVal = newMax;
+          maxEl.value = String(maxVal);
+        }
+        // Ensure min respects its hard bounds too
+        minVal = Math.min(Math.max(minVal, hardMinMin), hardMinMax);
+        minEl.value = String(minVal);
+      } else {
+        // Dragging max; if it reaches or dips below min, move min to follow max immediately
+        if (maxVal <= minVal) {
+          let newMin = Math.min(Math.max(maxVal, hardMinMin), hardMinMax);
+          // Respect max's hard bounds
+          maxVal = Math.min(Math.max(maxVal, hardMaxMin), hardMaxMax);
+          // If max fell below min's hardMin, align both at that limit
+          if (maxVal < hardMinMin) {
+            maxVal = hardMinMin;
+            newMin = hardMinMin;
+          }
+          minVal = newMin;
+          minEl.value = String(minVal);
+        }
+        // Ensure max respects its hard bounds too
+        maxVal = Math.min(Math.max(maxVal, hardMaxMin), hardMaxMax);
+        maxEl.value = String(maxVal);
+      }
+    }
     const opts = collectOptionsFromUI();
       const pyOpts = pyodide.toPy(opts);
       try {
@@ -377,6 +450,9 @@ function collectOptionsFromUI() {
         pyOpts.destroy();
       }
       window.pyodide?.runPython(`web_backend.web_app.set_options(W_OPTS)`);
+      if (["font_auto","ui_font_min_size","ui_font_max_size","waterline_top"].includes(id)) {
+        recomputeFontAndGrid();
+      }
   });
 });
 

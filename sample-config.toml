@@ -110,6 +110,8 @@ dwell_seconds = 20.0
 # - fullscreen: true to run the Tk window fullscreen
 # - cols/rows: character grid size for Tk mode
 # - font_family/font_size: font used for Tk canvas rendering
+# - font_min_size/font_max_size: bounds for Tk auto font sizing
+# - font_auto: when true, font grows/shrinks within bounds so the castle fits under the waterline
 [ui]
 backend = "terminal"   # terminal|tk
 fullscreen = false
@@ -117,3 +119,6 @@ cols = 120
 rows = 40
 font_family = "Menlo"
 font_size = 14
+font_min_size = 10   # lower bound for Tk auto font sizing
+font_max_size = 22   # upper bound for Tk auto font sizing
+font_auto = true     # auto-resize font to fit scene; bounded by min/max

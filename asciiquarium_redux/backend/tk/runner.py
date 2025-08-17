@@ -58,26 +58,31 @@ def run_tk(settings) -> None:
     min_rows_required = int(getattr(settings, "waterline_top", 5)) + len(WATER_SEGMENTS) + tallest_special_h + 2
     target_rows = max(rows, min_rows_required)
 
-    # If auto font is enabled, try to ensure at least target rows based on current screen height
+    # Helper to compute a font size given a target max cell height and bounds
+    def _pick_font_size(max_cell_h: int, current_size: int) -> int:
+        min_size = int(getattr(settings, "ui_font_min_size", 10))
+        max_size = int(getattr(settings, "ui_font_max_size", 22))
+        lo, hi = max(4, min_size), max(min_size, max_size)
+        best = max(min_size, min(max_size, current_size))
+        while lo <= hi:
+            mid = (lo + hi) // 2
+            test = tkfont.Font(family=family, size=mid)
+            th = max(MIN_CELL_H, int(test.metrics("linespace")))
+            if th <= max_cell_h:
+                best = mid
+                lo = mid + 1
+            else:
+                hi = mid - 1
+        return best
+
+    # If auto font is enabled, only shrink/grow within bounds so the castle fits below water
     if getattr(settings, "ui_font_auto", True):
         try:
-            # Use the monitor's available height for the initial window if not fullscreen
             screen_h_px = root.winfo_screenheight()
-            # Reserve a bit of margin for window chrome (titlebar etc.)
             chrome_px = 64
-            max_cell_h = max(10, (screen_h_px - chrome_px) // target_rows)
-            # Binary search a font size that gives cell_h <= max_cell_h
-            lo, hi = 4, max(10, req_size * 2)
-            best = req_size
-            while lo <= hi:
-                mid = (lo + hi) // 2
-                test = tkfont.Font(family=family, size=mid)
-                th = max(MIN_CELL_H, int(test.metrics("linespace")))
-                if th <= max_cell_h:
-                    best = mid
-                    lo = mid + 1
-                else:
-                    hi = mid - 1
+            fit_rows = max(1, min_rows_required)
+            max_cell_h = max(10, (screen_h_px - chrome_px) // fit_rows)
+            best = _pick_font_size(max_cell_h, req_size)
             if best != req_size:
                 fnt = tkfont.Font(family=family, size=best)
                 cell_w = max(8, int(fnt.measure("W")))
@@ -158,46 +163,34 @@ def run_tk(settings) -> None:
         # Use current canvas size in pixels
         w = max(1, int(canvas.winfo_width()))
         h = max(1, int(canvas.winfo_height()))
-        # If auto font is enabled, reduce font size if needed so target_rows fit vertically
+        # If auto font is enabled, adjust font size so minimal rows (castle fit) fit vertically within bounds
         if getattr(settings, "ui_font_auto", True):
             # Recompute target rows in case settings changed at runtime
             _castle_h = sprite_size(CASTLE)[1]
-            _target_rows = max(int(getattr(settings, "ui_rows", 40)), int(getattr(settings, "waterline_top", 5)) + len(WATER_SEGMENTS) + _castle_h + 2)
-            max_cell_h_now = max(6, h // max(1, _target_rows))
-            if cell_h > max_cell_h_now:
-                # Find the largest font size whose measured height <= max_cell_h_now
-                lo, hi = 4, int(fnt.cget("size"))
-                best_size = int(fnt.cget("size"))
-                while lo <= hi:
-                    mid = (lo + hi) // 2
-                    test = tkfont.Font(family=family, size=mid)
-                    th = max(MIN_CELL_H, int(test.metrics("linespace")))
-                    if th <= max_cell_h_now:
-                        best_size = mid
-                        lo = mid + 1
-                    else:
-                        hi = mid - 1
-                if best_size != int(fnt.cget("size")):
-                    # Apply new font metrics
-                    new_font = tkfont.Font(family=family, size=best_size)
-                    new_cell_w = max(8, int(new_font.measure("W")))
-                    new_cell_h = max(MIN_CELL_H, int(new_font.metrics("linespace")))
-                    # Update globals and context
-                    root._cell_w = new_cell_w  # type: ignore[attr-defined]
-                    root._cell_h = new_cell_h  # type: ignore[attr-defined]
-                    ctx.cell_w = new_cell_w
-                    ctx.cell_h = new_cell_h
-                    ctx.font = new_font
-                    # Clear all existing text items to avoid mixed-font artifacts
-                    try:
-                        canvas.delete("all")
-                        ctx._text_ids.clear()  # type: ignore[attr-defined]
-                    except Exception:
-                        pass
-                    # Overwrite captured variables for subsequent calculations
-                    fnt = new_font
-                    cell_w = new_cell_w
-                    cell_h = new_cell_h
+            _min_rows_required = int(getattr(settings, "waterline_top", 5)) + len(WATER_SEGMENTS) + _castle_h + 2
+            max_cell_h_now = max(6, h // max(1, _min_rows_required))
+            desired_size = _pick_font_size(max_cell_h_now, int(fnt.cget("size")))
+            if desired_size != int(fnt.cget("size")):
+                # Apply new font metrics (grow or shrink) within bounds
+                new_font = tkfont.Font(family=family, size=desired_size)
+                new_cell_w = max(8, int(new_font.measure("W")))
+                new_cell_h = max(MIN_CELL_H, int(new_font.metrics("linespace")))
+                # Update globals and context
+                root._cell_w = new_cell_w  # type: ignore[attr-defined]
+                root._cell_h = new_cell_h  # type: ignore[attr-defined]
+                ctx.cell_w = new_cell_w
+                ctx.cell_h = new_cell_h
+                ctx.font = new_font
+                # Clear all existing text items to avoid mixed-font artifacts
+                try:
+                    canvas.delete("all")
+                    ctx._text_ids.clear()  # type: ignore[attr-defined]
+                except Exception:
+                    pass
+                # Overwrite captured variables for subsequent calculations
+                fnt = new_font
+                cell_w = new_cell_w
+                cell_h = new_cell_h
         new_cols = max(1, w // cell_w)
         new_rows = max(1, h // cell_h)
         if new_cols != ctx.cols or new_rows != ctx.rows:

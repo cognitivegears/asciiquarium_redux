@@ -135,6 +135,22 @@ class WebApp:
             if new_seed != getattr(self.settings, "seed", None):
                 self.settings.seed = new_seed
                 needs_rebuild = True
+        # UI font auto and bounds (used by Tk; retained here for consistency and future web use)
+        if "font_auto" in options:
+            try:
+                self.settings.ui_font_auto = bool(options["font_auto"])  # type: ignore[assignment]
+            except Exception:
+                pass
+        if "ui_font_min_size" in options:
+            try:
+                self.settings.ui_font_min_size = int(options["ui_font_min_size"])  # type: ignore[assignment]
+            except Exception:
+                pass
+        if "ui_font_max_size" in options:
+            try:
+                self.settings.ui_font_max_size = int(options["ui_font_max_size"])  # type: ignore[assignment]
+            except Exception:
+                pass
         return needs_rebuild
 
     def _apply_booleans(self, options: dict) -> bool:

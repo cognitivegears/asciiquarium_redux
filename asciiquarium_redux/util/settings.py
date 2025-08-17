@@ -279,6 +279,8 @@ class Settings:
     ui_font_family: str = "Menlo"
     ui_font_size: int = 14
     ui_font_auto: bool = True
+    ui_font_min_size: int = 10
+    ui_font_max_size: int = 22
     web_open: bool = False
     web_port: int = 8000
 
@@ -644,6 +646,18 @@ def _parse_ui_settings(s: Settings, ui: dict) -> None:
     if isinstance(b, bool):
         s.ui_font_auto = b
 
+    v = ui.get("font_min_size")
+    if isinstance(v, int):
+        s.ui_font_min_size = max(6, min(64, v))
+
+    v = ui.get("font_max_size")
+    if isinstance(v, int):
+        s.ui_font_max_size = max(8, min(72, v))
+
+    # Ensure coherent bounds
+    if s.ui_font_max_size < s.ui_font_min_size:
+        s.ui_font_max_size = s.ui_font_min_size
+
 
 def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     """Apply command line argument overrides to settings.
@@ -666,6 +680,8 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--no-fullscreen", dest="fullscreen", action="store_false")
     parser.add_argument("--castle", dest="castle_enabled", action="store_true", default=None)
     parser.add_argument("--no-castle", dest="castle_enabled", action="store_false")
+    parser.add_argument("--font-min", dest="ui_font_min_size", type=int)
+    parser.add_argument("--font-max", dest="ui_font_max_size", type=int)
     args = parser.parse_args(argv)
 
     if args.fps is not None:
@@ -684,6 +700,12 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
         s.ui_fullscreen = bool(args.fullscreen)
     if getattr(args, "castle_enabled", None) is not None:
         s.castle_enabled = bool(args.castle_enabled)
+    if getattr(args, "ui_font_min_size", None) is not None:
+        s.ui_font_min_size = max(6, min(64, int(args.ui_font_min_size)))
+    if getattr(args, "ui_font_max_size", None) is not None:
+        s.ui_font_max_size = max(8, min(72, int(args.ui_font_max_size)))
+    if s.ui_font_max_size < s.ui_font_min_size:
+        s.ui_font_max_size = s.ui_font_min_size
     try:
         if getattr(args, "web_open", False):
             s.web_open = True

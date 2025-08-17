@@ -32,16 +32,19 @@ Status: Playable, configurable, and window-ready (Tk). Bring your own snacks (fo
 ## 📚 Documentation
 
 ### Quick Start
+
 - **[Getting Started Guide](docs/DEVELOPER_GUIDE.md)** - Setup, installation, and first steps
 - **[Configuration Guide](docs/CONFIGURATION.md)** - Complete settings reference and customization
 - **[Backend Comparison](docs/BACKENDS.md)** - Terminal vs Web vs TkInter backends
 
 ### Technical Reference
+
 - **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and component relationships
 - **[API Reference](docs/API_REFERENCE.md)** - Public interfaces and usage examples
 - **[Entity System](docs/ENTITY_SYSTEM.md)** - Fish, seaweed, bubbles, and special entity details
 
 ### Deployment & Advanced
+
 - **[Web Deployment](docs/WEB_DEPLOYMENT.md)** - Browser setup and GitHub Pages deployment
 - **[Sample Configuration](sample-config.toml)** - Example TOML configuration file
 
@@ -182,6 +185,8 @@ Common flags:
 - --speed (float): global speed multiplier (default 0.75)
 - --backend <terminal|tk>: choose backend
 - --fullscreen: make Tk window fullscreen
+- --font-min (int): minimum Tk font size bound for auto-resize
+- --font-max (int): maximum Tk font size bound for auto-resize
 
 ## Notes
 
@@ -343,6 +348,15 @@ cols = 120
 rows = 40
 font_family = "Menlo"
 font_size = 14
+font_min_size = 10   # lower bound for Tk auto font sizing
+font_max_size = 22   # upper bound for Tk auto font sizing
+font_auto = true     # auto-resize font to fit scene; bounded by min/max
+
+Tk auto font sizing notes
+
+- When using the Tk backend with font_auto = true, the app adjusts the font size so that the minimal scene (waterline + water + castle + margin) fits vertically.
+- The font size is recalculated on window resize and can grow or shrink, but it is always clamped between font_min_size and font_max_size to avoid unreadably small or comically large text.
+- Very small windows: the app will shrink the font no smaller than font_min_size; if things still don’t fit, some tall specials (e.g., big_fish) will be skipped until there’s enough space.
 ```
 
 Run with uvx without cloning the repo:

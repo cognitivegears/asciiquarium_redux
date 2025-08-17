@@ -622,7 +622,11 @@ class AsciiQuarium:
                 spawner = spawn_function
                 chosen_name = entity_name
                 break
-        self.specials.extend(spawner(screen, self))
+        new_specials = spawner(screen, self)
+        if not new_specials:
+            # Spawner declined (e.g., screen too small); do not consume cooldowns
+            return
+        self.specials.extend(new_specials)
         # register cooldowns
         self._last_spawn[chosen_name] = current_time
         if self.settings.spawn_cooldown_global > 0:
