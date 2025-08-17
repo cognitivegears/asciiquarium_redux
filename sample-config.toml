@@ -70,6 +70,7 @@ dwell_seconds = 20.0
 # Fish behavior and counts
 # - direction_bias: probability of rightward motion (0..1)
 # - speed_min/max: fish speed range (units/sec ~0.6..2.5)
+# - vertical_speed_max: max vertical drift speed (rows/sec). Keep small so motion is mostly sideways.
 # - bubble_min/max: seconds between bubbles (2.0..5.0+)
 # - y_band: optional vertical band as fractions of screen height [low, high], 0..1
 # - count_*: optional override for base count, scaling per 80 cols
@@ -77,6 +78,7 @@ dwell_seconds = 20.0
  direction_bias = 0.5
  speed_min = 0.6
  speed_max = 2.5
+ vertical_speed_max = 2.0
  bubble_min = 2.0
  bubble_max = 5.0
  # y_band = [0.20, 0.90]

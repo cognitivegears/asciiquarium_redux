@@ -79,6 +79,7 @@ from .entities.specials import (
     spawn_monster,
     spawn_big_fish,
     spawn_treasure_chest,
+    spawn_fish_food,
 )
 from .constants import (
     SCREEN_WIDTH_UNIT_DIVISOR,
@@ -665,7 +666,7 @@ class AsciiQuarium:
             f"seed: {self.settings.seed if self.settings.seed is not None else 'random'}",
             "",
             "Controls:",
-            "  q: quit    p: pause/resume    r: rebuild",
+            "  q: quit    p: pause/resume    r: rebuild    f: feed fish",
             "  Left-click: drop fishhook to clicked spot",
             "  h/?: toggle this help",
         ]
@@ -1014,6 +1015,8 @@ def _handle_keyboard_events(event, app: AsciiQuarium, screen: Screen) -> bool:
         app._show_help = not app._show_help
     elif key in (ord("t"), ord("T")):
         _handle_debug_fish_turn(app)
+    elif key in (ord("f"), ord("F")):
+        app.specials.extend(spawn_fish_food(screen, app))
     elif key == ord(" "):
         _handle_fishhook_toggle(app, screen)
 

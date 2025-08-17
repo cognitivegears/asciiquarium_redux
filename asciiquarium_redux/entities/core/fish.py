@@ -140,6 +140,7 @@ class Fish:
     y: float
     vx: float
     colour: int
+    vy: float = 0.0
     # Z-depth for layering between fish (higher draws on top)
     z: int = field(default_factory=lambda: random.randint(3, 20))
     colour_mask: List[str] | None = None
@@ -207,6 +208,38 @@ class Fish:
             else:
                 speed_scale = 0.0
         self.x += self.vx * dt * MOVEMENT_MULTIPLIER * speed_scale
+        # --- Vertical drift (slow, mostly horizontal swim) ---
+        v_max = max(0.0, float(getattr(app.settings, "fish_vertical_speed_max", 0.3)))
+        if not self.hooked and v_max > 0.0:
+            # Randomly vary vertical velocity a bit over time
+            # Chance per second to pick a new vy target
+            if random.random() < 0.8 * dt:  # ~once every 1.25 seconds on average
+                new_vy = random.uniform(-v_max, v_max)
+                # Ensure a small minimum magnitude so it's perceptible
+                min_mag = min(0.3, v_max * 0.5)
+                if abs(new_vy) < min_mag:
+                    new_vy = min_mag if new_vy >= 0 else -min_mag
+                self.vy = new_vy
+            # Compute allowed vertical bounds within water
+            top_bound = max(self.waterline_top + self.water_rows + 1, 1)
+            bottom_bound = max(top_bound, screen.height - self.height - 2)
+            # Predict next position and handle boundaries (level out or bounce)
+            next_y = self.y + self.vy * dt
+            if next_y < top_bound:
+                # Either level out or go downward
+                if random.random() < 0.5:
+                    self.vy = 0.0
+                else:
+                    self.vy = abs(self.vy) if self.vy != 0 else random.uniform(0.05, v_max)
+                self.y = float(top_bound)
+            elif next_y > bottom_bound:
+                if random.random() < 0.5:
+                    self.vy = 0.0
+                else:
+                    self.vy = -abs(self.vy) if self.vy != 0 else -random.uniform(0.05, v_max)
+                self.y = float(bottom_bound)
+            else:
+                self.y = next_y
         self.next_bubble -= dt
         if self.next_bubble <= 0:
             bubble_y = int(self.y + self.height // 2)

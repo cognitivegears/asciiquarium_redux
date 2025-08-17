@@ -246,6 +246,8 @@ class Settings:
     fish_direction_bias: float = 0.5
     fish_speed_min: float = 0.6
     fish_speed_max: float = 2.5
+    # Max vertical drift speed (rows/sec); small to keep mostly horizontal motion
+    fish_vertical_speed_max: float = 2.0
     fish_bubble_min: float = 2.0
     fish_bubble_max: float = 5.0
     fish_turn_enabled: bool = True
@@ -258,6 +260,15 @@ class Settings:
     fish_y_band: Optional[Tuple[float, float]] = None
     seaweed_count_base: Optional[int] = None
     seaweed_count_per_80_cols: Optional[float] = None
+    # Fish food (special) configuration
+    fish_food_count_min: int = 5
+    fish_food_count_max: int = 12
+    fish_food_float_seconds_min: float = 1.0
+    fish_food_float_seconds_max: float = 3.0
+    fish_food_sink_speed_min: float = 0.4
+    fish_food_sink_speed_max: float = 1.0
+    fish_food_drift_chance: float = 0.35
+    fish_food_drift_speed: float = 1.0
     seaweed_sway_min: float = 0.18
     seaweed_sway_max: float = 0.5
     seaweed_lifetime_min: float = 25.0
@@ -494,6 +505,9 @@ def _parse_fish_settings(s: Settings, fish: dict) -> None:
         ("direction_bias", "fish_direction_bias"),
         ("speed_min", "fish_speed_min"),
         ("speed_max", "fish_speed_max"),
+    ("vertical_speed_max", "fish_vertical_speed_max"),
+        # accept alias spelling
+        ("vertical_max_speed", "fish_vertical_speed_max"),
         ("bubble_min", "fish_bubble_min"),
         ("bubble_max", "fish_bubble_max"),
         ("turn_chance_per_second", "fish_turn_chance_per_second"),

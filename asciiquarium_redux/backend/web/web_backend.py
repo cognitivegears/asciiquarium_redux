@@ -16,7 +16,7 @@ from typing import Callable, List, Optional
 
 from ...app import AsciiQuarium
 from ...util.settings import Settings
-from ...entities.specials import FishHook, spawn_fishhook, spawn_fishhook_to, spawn_treasure_chest
+from ...entities.specials import FishHook, spawn_fishhook, spawn_fishhook_to, spawn_treasure_chest, spawn_fish_food
 from ...entities.specials.treasure_chest import TreasureChest
 from .web_screen import WebScreen
 from ...util.types import FlushHook, FlushBatch
@@ -376,6 +376,14 @@ class WebApp:
                         h.retract_now()
             else:
                 self.app.specials.extend(spawn_fishhook(self.screen, self.app))  # type: ignore[arg-type]
+            return
+        if k == "f":
+            # Feed fish: spawn fish food flakes
+            try:
+                self.app.specials.extend(spawn_fish_food(self.screen, self.app))  # type: ignore[arg-type]
+            except Exception:
+                pass
+            return
 
     def on_mouse(self, x: int, y: int, button: int):
         if not self.app or not self.screen:
