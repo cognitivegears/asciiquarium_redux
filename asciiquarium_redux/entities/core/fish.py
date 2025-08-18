@@ -543,16 +543,29 @@ class Fish:
 
     def finish_shrink_and_flip(self):
         # At the narrowest point: flip direction and frames, stop, then expand and ramp speed
-        direction = -1 if self.vx > 0 else 1
-        # Swap to opposite direction frames but choose the same size index if possible
-        from .fish_assets import FISH_RIGHT, FISH_LEFT, FISH_RIGHT_MASKS, FISH_LEFT_MASKS
-        src = FISH_RIGHT if direction > 0 else FISH_LEFT
-        src_masks = FISH_RIGHT_MASKS if direction > 0 else FISH_LEFT_MASKS
-        # Try to match height (number of rows) to current sprite size
-        curr_h = self.height
-        candidate = list(zip(src, src_masks))
-        frames, mask = min(candidate, key=lambda fm: abs(len(fm[0]) - curr_h))
-        self.frames = frames
+        # Determine current and new directions
+        curr_dir = 1 if self.vx > 0 else -1
+        new_dir = -curr_dir
+        # Swap to opposite direction frames, preserving the same sprite index when possible
+        from .fish_assets import FISH_RIGHT, FISH_LEFT
+        src_list = FISH_RIGHT if curr_dir > 0 else FISH_LEFT
+        dst_list = FISH_RIGHT if new_dir > 0 else FISH_LEFT
+        # Try to locate current frames' index in its source list for a stable mapping
+        idx: Optional[int] = None
+        try:
+            for i, spr in enumerate(src_list):
+                if spr == self.frames:
+                    idx = i
+                    break
+        except Exception:
+            idx = None
+        if idx is not None and 0 <= idx < len(dst_list):
+            self.frames = dst_list[idx]
+        else:
+            # Fallback: choose the closest by height to avoid mismatches if not found
+            curr_h = self.height
+            candidates = list(dst_list)
+            self.frames = min(candidates, key=lambda fr: abs(len(fr) - curr_h))
         # Preserve existing colours when turning by mirroring the current colour_mask
         if self.colour_mask is not None:
             try:
@@ -572,7 +585,7 @@ class Fish:
                     left = pad // 2
                     right = pad - left
                     return (" " * left) + row + (" " * right)
-                for dy, row in enumerate(frames):
+                for dy, row in enumerate(self.frames):
                     src_row = old_mask[dy] if dy < len(old_mask) else ""
                     # mirror horizontally
                     mirrored = src_row[::-1]
@@ -585,7 +598,7 @@ class Fish:
             self.colour_mask = None
         # Reverse velocity sign, magnitude picked from base_speed magnitude
         speed_mag = abs(self.base_speed) if self.base_speed != 0 else random.uniform(self.speed_min, self.speed_max)
-        self.vx = speed_mag * direction
+        self.vx = speed_mag * new_dir
         # Continue to expand phase
         self.turn_phase = "expand"
         self.turn_t = 0.0
