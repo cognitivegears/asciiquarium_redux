@@ -118,6 +118,8 @@ chest_burst_seconds = 60.0 # Seconds between treasure chest bubbles
 restock_enabled = true     # Replenish fish if counts stay low
 restock_after_seconds = 20.0   # Time below threshold before restock
 restock_min_fraction = 0.6     # Threshold: fraction of target count
+fish_tank = false              # If true, fish turn before hitting left/right edges
+fish_tank_margin = 3           # Columns from each side considered the glass margin
 ```
 
 ### Settings Reference
@@ -133,6 +135,8 @@ restock_min_fraction = 0.6     # Threshold: fraction of target count
 | `restock_enabled` | boolean | `true` | - | If true and fish population remains below threshold for `restock_after_seconds`, gently add fish |
 | `restock_after_seconds` | float | `20.0` | `5.0-600.0` | Duration below threshold before restock triggers |
 | `restock_min_fraction` | float | `0.6` | `0.1-1.0` | Threshold fraction of target fish count that defines "low" |
+| `fish_tank` | boolean | `false` | - | Treat scene as a tank; fish turn before reaching side edges |
+| `fish_tank_margin` | integer | `3` | `0-40` | Margin (columns) from each side where fish will turn when `fish_tank` is true |
 
 ### Example Configurations
 
