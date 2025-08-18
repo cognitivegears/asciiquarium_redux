@@ -179,7 +179,33 @@ class WebApp:
                 pass
         if "turn" in options:
             try:
-                self.settings.fish_turn_enabled = bool(options["turn"])  # type: ignore[attr-defined]
+                new_val = bool(options["turn"])  # type: ignore[attr-defined]
+                self.settings.fish_turn_enabled = new_val  # type: ignore[attr-defined]
+                # Propagate to existing fish so effect is immediate
+                if self.app is not None:
+                    for f in getattr(self.app, "fish", []):
+                        try:
+                            f.turn_enabled = new_val
+                        except Exception:
+                            pass
+                # If turning was enabled, give instant feedback by turning one fish
+                if new_val and self.app is not None:
+                    try:
+                        fishes = [f for f in getattr(self.app, "fish", []) if not getattr(f, 'hooked', False)]
+                        if fishes:
+                            import random as _r
+                            _r.choice(fishes).start_turn()
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+        if "ai_enabled" in options:
+            try:
+                prev = bool(getattr(self.settings, "ai_enabled", True))
+                new_val = bool(options["ai_enabled"])  # type: ignore[attr-defined]
+                if new_val != prev:
+                    self.settings.ai_enabled = new_val  # type: ignore[attr-defined]
+                    # No rebuild needed; Fish.update reads ai_enabled each frame
             except Exception:
                 pass
         return needs_rebuild
@@ -250,6 +276,8 @@ class WebApp:
         for src, dst, typ in [
             ("waterline_top", "waterline_top", int),
             ("chest_burst_seconds", "chest_burst_seconds", float),
+            ("fish_tank", "fish_tank", bool),
+            ("fish_tank_margin", "fish_tank_margin", int),
             ("spawn_start_delay_min", "spawn_start_delay_min", float),
             ("spawn_start_delay_max", "spawn_start_delay_max", float),
             ("spawn_interval_min", "spawn_interval_min", float),
@@ -264,6 +292,32 @@ class WebApp:
                     changed = (isinstance(new_val, float) and isinstance(old_val, float) and abs(new_val - old_val) > self._EPS) or (not isinstance(new_val, float) and new_val != old_val)
                     if changed:
                         setattr(self.settings, dst, new_val)
+                        # Propagate fish tank settings live without rebuild (and enforce immediately)
+                        if dst in ("fish_tank", "fish_tank_margin") and self.app is not None and self.screen is not None:
+                            try:
+                                ft = bool(getattr(self.settings, "fish_tank", False))
+                                margin = max(0, int(getattr(self.settings, "fish_tank_margin", 3)))
+                                if ft:
+                                    left_limit = 0 + margin
+                                    # Guard in case any fish has width > screen
+                                    right_limit = max(left_limit, self.screen.width - 1)  # default
+                                    # Compute per-fish right limit to respect width
+                                    for f in list(getattr(self.app, "fish", [])):
+                                        try:
+                                            rl = self.screen.width - getattr(f, 'width', 1) - margin
+                                            rl = max(left_limit, rl)
+                                            if getattr(f, 'x', 0) > rl:
+                                                f.x = float(rl)
+                                                if getattr(f, 'vx', 0.0) > 0 and not getattr(f, 'turning', False) and not getattr(f, 'hooked', False):
+                                                    f.start_turn()
+                                            elif getattr(f, 'x', 0) < left_limit:
+                                                f.x = float(left_limit)
+                                                if getattr(f, 'vx', 0.0) < 0 and not getattr(f, 'turning', False) and not getattr(f, 'hooked', False):
+                                                    f.start_turn()
+                                        except Exception:
+                                            pass
+                            except Exception:
+                                pass
                         if dst == "waterline_top":
                             if self.app is not None:
                                 for f in getattr(self.app, "fish", []):

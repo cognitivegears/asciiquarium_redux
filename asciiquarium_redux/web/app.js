@@ -299,6 +299,10 @@ function collectOptionsFromUI() {
     chest: chk("chest"),
   castle: chk("castle"),
     turn: chk("turn"),
+  ai_enabled: chk("ai_enabled"),
+  // Fish tank
+  fish_tank: chk("fish_tank"),
+  fish_tank_margin: num("fish_tank_margin"),
   // UI font bounds & auto
   font_auto: chk("font_auto"),
   ui_font_min_size: num("ui_font_min_size"),
@@ -386,7 +390,7 @@ function recomputeFontAndGrid() {
     // seaweed
   "seaweed_scale","seaweed_sway_min","seaweed_sway_max",
     // scene & spawn
-    "waterline_top","chest_burst_seconds","spawn_start_delay_min","spawn_start_delay_max","spawn_interval_min","spawn_interval_max",
+  "waterline_top","chest_burst_seconds","fish_tank","fish_tank_margin","spawn_start_delay_min","spawn_start_delay_max","spawn_interval_min","spawn_interval_max",
     "spawn_max_concurrent","spawn_cooldown_global","w_shark","w_fishhook","w_whale","w_ship","w_ducks","w_dolphins","w_swan","w_monster","w_big_fish",
     // fishhook
     "fishhook_dwell_seconds",
@@ -454,6 +458,11 @@ function recomputeFontAndGrid() {
         recomputeFontAndGrid();
       }
   });
+});
+
+// Turn test button: ask backend to turn a random fish (same as pressing 't')
+document.getElementById("turn_test")?.addEventListener("click", () => {
+  window.pyodide?.runPython(`web_backend.web_app.on_key("t")`);
 });
 
 document.getElementById("reset").addEventListener("click", () => location.reload());
