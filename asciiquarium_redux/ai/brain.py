@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Tuple, Optional, Protocol
+from typing import Iterable, Tuple, Optional, Protocol, List
 import random as _random
 from .vector import Vec2
 from .noise import LeakyNoise
@@ -26,6 +26,8 @@ class WorldSense(Protocol):
     def obstacles(self, fish_id: int, radius_cells: float) -> Iterable[Vec2]: ...
     def bounds(self) -> Tuple[int, int]: ...
     def nearest_prey(self, fish_id: int) -> Tuple[Vec2, float]: ...
+    def shelters(self) -> Iterable[Vec2]: ...
+    def size_of(self, fish_id: int) -> int: ...
 
 
 @dataclass
@@ -43,9 +45,11 @@ class FishBrain:
     sense: WorldSense
     config: SteeringConfig
     util_temp: float = 0.6
-    wander_tau: float = 1.2
+    wander_tau: float = 1.6
     eat_gain: float = 1.2
     hide_gain: float = 1.5
+    idle_gain: float = 0.8
+    chase_gain: float = 0.9
     flock_alignment: float = 0.8
     flock_cohesion: float = 0.5
     flock_separation: float = 1.2
@@ -87,6 +91,7 @@ class FishBrain:
             except Exception:
                 pass
         neigh = list(self.sense.neighbors(self.fish_id, self.config.separation_radius))
+        shelters = list(self.sense.shelters())
         obstacles = list(self.sense.obstacles(self.fish_id, self.config.obstacle_radius))
         # Utilities
         alpha = 0.35
@@ -95,16 +100,27 @@ class FishBrain:
         fear = 1.0 / (1.0 + beta * dist_pred)
         social = min(1.0, max(0.0, len(neigh) / 8.0))
         curiosity = 1.0 - 0.5 * social
+        # Idle tendency grows with size and low hunger/fear
+        try:
+            my_size = max(1, int(self.sense.size_of(self.fish_id)))
+        except Exception:
+            my_size = 3
+        size_scale = min(1.0, 0.25 + 0.2 * (my_size - 1))  # bigger fish idle more
         # Personality scaling
         food_pull *= self.personality.hunger
         fear *= self.personality.fear
         social *= self.personality.social
         curiosity *= self.personality.curiosity
+        idle_pull = max(0.0, size_scale * (1.0 - 0.6 * self.hunger) * (1.0 - 0.7 * fear))
+        # Chase tendency: when social/curiosity are moderate and not fearful/hungry
+        chase_pull = max(0.0, 0.6 * social + 0.4 * curiosity) * (1.0 - 0.5 * fear)
         # Action utilities
         utilities = {
             "EAT": food_pull * self.eat_gain,
             "HIDE": fear * self.hide_gain,
             "FLOCK": social * 1.0,
+            "CHASE": chase_pull * self.chase_gain,
+            "IDLE": idle_pull * self.idle_gain,
             "EXPLORE": curiosity * 1.0,
         }
         action, _ = self._selector.softmax_choice(utilities)
@@ -115,7 +131,21 @@ class FishBrain:
         if action == "EAT" and dist_food < float("inf"):
             components.append((dir_food * self.eat_gain, 1.0))
         elif action == "HIDE" and dist_pred < float("inf"):
-            components.append((dir_pred * self.hide_gain, 1.0))
+            # Prefer steering toward a shelter roughly aligned with escaping from the predator
+            best_target: Optional[Vec2] = None
+            best_dot = -1.0
+            if shelters:
+                away = dir_pred.normalized()
+                for s in shelters:
+                    to_s = (s - pos).normalized()
+                    d = max(-1.0, min(1.0, to_s.dot(away)))
+                    if d > best_dot:
+                        best_dot = d
+                        best_target = s
+            if best_target is not None:
+                components.append((seek(pos, best_target, self.config.max_speed), self.hide_gain))
+            else:
+                components.append((dir_pred * self.hide_gain, 1.0))
             components.append((st_avoid(pos, obstacles, self.config.obstacle_radius), 0.7))
         elif action == "FLOCK":
             neigh_pos = [p for _, p, _ in neigh]
@@ -123,15 +153,53 @@ class FishBrain:
             components.append((st_align(vel, neigh_vel), self.flock_alignment))
             components.append((st_cohere(pos, neigh_pos), self.flock_cohesion))
             components.append((st_separate(pos, neigh_pos, self.config.separation_radius), self.flock_separation))
+        elif action == "CHASE":
+            # Seek a similarly-sized neighbor (playful chase)
+            try:
+                my_sz = max(1, int(self.sense.size_of(self.fish_id)))
+            except Exception:
+                my_sz = 3
+            peer_id: Optional[int] = None
+            peer_pos: Optional[Vec2] = None
+            best_d2 = float("inf")
+            for nid, p, v in neigh:
+                try:
+                    ns = max(1, int(self.sense.size_of(nid)))
+                except Exception:
+                    ns = my_sz
+                # Similar size within +-1 row
+                if abs(ns - my_sz) <= 1:
+                    d2 = (p.x - pos.x) ** 2 + (p.y - pos.y) ** 2
+                    if d2 < best_d2:
+                        best_d2 = d2
+                        peer_id = nid
+                        peer_pos = p
+            if peer_pos is not None:
+                components.append((seek(pos, peer_pos, self.config.max_speed), self.chase_gain))
+            else:
+                # Fallback to explore if no peer found
+                w = st_wander(self._noise.step(), self.config.max_speed)
+                components.append((w, 0.5))
+        elif action == "IDLE":
+            # Apply a small braking force to linger around current spot
+            components.append((Vec2(-vel.x, -vel.y), 0.6))
+            # Add tiny wander to avoid perfect stillness
+            components.append((st_wander(self._noise.step(), self.config.max_speed), 0.1))
         elif action == "EXPLORE":
-            w = st_wander(self._noise.step(), self.config.max_speed)
-            components.append((w, 0.6))
+            w = st_wander(self._noise.step(), self.config.max_speed * 0.7)
+            components.append((w, 0.5))
         # Baselines always on
         neigh_pos = [p for _, p, _ in neigh]
         components.append((st_separate(pos, neigh_pos, self.config.separation_radius), self.baseline_separation))
         components.append((st_avoid(pos, obstacles, self.config.obstacle_radius), self.baseline_avoid))
         # Integrate force into velocity (clamped)
-        new_vel = compose_velocity(vel, components, self.config.max_speed, self.config.max_force)
+        # Slightly reduce max force to smooth movements
+        new_vel = compose_velocity(
+            vel,
+            components,
+            self.config.max_speed * 0.9,
+            self.config.max_force * 0.85,
+        )
         # Update hunger dynamics
         eaten = 1.0 if (action == "EAT" and dist_food < 1.2) else 0.0
         self.hunger = max(0.0, min(1.0, self.hunger + 0.03 * dt - eaten * 0.5))

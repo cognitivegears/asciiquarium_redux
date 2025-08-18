@@ -274,15 +274,28 @@ class AsciiQuarium:
         )
         total_height: int = 0
         # Bias selection toward smaller fish (weights inversely proportional to height)
+        # and spawn small fish in small groups for visible flocking.
         while total_height < target_total_height:
             direction = self._determine_fish_direction()
             frames = self._choose_fish_frames_biased(direction)
-            frames, colour_mask = self._select_fish_frames_and_mask(direction, colours, frames)
-            x, y, vx = self._calculate_fish_positioning(direction, frames, screen)
-            fish = self._create_fish_entity(frames, x, y, vx, colour_mask, screen)
-            self._configure_fish_behavior(fish)
-            self.fish.append(fish)
-            total_height += len(frames)
+            # If this is a small fish (height<=3), spawn 2-3 together near each other
+            group_size = 1
+            if len(frames) <= 3:
+                group_size = random.randint(2, 3)
+            for gi in range(group_size):
+                frames_g = frames
+                frames_g, colour_mask = self._select_fish_frames_and_mask(direction, colours, frames_g)
+                x, y, vx = self._calculate_fish_positioning(direction, frames_g, screen)
+                # Slight offset for group members
+                if gi > 0:
+                    x = max(0, min(screen.width - len(frames_g[0]) - 1, x + random.randint(-3, 3)))
+                    y = max(self.settings.waterline_top + 5, min(screen.height - len(frames_g) - 2, y + random.randint(-1, 1)))
+                fish = self._create_fish_entity(frames_g, x, y, vx, colour_mask, screen)
+                self._configure_fish_behavior(fish)
+                self.fish.append(fish)
+                total_height += len(frames_g)
+                if total_height >= target_total_height:
+                    break
 
     def draw_waterline(self, screen: Screen) -> None:
         """Draw the animated waterline at the top of the aquarium.
@@ -547,8 +560,26 @@ class AsciiQuarium:
         return [Vec2(cols - 8.0, rows - 6.0)]
 
     def neighbors(self, fish_id: int, radius_cells: float):
-        # Keep O(1) for now; could be extended with spatial hashing later.
-        return []
+        # Provide a simple local neighborhood search for AI flocking/chase.
+        from .ai.vector import Vec2
+        radius2 = float(radius_cells) * float(radius_cells)
+        me = None
+        for f in self.fish:
+            if id(f) == fish_id:
+                me = f
+                break
+        if me is None:
+            return []
+        mx, my = float(me.x), float(me.y)
+        out = []
+        for other in self.fish:
+            if other is me:
+                continue
+            dx = float(other.x) - mx
+            dy = float(other.y) - my
+            if dx * dx + dy * dy <= radius2:
+                out.append((id(other), Vec2(float(other.x), float(other.y)), Vec2(float(other.vx), float(other.vy))))
+        return out
 
     def nearest_food(self, fish_id: int):
         # If fish food flakes are present, steer toward the closest flake roughly.
@@ -658,6 +689,31 @@ class AsciiQuarium:
         if best_d <= 1e-6:
             return (Vec2(0.0, 0.0), best_d)
         return (Vec2((bx - mx) / best_d, (by - my) / best_d), best_d)
+
+    # --- New AI world hooks ---
+    def shelters(self):
+        """Return rough shelter points (e.g., behind decor like castle/chest)."""
+        cols, rows = self.bounds()
+        from .ai.vector import Vec2
+        pts = []
+        # Castle bottom-right-ish corner if enabled
+        if getattr(self.settings, "castle_enabled", True):
+            pts.append(Vec2(max(2.0, cols - 10.0), max(2.0, rows - 6.0)))
+        # Chest bottom-left-ish if present
+        try:
+            from .entities.specials import TreasureChest  # type: ignore
+            for d in self.decor:
+                if isinstance(d, TreasureChest):
+                    pts.append(Vec2(float(d.x + 2), float(d.y)))
+        except Exception:
+            pass
+        return pts
+
+    def size_of(self, fish_id: int) -> int:
+        for f in self.fish:
+            if id(f) == fish_id:
+                return int(getattr(f, "height", len(f.frames)))
+        return 3
 
     def _render_seaweed(self, screen: Screen, mono: bool) -> None:
         """Render seaweed entities with animation.

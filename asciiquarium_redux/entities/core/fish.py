@@ -259,11 +259,27 @@ class Fish:
                 self.vx -= max_step
             else:
                 self.vx += dv
-            # Clamp to configured min/max speeds (preserve sign)
+            # Clamp to min/max speeds (preserve sign). Allow near-zero when AI is idling.
             mag = abs(self.vx)
             if mag > 0.0:
-                mag = max(self.speed_min, min(self.speed_max, mag))
+                min_speed = self.speed_min
+                try:
+                    if getattr(app.settings, "ai_enabled", False) and getattr(self, "_brain", None) is not None:
+                        if getattr(self._brain, "last_action", None) == "IDLE":
+                            min_speed = float(getattr(app.settings, "ai_idle_min_speed", 0.0))
+                except Exception:
+                    pass
+                mag = max(min_speed, min(self.speed_max, mag))
                 self.vx = mag if self.vx >= 0 else -mag
+            # Additional damping when idling to settle quickly
+            try:
+                if getattr(app.settings, "ai_enabled", False) and getattr(self, "_brain", None) is not None:
+                    if getattr(self._brain, "last_action", None) == "IDLE":
+                        damp = float(getattr(app.settings, "ai_idle_damping_per_sec", 0.8))
+                        k = max(0.0, min(1.0, damp * dt))
+                        self.vx *= (1.0 - k)
+            except Exception:
+                pass
 
         # Kinematics integration (horizontal)
         self.x += self.vx * dt * MOVEMENT_MULTIPLIER * speed_scale
@@ -315,6 +331,15 @@ class Fish:
         v_max = max(0.0, float(getattr(app.settings, "fish_vertical_speed_max", 0.3)))
         top_bound = max(self.waterline_top + self.water_rows + 1, 1)
         bottom_bound = max(top_bound, screen.height - self.height - 2)
+        # Apply extra vertical damping when idling to reduce jitter
+        try:
+            if getattr(app.settings, "ai_enabled", False) and getattr(self, "_brain", None) is not None:
+                if getattr(self._brain, "last_action", None) == "IDLE":
+                    vy_damp = float(getattr(app.settings, "ai_idle_vy_damping_per_sec", 1.2))
+                    k = max(0.0, min(1.0, vy_damp * dt))
+                    self.vy *= (1.0 - k)
+        except Exception:
+            pass
         next_y = self.y + self.vy * dt
         if next_y < top_bound:
             if random.random() < 0.5:

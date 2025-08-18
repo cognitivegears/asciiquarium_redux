@@ -140,7 +140,7 @@ class AIBehaviorEngine(BehaviorEngine):
                 desired_sign = 1 if new_vel.x > 0 else (-1 if new_vel.x < 0 else 0)
                 current_sign = 1 if fish.vx >= 0 else -1
                 reason = None
-                if getattr(fish._brain, "last_action", None) in ("EAT", "HIDE", "FLOCK"):
+                if getattr(fish._brain, "last_action", None) in ("EAT", "HIDE", "FLOCK", "CHASE", "IDLE"):
                     reason = fish._brain.last_action
                 # bigger fish are extra lazy: require stronger reason except EAT
                 if reason == "FLOCK" and height_bias >= 4.0:

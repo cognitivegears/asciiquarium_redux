@@ -15,6 +15,6 @@ Public modules:
 """
 
 from .vector import Vec2
-from .brain import FishBrain, AIAction
+from .brain import FishBrain
 
-__all__ = ["Vec2", "FishBrain", "AIAction"]
+__all__ = ["Vec2", "FishBrain"]

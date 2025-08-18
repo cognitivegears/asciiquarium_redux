@@ -249,7 +249,7 @@ class Settings:
     fish_speed_min: float = 0.6
     fish_speed_max: float = 2.5
     # Max vertical drift speed (rows/sec); small to keep mostly horizontal motion
-    fish_vertical_speed_max: float = 2.0
+    fish_vertical_speed_max: float = 0.3
     fish_bubble_min: float = 2.0
     fish_bubble_max: float = 5.0
     fish_turn_enabled: bool = True
@@ -310,6 +310,10 @@ class Settings:
     ai_explore_gain: float = 0.6
     ai_baseline_separation: float = 0.6
     ai_baseline_avoid: float = 0.9
+    # When idling, allow very low speeds and add damping to calm motion
+    ai_idle_min_speed: float = 0.0
+    ai_idle_damping_per_sec: float = 0.8
+    ai_idle_vy_damping_per_sec: float = 1.2
     # Restock configuration: if fish population remains below target for this many seconds, add fish
     restock_enabled: bool = True
     restock_after_seconds: float = 20.0
