@@ -115,6 +115,9 @@ speed = 0.75               # Global time multiplier (0.1-3.0)
 waterline_top = 5          # Top row of waterline (0-based)
 chest_enabled = true       # Show treasure chest decoration
 chest_burst_seconds = 60.0 # Seconds between treasure chest bubbles
+restock_enabled = true     # Replenish fish if counts stay low
+restock_after_seconds = 20.0   # Time below threshold before restock
+restock_min_fraction = 0.6     # Threshold: fraction of target count
 ```
 
 ### Settings Reference
@@ -127,6 +130,9 @@ chest_burst_seconds = 60.0 # Seconds between treasure chest bubbles
 | `waterline_top` | integer | `5` | `0-20` | Top row of water surface (0 = very top of screen) |
 | `chest_enabled` | boolean | `true` | - | Whether to show treasure chest decoration |
 | `chest_burst_seconds` | float | `60.0` | `10.0-300.0` | Interval between treasure chest bubble bursts |
+| `restock_enabled` | boolean | `true` | - | If true and fish population remains below threshold for `restock_after_seconds`, gently add fish |
+| `restock_after_seconds` | float | `20.0` | `5.0-600.0` | Duration below threshold before restock triggers |
+| `restock_min_fraction` | float | `0.6` | `0.1-1.0` | Threshold fraction of target fish count that defines "low" |
 
 ### Example Configurations
 
@@ -282,6 +288,7 @@ speed_min = 0.6            # Minimum fish speed (units/second)
 speed_max = 2.5            # Maximum fish speed
 bubble_min = 2.0           # Minimum seconds between bubbles
 bubble_max = 5.0           # Maximum seconds between bubbles
+vertical_speed_max = 2.0   # Max vertical drift speed (rows/sec)
 turn_enabled = true        # Enable fish turning behavior
 turn_chance_per_second = 0.01  # Probability of turning per second
 turn_min_interval = 6.0    # Minimum time between turns (seconds)
@@ -303,6 +310,7 @@ turn_expand_seconds = 0.35 # Duration of expand animation
 | `direction_bias` | float | `0.5` | `0.0-1.0` | Probability fish spawn moving rightward |
 | `speed_min/max` | float | `0.6/2.5` | `0.1-10.0` | Fish speed range (screen units/second) |
 | `bubble_min/max` | float | `2.0/5.0` | `0.5-30.0` | Time range between bubble generation |
+| `vertical_speed_max` | float | `2.0` | `0.0-10.0` | Clamp on vertical drift speed (rows/sec). Keep small for mostly horizontal motion |
 | `turn_enabled` | boolean | `true` | - | Whether fish can turn around mid-swim |
 | `turn_chance_per_second` | float | `0.01` | `0.0-1.0` | Probability of initiating turn per second |
 
@@ -496,7 +504,12 @@ cols = 120               # Screen width in characters
 rows = 40                # Screen height in characters
 font_family = "Menlo"    # Font name (tk backend only)
 font_size = 14           # Font size (tk backend only)
+font_auto = true         # Auto-fit font so the castle fits under the waterline
+font_min_size = 10       # Lower bound for auto font sizing
+font_max_size = 22       # Upper bound for auto font sizing
 ```
+
+When `font_auto` is enabled, the Tk backend adjusts font size on resize within `[font_min_size, font_max_size]` to keep the minimal scene (waterline + water + castle + margin) visible.
 
 ### Backend Selection
 
@@ -583,6 +596,31 @@ fullscreen = true
 font_family = "Source Code Pro"
 font_size = 16
 ```
+
+## AI Settings
+
+Enable simple lifelike choices and steering for fish.
+
+```toml
+[ai]
+enabled = true
+action_temperature = 0.6
+wander_tau = 1.2
+separation_radius = 3.0
+obstacle_radius = 3.0
+flock_alignment = 0.8
+flock_cohesion = 0.5
+flock_separation = 1.2
+eat_gain = 1.2
+hide_gain = 1.5
+explore_gain = 0.6
+baseline_separation = 0.6
+baseline_avoid = 0.9
+```
+
+Notes
+
+- Fish prefer food flakes; when very hungry and no food is available, larger fish may eat strictly smaller fish. A brief splat effect appears and prey are respawned to keep populations healthy.
 
 ## Command-Line Overrides
 

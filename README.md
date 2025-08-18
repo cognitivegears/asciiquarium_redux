@@ -166,6 +166,7 @@ Controls:
 - mouse: left-click to drop a hook at the cursor (or retract if one is active)
 - s (Tk): save a screenshot as ./asciiquarium_#.png (auto-incrementing)
 - t: force a random fish to turn (useful to preview the turning animation)
+- f: feed fish (spawns floating flakes fish will seek and eat)
 
 CLI examples:
 
@@ -187,12 +188,22 @@ Common flags:
 - --fullscreen: make Tk window fullscreen
 - --font-min (int): minimum Tk font size bound for auto-resize
 - --font-max (int): maximum Tk font size bound for auto-resize
+- --ai / --no-ai: enable or disable Utility AI behaviors
+- --port (int): web server port for web backend
 
 ## Notes
 
 - Terminal uses `asciimatics`; Tk backend renders to a Canvas with per-cell text.
 - Tk resizes by adjusting the character grid to the window size; the scene rebuilds when size stabilizes.
+- When Tk font_auto is enabled, font size auto-fits within [font_min_size, font_max_size] so the castle fits; sliders clamp min<=max.
 - Ensure a UTF-8 locale and a monospaced font for best results.
+
+Behavior highlights
+
+- Fish can drift vertically (bounded by fish.vertical_speed_max; default 2.0 rows/sec) while keeping mostly horizontal motion.
+- Utility AI (when enabled) prioritizes eating fish food; when very hungry and no food is available, larger fish may prey on strictly smaller fish.
+- Predation creates a brief splat effect; prey are immediately respawned to maintain population.
+- If fish counts remain low for a while, restocking gently replenishes the population.
 
 ## Tk backend requirements (Tkinter)
 

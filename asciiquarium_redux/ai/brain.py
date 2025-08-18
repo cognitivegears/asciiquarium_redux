@@ -25,6 +25,7 @@ class WorldSense(Protocol):
     def neighbors(self, fish_id: int, radius_cells: float) -> Iterable[Tuple[int, Vec2, Vec2]]: ...
     def obstacles(self, fish_id: int, radius_cells: float) -> Iterable[Vec2]: ...
     def bounds(self) -> Tuple[int, int]: ...
+    def nearest_prey(self, fish_id: int) -> Tuple[Vec2, float]: ...
 
 
 @dataclass
@@ -50,6 +51,7 @@ class FishBrain:
     flock_separation: float = 1.2
     baseline_separation: float = 0.6
     baseline_avoid: float = 0.9
+    hunt_threshold: float = 0.8  # hunger level at which fish may hunt smaller fish
     personality: Personality = field(default_factory=Personality)
 
     # internal state
@@ -72,6 +74,14 @@ class FishBrain:
         # Sense
         dir_food, dist_food = self.sense.nearest_food(self.fish_id)
         dir_pred, dist_pred = self.sense.predator_vector(self.fish_id)
+        # If very hungry and no fish food around, consider hunting smaller fish
+        if self.hunger >= self.hunt_threshold and (dist_food == float("inf") or dist_food > 9999.0):
+            try:
+                dir_prey, dist_prey = self.sense.nearest_prey(self.fish_id)
+                if dist_prey < float("inf"):
+                    dir_food, dist_food = dir_prey, dist_prey
+            except Exception:
+                pass
         neigh = list(self.sense.neighbors(self.fish_id, self.config.separation_radius))
         obstacles = list(self.sense.obstacles(self.fish_id, self.config.obstacle_radius))
         # Utilities

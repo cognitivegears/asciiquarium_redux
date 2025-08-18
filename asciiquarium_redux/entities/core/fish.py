@@ -18,6 +18,7 @@ from .fish_assets import (
     FISH_LEFT_MASKS,
 )
 from .bubble import Bubble
+from .splat import Splat
 from ...constants import (
     MOVEMENT_MULTIPLIER,
     FISH_DEFAULT_SPEED_MIN,
@@ -164,6 +165,13 @@ class Fish:
     speed_max: float = FISH_DEFAULT_SPEED_MAX
     bubble_min: float = FISH_BUBBLE_DEFAULT_MIN
     bubble_max: float = FISH_BUBBLE_DEFAULT_MAX
+    # Speed modulation (acceleration-limited)
+    accel_per_sec: float = 2.0  # how fast speed can change (units/sec^2)
+    speed_target: float = 0.0   # desired speed magnitude (non-AI)
+    speed_change_in: float = field(default_factory=lambda: random.uniform(1.5, 4.0))
+    speed_change_interval_min: float = 1.5
+    speed_change_interval_max: float = 4.0
+    desired_vx: float = 0.0     # desired vx for smoothing (AI or non-AI)
     # Y-band as fractions of screen height, plus waterline context
     band_low_frac: float = 0.0
     band_high_frac: float = 1.0
@@ -191,6 +199,16 @@ class Fish:
     @property
     def height(self) -> int:
         return len(self.frames)
+
+    @property
+    def size(self) -> int:
+        """Logical fish size derived from sprite height.
+
+        Size is defined as the number of rows in the fish's ASCII art, which
+        is consistent per sprite type. This provides a stable measure that can
+        be used for behaviors, sorting, or interactions without guessing.
+        """
+        return self.height
 
     def update(self, dt: float, screen: "Screen", app: "AsciiQuariumProtocol") -> None:
         """Update fish behavior including movement, turning, and bubble generation.
@@ -274,9 +292,43 @@ class Fish:
                     if not self.turning:
                         self.start_turn()
                 else:
-                    self.vx = float(new_vel.x)
+                    # Record desired vx for smoothing; apply after AI block
+                    self.desired_vx = float(new_vel.x)
             except Exception:
                 pass
+        else:
+            # Non-AI desired vx: keep current direction, aim for a drifting speed target
+            if not self.hooked:
+                # Lazy-init speed target on first update
+                if self.speed_target <= 0.0:
+                    self.speed_target = max(self.speed_min, min(self.speed_max, abs(self.vx)))
+                # Countdown and retarget periodically
+                self.speed_change_in -= dt
+                if self.speed_change_in <= 0.0:
+                    self.speed_target = random.uniform(self.speed_min, self.speed_max)
+                    self.speed_change_in = random.uniform(self.speed_change_interval_min, self.speed_change_interval_max)
+                # Desired vx preserves current sign
+                sign = 1.0 if self.vx >= 0.0 else -1.0
+                self.desired_vx = sign * float(self.speed_target)
+
+        # Apply acceleration-limited change toward desired_vx (if set)
+        if not self.hooked:
+            try:
+                dv = float(self.desired_vx) - float(self.vx)
+            except Exception:
+                dv = 0.0
+            max_step = max(0.0, float(self.accel_per_sec) * dt)
+            if dv > max_step:
+                self.vx += max_step
+            elif dv < -max_step:
+                self.vx -= max_step
+            else:
+                self.vx += dv
+            # Clamp to configured min/max speeds (preserve sign)
+            mag = abs(self.vx)
+            if mag > 0.0:
+                mag = max(self.speed_min, min(self.speed_max, mag))
+                self.vx = mag if self.vx >= 0 else -mag
 
         # Kinematics integration (horizontal)
         self.x += self.vx * dt * MOVEMENT_MULTIPLIER * speed_scale
@@ -315,6 +367,8 @@ class Fish:
             from ..specials import FishFoodFlake  # type: ignore
             mx = int(self.x + (self.width - 1 if self.vx > 0 else 0))
             my = int(self.y + self.height // 2)
+            # Prefer fish food: if any active flakes are present and intersect, consume them
+            ate_food = False
             for s in list(app.specials):
                 if isinstance(s, FishFoodFlake) and getattr(s, "active", True):
                     sx, sy = int(getattr(s, "x", 0)), int(getattr(s, "y", 0))
@@ -325,6 +379,39 @@ class Fish:
                                 self._brain.hunger = max(0.0, float(self._brain.hunger) - 0.5)
                             except Exception:
                                 pass
+                        ate_food = True
+                        break
+            # If very hungry and didn't find fish food to eat, allow predation on smaller fish
+            if not ate_food and getattr(self, "_brain", None) is not None:
+                try:
+                    if float(self._brain.hunger) >= float(getattr(self._brain, "hunt_threshold", 0.8)):
+                        for other in list(app.fish):
+                            if other is self:
+                                continue
+                            # Only eat strictly smaller fish by height
+                            if int(other.height) >= int(self.height):
+                                continue
+                            ox, oy = int(other.x), int(other.y + other.height // 2)
+                            if abs(ox - mx) <= 1 and abs(oy - my) <= 0:
+                                # Visual splat effect at predation point
+                                try:
+                                    app.splats.append(Splat(x=mx, y=my))
+                                except Exception:
+                                    pass
+                                # Immediately respawn the prey elsewhere to prevent population drop
+                                try:
+                                    import random as _r
+                                    other.respawn(screen, direction=1 if _r.random() < 0.5 else -1)
+                                except Exception:
+                                    # Fallback: move off-screen and zero velocity
+                                    other.x = -9999
+                                    other.y = -9999
+                                    other.vx = 0.0
+                                # Reduce hunger more modestly than fish food
+                                self._brain.hunger = max(0.0, float(self._brain.hunger) - 0.35)
+                                break
+                except Exception:
+                    pass
         except Exception:
             pass
 
@@ -368,7 +455,13 @@ class Fish:
         frames, colour_mask = random.choice(frame_choices)
         self.frames = frames
         self.colour_mask = randomize_colour_mask(colour_mask)
+        # Pick a new horizontal speed within bounds and set direction
         self.vx = random.uniform(self.speed_min, self.speed_max) * direction
+        # Reset speed modulation targets
+        self.speed_target = abs(self.vx)
+        self.desired_vx = self.vx
+        self.speed_change_in = random.uniform(self.speed_change_interval_min, self.speed_change_interval_max)
+
         # compute y-band respecting waterline and screen size
         default_low_y = max(self.waterline_top + self.water_rows + 1, 1)
         min_y = max(default_low_y, int(screen.height * self.band_low_frac))
@@ -459,10 +552,10 @@ class Fish:
         from .fish_assets import FISH_RIGHT, FISH_LEFT, FISH_RIGHT_MASKS, FISH_LEFT_MASKS
         src = FISH_RIGHT if direction > 0 else FISH_LEFT
         src_masks = FISH_RIGHT_MASKS if direction > 0 else FISH_LEFT_MASKS
-        # Try to match width to current lines
-        curr_w = self.width
+        # Try to match height (number of rows) to current sprite size
+        curr_h = self.height
         candidate = list(zip(src, src_masks))
-        frames, mask = min(candidate, key=lambda fm: abs(max(len(r) for r in fm[0]) - curr_w))
+        frames, mask = min(candidate, key=lambda fm: abs(len(fm[0]) - curr_h))
         self.frames = frames
         self.colour_mask = randomize_colour_mask(mask) if self.colour_mask is not None else None
         # Reverse velocity sign, magnitude picked from base_speed magnitude

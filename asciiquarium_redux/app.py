@@ -264,10 +264,25 @@ class AsciiQuarium:
         else:
             fish_count = max(FISH_MINIMUM_COUNT, int(area // FISH_DENSITY_AREA_DIVISOR * self.settings.density * self.settings.fish_scale))
 
-        # Create fish entities with color palette
+        # Create fish entities using a total-height budget to fit more small fish.
         colours: List[int] = self._palette(screen)
-        for _ in range(fish_count):
-            self.fish.append(self._make_one_fish(screen, colours))
+        # Define a nominal base height for budgeting and speed scaling
+        base_height: float = 4.0
+        target_total_height: int = max(
+            FISH_MINIMUM_COUNT * int(base_height),
+            int(fish_count * base_height),
+        )
+        total_height: int = 0
+        # Bias selection toward smaller fish (weights inversely proportional to height)
+        while total_height < target_total_height:
+            direction = self._determine_fish_direction()
+            frames = self._choose_fish_frames_biased(direction)
+            frames, colour_mask = self._select_fish_frames_and_mask(direction, colours, frames)
+            x, y, vx = self._calculate_fish_positioning(direction, frames, screen)
+            fish = self._create_fish_entity(frames, x, y, vx, colour_mask, screen)
+            self._configure_fish_behavior(fish)
+            self.fish.append(fish)
+            total_height += len(frames)
 
     def draw_waterline(self, screen: Screen) -> None:
         """Draw the animated waterline at the top of the aquarium.
@@ -352,6 +367,7 @@ class AsciiQuarium:
 
         if not self._paused:
             self._update_all_entities(dt, screen)
+            self._maybe_restock(dt, screen)
 
         self._render_all_entities(screen)
 
@@ -390,6 +406,28 @@ class AsciiQuarium:
 
         # Handle special entity spawning
         self._manage_special_spawning(dt, screen)
+
+    def _maybe_restock(self, dt: float, screen: Screen) -> None:
+        """Replenish fish if the population remains too low for too long."""
+        if not getattr(self.settings, "restock_enabled", True):
+            return
+        target_fish_count, _ = self._compute_target_counts(screen)
+        min_frac = float(getattr(self.settings, "restock_min_fraction", 0.6))
+        threshold = max(1, int(target_fish_count * min_frac))
+        # Track time under threshold
+        if not hasattr(self, "_restock_timer"):
+            self._restock_timer = 0.0  # type: ignore[attr-defined]
+        if len(self.fish) < threshold:
+            self._restock_timer += dt  # type: ignore[attr-defined]
+        else:
+            self._restock_timer = 0.0  # type: ignore[attr-defined]
+        if self._restock_timer >= float(getattr(self.settings, "restock_after_seconds", 20.0)):
+            # Add up to 25% of target or at least 1 fish, favoring smaller fish
+            add_n = max(1, int(target_fish_count * 0.25))
+            palette = self._palette(screen)
+            for _ in range(add_n):
+                self.fish.append(self._make_one_fish(screen, palette))
+            self._restock_timer = 0.0  # type: ignore[attr-defined]
 
     def _update_decor_entities(self, dt: float, screen: Screen) -> None:
         """Update decorative entities with backwards compatibility.
@@ -577,6 +615,49 @@ class AsciiQuarium:
             return (Vec2(0.0, 0.0), best_d)
         dir_away = Vec2((fx - tx) / best_d, (fy - ty) / best_d)
         return (dir_away, best_d)
+
+    def nearest_prey(self, fish_id: int):
+        """Find the closest smaller fish to the given fish, if any.
+
+        Preference is to eat fish food; this is only used by the brain when hunger is high.
+        Returns a unit direction vector and distance; distance=inf if none.
+        """
+        from math import hypot
+        from .ai.vector import Vec2
+        # Locate self and get size
+        me = None
+        for f in self.fish:
+            if id(f) == fish_id:
+                me = f
+                break
+        if me is None:
+            return (Vec2(0.0, 0.0), float("inf"))
+        mx, my = float(me.x), float(me.y)
+        my_h = int(getattr(me, "height", len(me.frames)))
+        best: tuple[float, float] | None = None
+        best_d = float("inf")
+        for other in self.fish:
+            if other is me:
+                continue
+            # Only consider strictly smaller fish
+            oh = int(getattr(other, "height", len(other.frames)))
+            if oh >= my_h:
+                continue
+            # Exclude any special big fish types (by class name heuristic or presence in specials)
+            cname = other.__class__.__name__.lower()
+            if "big" in cname or "special" in cname:
+                continue
+            ox, oy = float(other.x), float(other.y)
+            d = hypot(ox - mx, oy - my)
+            if d < best_d:
+                best_d = d
+                best = (ox, oy)
+        if best is None or best_d == float("inf"):
+            return (Vec2(0.0, 0.0), float("inf"))
+        bx, by = best
+        if best_d <= 1e-6:
+            return (Vec2(0.0, 0.0), best_d)
+        return (Vec2((bx - mx) / best_d, (by - my) / best_d), best_d)
 
     def _render_seaweed(self, screen: Screen, mono: bool) -> None:
         """Render seaweed entities with animation.
@@ -826,7 +907,7 @@ class AsciiQuarium:
         """
         return 1 if random.random() < float(self.settings.fish_direction_bias) else -1
 
-    def _select_fish_frames_and_mask(self, direction: int, colours: List[int]) -> tuple[List[str], List[str] | None]:
+    def _select_fish_frames_and_mask(self, direction: int, colours: List[int], frames: List[str] | None = None) -> tuple[List[str], List[str] | None]:
         """Select fish frames and create matching color mask.
 
         Args:
@@ -836,7 +917,8 @@ class AsciiQuarium:
         Returns:
             Tuple of (frames, colour_mask) where colour_mask may be None
         """
-        frames = random_fish_frames(direction)
+        if frames is None:
+            frames = random_fish_frames(direction)
         colour = random.choice(colours)
 
         # Build initial colour mask consistent with frames
@@ -901,7 +983,8 @@ class AsciiQuarium:
         # initial y will be refined by Fish.respawn; use temp fallback
         fish_y = random.randint(max(water_top + 3, 1), max(water_top + 3, screen.height - fish_height - 2))
         fish_x = (-fish_width if direction > 0 else screen.width)
-        velocity_x = random.uniform(self.settings.fish_speed_min, self.settings.fish_speed_max) * direction
+        speed_scale = self._speed_scale_for_height(fish_height)
+        velocity_x = random.uniform(self.settings.fish_speed_min, self.settings.fish_speed_max) * speed_scale * direction
 
         return fish_x, fish_y, velocity_x
 
@@ -921,6 +1004,9 @@ class AsciiQuarium:
         colours = self._palette(screen)
         colour = random.choice(colours)
 
+        # Scale per-fish speed range based on its height so small fish are faster
+        _, fish_height = sprite_size(frames)
+        speed_scale = self._speed_scale_for_height(fish_height)
         return Fish(
             frames=frames,
             x=x,
@@ -928,8 +1014,8 @@ class AsciiQuarium:
             vx=vx,
             colour=colour,
             colour_mask=colour_mask,
-            speed_min=self.settings.fish_speed_min,
-            speed_max=self.settings.fish_speed_max,
+            speed_min=self.settings.fish_speed_min * speed_scale,
+            speed_max=self.settings.fish_speed_max * speed_scale,
             bubble_min=self.settings.fish_bubble_min,
             bubble_max=self.settings.fish_bubble_max,
             band_low_frac=(self.settings.fish_y_band[0] if self.settings.fish_y_band else 0.0),
@@ -953,6 +1039,29 @@ class AsciiQuarium:
         fish.turn_min_interval = float(getattr(self.settings, "fish_turn_min_interval", 6.0))
         fish.turn_shrink_seconds = float(getattr(self.settings, "fish_turn_shrink_seconds", 0.35))
         fish.turn_expand_seconds = float(getattr(self.settings, "fish_turn_expand_seconds", 0.35))
+
+    def _choose_fish_frames_biased(self, direction: int) -> List[str]:
+        """Choose fish frames with a bias toward smaller (shorter) fish.
+
+        Weights are inversely proportional to height, so shorter fish are more likely.
+        """
+        from .entities.core import FISH_RIGHT, FISH_LEFT
+        choices = FISH_RIGHT if direction > 0 else FISH_LEFT
+        heights = [len(fr) for fr in choices]
+        # Avoid division by zero and cap extremes
+        weights = [1.0 / max(1, h) for h in heights]
+        # random.choices expects a population and weights of same length
+        return random.choices(choices, weights=weights, k=1)[0]
+
+    def _speed_scale_for_height(self, height: int) -> float:
+        """Compute a speed scale where smaller fish are faster and larger are slower.
+
+        Uses a nominal base height of 4 rows; clamps to a reasonable range.
+        """
+        base_height = 4.0
+        raw = base_height / max(1.0, float(height))
+        # Clamp to avoid extremes
+        return max(0.6, min(1.5, raw))
 
     def _make_one_seaweed(self, screen: Screen) -> Seaweed:
         seaweed_height = random.randint(SEAWEED_HEIGHT_MIN, SEAWEED_HEIGHT_MAX)

@@ -308,6 +308,10 @@ class Settings:
     ai_explore_gain: float = 0.6
     ai_baseline_separation: float = 0.6
     ai_baseline_avoid: float = 0.9
+    # Restock configuration: if fish population remains below target for this many seconds, add fish
+    restock_enabled: bool = True
+    restock_after_seconds: float = 20.0
+    restock_min_fraction: float = 0.6  # if below 60% of target, trigger restock
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
@@ -448,6 +452,11 @@ def _parse_scene_settings(s: Settings, scene: dict) -> None:
     _safe_set_bool(s, "castle_enabled", scene)
     _safe_set_bool(s, "chest_enabled", scene)
     _safe_set_float(s, "chest_burst_seconds", scene)
+
+    # Population resilience (restocking)
+    _safe_set_bool(s, "restock_enabled", scene)
+    _safe_set_float(s, "restock_after_seconds", scene)
+    _safe_set_float(s, "restock_min_fraction", scene)
 
 
 def _parse_spawn_settings(s: Settings, spawn: dict) -> None:
