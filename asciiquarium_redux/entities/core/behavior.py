@@ -27,6 +27,19 @@ class ClassicBehaviorEngine(BehaviorEngine):
 
     def step(self, fish: "Fish", dt: float, screen: "Screen", app: "AsciiQuariumProtocol") -> BehaviorResult:
         res = BehaviorResult()
+        # Fish tank edge awareness: turn before hitting edges if enabled
+        if getattr(app.settings, "fish_tank", False) and not fish.turning and not fish.hooked:
+            margin = max(0, int(getattr(app.settings, "fish_tank_margin", 3)))
+            left_limit = 0 + margin
+            right_limit = screen.width - fish.width - margin
+            vx = fish.vx if fish.vx != 0 else (fish.speed_min if random.random() < 0.5 else -fish.speed_min)
+            # Trigger a turn exactly at the margin boundary
+            if vx > 0 and fish.x >= right_limit:
+                res.request_turn = True
+                return res
+            if vx < 0 and fish.x <= left_limit:
+                res.request_turn = True
+                return res
         # Turn chance (classic)
         if not fish.hooked and fish.turn_enabled:
             fish.next_turn_ok_in = max(0.0, float(fish.next_turn_ok_in) - dt)
@@ -133,6 +146,21 @@ class AIBehaviorEngine(BehaviorEngine):
                 if reason == "FLOCK" and height_bias >= 4.0:
                     # occasionally skip flock-motivated turns for large fish unless cooldown is fully elapsed
                     pass  # reason remains FLOCK but will still honor cooldown
+                # Fish tank edge awareness: always turn before hitting edges if enabled
+                if getattr(app.settings, "fish_tank", False) and not fish.turning and not fish.hooked:
+                    margin = max(0, int(getattr(app.settings, "fish_tank_margin", 3)))
+                    left_limit = 0 + margin
+                    right_limit = screen.width - fish.width - margin
+                    vx = fish.vx if fish.vx != 0 else float(new_vel.x)
+                    if vx > 0 and fish.x >= right_limit:
+                        res.request_turn = True
+                        fish._brain.turn_cooldown = cooldown
+                        return res
+                    if vx < 0 and fish.x <= left_limit:
+                        res.request_turn = True
+                        fish._brain.turn_cooldown = cooldown
+                        return res
+                # Otherwise, apply goal-gated turn policy
                 if desired_sign != 0 and desired_sign != current_sign and reason is not None:
                     if float(getattr(fish._brain, "turn_cooldown", 0.0)) <= 0.0 and not fish.turning:
                         res.request_turn = True

@@ -28,6 +28,8 @@ restock_min_fraction = 0.6   # trigger if below 60% of target for the duration
 # - fish_scale/seaweed_scale: extra multipliers on top of density
 # - max_concurrent: cap on simultaneously active specials (>=1)
 # - cooldown_global: cooldown after any special spawns (seconds)
+fish_tank = false
+fish_tank_margin = 3
 [spawn]
 start_delay_min = 3.0
 start_delay_max = 8.0

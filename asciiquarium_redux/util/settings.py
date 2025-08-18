@@ -22,10 +22,12 @@ Architecture:
     4. **Programmatic API**: Direct Settings object creation for embedded usage
 
 Configuration Sources (Priority Order):
-    1. **CLI Arguments** (highest priority): Runtime overrides
-    2. **Explicit Config File**: User-specified via --config argument
-    3. **Default Config File**: ./config.toml or ./sample-config.toml
-    4. **Built-in Defaults** (lowest priority): Fallback values
+     1. **CLI Arguments** (highest priority): Runtime overrides
+     2. **Explicit Config File**: User-specified via --config argument
+     3. **Discovered Configs**: In order: ./.asciiquarium.toml, ./config.toml,
+         then user config at $XDG_CONFIG_HOME/asciiquarium_rules/config.toml or
+         ~/.config/asciiquarium_rules/config.toml
+     4. **Built-in Defaults** (lowest priority): Fallback values
 
 TOML Format Support:
     The module uses Python's built-in tomllib for parsing TOML files. Configuration
@@ -312,6 +314,9 @@ class Settings:
     restock_enabled: bool = True
     restock_after_seconds: float = 20.0
     restock_min_fraction: float = 0.6  # if below 60% of target, trigger restock
+    # Fish tank mode: if enabled, fish turn before reaching left/right edges
+    fish_tank: bool = False
+    fish_tank_margin: int = 3
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
@@ -321,12 +326,15 @@ def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
         return [override]
     paths: List[Path] = []
     cwd = Path.cwd()
+    # Project-local configs (priority order)
     paths.append(cwd / ".asciiquarium.toml")
+    paths.append(cwd / "config.toml")
+    # User configs: prefer new namespace "asciiquarium_rules"
     xdg = os.environ.get("XDG_CONFIG_HOME")
     if xdg:
-        paths.append(Path(xdg) / "asciiquarium-redux" / "config.toml")
+        paths.append(Path(xdg) / "asciiquarium_rules" / "config.toml")
     home = Path.home()
-    paths.append(home / ".config" / "asciiquarium-redux" / "config.toml")
+    paths.append(home / ".config" / "asciiquarium_rules" / "config.toml")
     return [p for p in paths if p.exists()]
 
 
@@ -415,6 +423,14 @@ def _load_toml_configurations(s: Settings, override_path: Optional[Path]) -> Non
         _parse_fishhook_settings(s, data.get("fishhook", {}))
         _parse_ui_settings(s, data.get("ui", {}))
         _parse_ai_settings(s, data.get("ai", {}))
+        # Fallback: accept top-level fish tank keys if users placed them at root
+        try:
+            if "fish_tank" in data:
+                s.fish_tank = bool(data.get("fish_tank"))
+            if "fish_tank_margin" in data:
+                s.fish_tank_margin = max(0, int(data.get("fish_tank_margin") or 0))
+        except Exception:
+            pass
         break  # Only process first found config file
 
 
@@ -457,6 +473,17 @@ def _parse_scene_settings(s: Settings, scene: dict) -> None:
     _safe_set_bool(s, "restock_enabled", scene)
     _safe_set_float(s, "restock_after_seconds", scene)
     _safe_set_float(s, "restock_min_fraction", scene)
+    # Fish tank mode
+    _safe_set_bool(s, "fish_tank", scene)
+    _safe_set_int(s, "fish_tank_margin", scene)
+    # Accept kebab-case aliases
+    try:
+        if "fish-tank" in scene:
+            s.fish_tank = bool(scene.get("fish-tank"))
+        if "fish-tank-margin" in scene:
+            s.fish_tank_margin = max(0, int(scene.get("fish-tank-margin") or 0))
+    except Exception:
+        pass
 
 
 def _parse_spawn_settings(s: Settings, spawn: dict) -> None:
@@ -722,6 +749,12 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--font-max", dest="ui_font_max_size", type=int)
     parser.add_argument("--ai", dest="ai_enabled", action="store_true")
     parser.add_argument("--no-ai", dest="ai_enabled", action="store_false")
+    # Default paired booleans to None so absent flags don't override config
+    parser.set_defaults(fullscreen=None, ai_enabled=None)
+    parser.add_argument("--fish-tank", dest="fish_tank", action="store_true")
+    parser.add_argument("--no-fish-tank", dest="fish_tank", action="store_false")
+    parser.add_argument("--fish-tank-margin", dest="fish_tank_margin", type=int)
+    parser.set_defaults(fish_tank=None)
     args = parser.parse_args(argv)
 
     if args.fps is not None:
@@ -742,6 +775,10 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
         s.castle_enabled = bool(args.castle_enabled)
     if getattr(args, "ai_enabled", None) is not None:
         s.ai_enabled = bool(args.ai_enabled)
+    if getattr(args, "fish_tank", None) is not None:
+        s.fish_tank = bool(args.fish_tank)
+    if getattr(args, "fish_tank_margin", None) is not None:
+        s.fish_tank_margin = max(0, int(args.fish_tank_margin))
     if getattr(args, "ui_font_min_size", None) is not None:
         s.ui_font_min_size = max(6, min(64, int(args.ui_font_min_size)))
     if getattr(args, "ui_font_max_size", None) is not None:
