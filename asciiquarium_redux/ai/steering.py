@@ -77,7 +77,8 @@ def wander(noise_val: float, max_speed: float) -> Vec2:
     angle = noise_val * 3.14159  # up to ~pi radians change
     # Simple unit vector from angle in X/Y; prefer horizontal bias
     from math import cos, sin
-    v = Vec2(cos(angle), 0.35 * sin(angle))
+    # Use sin for x to avoid positive bias (E[sin(theta)] = 0 for symmetric theta)
+    v = Vec2(sin(angle), 0.35 * cos(angle))
     return v.normalized() * max_speed
 
 

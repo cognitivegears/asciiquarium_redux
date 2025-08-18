@@ -292,7 +292,7 @@ speed_min = 0.6            # Minimum fish speed (units/second)
 speed_max = 2.5            # Maximum fish speed
 bubble_min = 2.0           # Minimum seconds between bubbles
 bubble_max = 5.0           # Maximum seconds between bubbles
-vertical_speed_max = 2.0   # Max vertical drift speed (rows/sec)
+vertical_speed_max = 0.3   # Max vertical drift speed (rows/sec); lower = calmer
 turn_enabled = true        # Enable fish turning behavior
 turn_chance_per_second = 0.01  # Probability of turning per second
 turn_min_interval = 6.0    # Minimum time between turns (seconds)
@@ -314,7 +314,7 @@ turn_expand_seconds = 0.35 # Duration of expand animation
 | `direction_bias` | float | `0.5` | `0.0-1.0` | Probability fish spawn moving rightward |
 | `speed_min/max` | float | `0.6/2.5` | `0.1-10.0` | Fish speed range (screen units/second) |
 | `bubble_min/max` | float | `2.0/5.0` | `0.5-30.0` | Time range between bubble generation |
-| `vertical_speed_max` | float | `2.0` | `0.0-10.0` | Clamp on vertical drift speed (rows/sec). Keep small for mostly horizontal motion |
+| `vertical_speed_max` | float | `0.3` | `0.0-10.0` | Clamp on vertical drift speed (rows/sec). Smaller values produce calmer, more horizontal motion |
 | `turn_enabled` | boolean | `true` | - | Whether fish can turn around mid-swim |
 | `turn_chance_per_second` | float | `0.01` | `0.0-1.0` | Probability of initiating turn per second |
 
@@ -382,6 +382,26 @@ turn_enabled = false    # No turning
 speed_min = 1.0
 speed_max = 1.5         # Consistent speed
 ```
+
+## AI Settings (Utility AI)
+
+These settings control the high-level AI behavior used when `ai_enabled` is true (default). They tune flocking, hiding, and exploration, and include idle-specific damping for calmer motion.
+
+```toml
+[ai]
+idle_min_speed = 0.0               # Allow fish to fully stop while idling
+idle_damping_per_sec = 0.8         # Horizontal velocity damping when idling (per second)
+idle_vy_damping_per_sec = 1.2      # Vertical velocity damping when idling (per second)
+wander_tau = 1.2                   # Smoothness of wander (higher = smoother)
+eat_gain = 1.2
+hide_gain = 1.5
+explore_gain = 0.6
+```
+
+Notes:
+
+- Damping applies only when the AI's current action is IDLE, helping big fish pause naturally.
+- Lower `vertical_speed_max` in `[fish]` reinforces calmer, mostly horizontal motion.
 
 ## Seaweed Settings
 

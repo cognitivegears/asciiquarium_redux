@@ -581,6 +581,12 @@ class AsciiQuarium:
                 out.append((id(other), Vec2(float(other.x), float(other.y)), Vec2(float(other.vx), float(other.vy))))
         return out
 
+    def species_of(self, fish_id: int) -> int:
+        for f in self.fish:
+            if id(f) == fish_id:
+                return int(getattr(f, "species_id", -1))
+        return -1
+
     def nearest_food(self, fish_id: int):
         # If fish food flakes are present, steer toward the closest flake roughly.
         # Return (direction unit vector, distance). If none, distance=inf.
@@ -951,6 +957,15 @@ class AsciiQuarium:
         x, y, vx = self._calculate_fish_positioning(direction, frames, screen)
 
         fish = self._create_fish_entity(frames, x, y, vx, colour_mask, screen)
+        # Tag species_id and size_bucket based on sprite index and height
+        try:
+            from .entities.core import FISH_RIGHT, FISH_LEFT
+            src_list = FISH_RIGHT if direction > 0 else FISH_LEFT
+            sid = src_list.index(frames)
+        except Exception:
+            sid = -1
+        fish.species_id = sid
+        fish.size_bucket = len(frames)
         self._configure_fish_behavior(fish)
 
         return fish
@@ -1035,10 +1050,10 @@ class AsciiQuarium:
         """
         fish_width, fish_height = sprite_size(frames)
         water_top = self.settings.waterline_top
-
         # initial y will be refined by Fish.respawn; use temp fallback
         fish_y = random.randint(max(water_top + 3, 1), max(water_top + 3, screen.height - fish_height - 2))
-        fish_x = (-fish_width if direction > 0 else screen.width)
+        # Start slightly off-screen on the entry side to keep symmetry
+        fish_x = (-fish_width - 1 if direction > 0 else screen.width + 1)
         speed_scale = self._speed_scale_for_height(fish_height)
         velocity_x = random.uniform(self.settings.fish_speed_min, self.settings.fish_speed_max) * speed_scale * direction
 

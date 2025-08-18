@@ -28,6 +28,7 @@ class WorldSense(Protocol):
     def nearest_prey(self, fish_id: int) -> Tuple[Vec2, float]: ...
     def shelters(self) -> Iterable[Vec2]: ...
     def size_of(self, fish_id: int) -> int: ...
+    def species_of(self, fish_id: int) -> int: ...
 
 
 @dataclass
@@ -91,15 +92,37 @@ class FishBrain:
             except Exception:
                 pass
         neigh = list(self.sense.neighbors(self.fish_id, self.config.separation_radius))
+        # Restrict social behaviors to same-species neighbors if available
+        try:
+            my_species = int(self.sense.species_of(self.fish_id))
+        except Exception:
+            my_species = -1
         shelters = list(self.sense.shelters())
         obstacles = list(self.sense.obstacles(self.fish_id, self.config.obstacle_radius))
         # Utilities
-        alpha = 0.35
+        # Distance normalization relative to tank size so food is attractive from most of the tank
+        try:
+            bw, bh = self.sense.bounds()
+            from math import hypot
+            diag = max(1.0, hypot(float(bw), float(bh)))
+        except Exception:
+            diag = 100.0
+        # Normalize distance by ~85% of diagonal to treat most of tank as near-ish
+        if dist_food == float("inf"):
+            d_food_norm = float("inf")
+        else:
+            d_food_norm = max(0.0, float(dist_food) / max(1.0, 0.85 * diag))
+        # gentler falloff with distance so flakes are enticing from far away
+        food_pull = 0.0 if d_food_norm == float("inf") else (1.0 / (1.0 + 2.2 * d_food_norm))
+        # Predator fear can use a similar normalization but keep prior behavior
         beta = 0.35
-        food_pull = 1.0 / (1.0 + alpha * dist_food)
         fear = 1.0 / (1.0 + beta * dist_pred)
         social = min(1.0, max(0.0, len(neigh) / 8.0))
         curiosity = 1.0 - 0.5 * social
+        has_food = dist_food < float("inf")
+        if has_food:
+            # When flakes exist anywhere, reduce exploration drive so EAT dominates
+            curiosity *= 0.4
         # Idle tendency grows with size and low hunger/fear
         try:
             my_size = max(1, int(self.sense.size_of(self.fish_id)))
@@ -115,8 +138,12 @@ class FishBrain:
         # Chase tendency: when social/curiosity are moderate and not fearful/hungry
         chase_pull = max(0.0, 0.6 * social + 0.4 * curiosity) * (1.0 - 0.5 * fear)
         # Action utilities
+        # Add a strong base bias so flakes are favored even when not hungry
+        base_food_bias = 0.0 if dist_food == float("inf") else 0.9
+        # Proximity bonus: closer food adds more pull on top of baseline
+        prox_bonus = 0.0 if d_food_norm == float("inf") else max(0.0, 0.6 * (1.0 - min(1.0, d_food_norm)))
         utilities = {
-            "EAT": food_pull * self.eat_gain,
+            "EAT": base_food_bias + prox_bonus + food_pull * self.eat_gain,
             "HIDE": fear * self.hide_gain,
             "FLOCK": social * 1.0,
             "CHASE": chase_pull * self.chase_gain,
@@ -148,8 +175,20 @@ class FishBrain:
                 components.append((dir_pred * self.hide_gain, 1.0))
             components.append((st_avoid(pos, obstacles, self.config.obstacle_radius), 0.7))
         elif action == "FLOCK":
-            neigh_pos = [p for _, p, _ in neigh]
-            neigh_vel = [v for _, _, v in neigh]
+            # Only flock with same-species neighbors if we can identify them
+            if my_species != -1:
+                filtered = []
+                for nid, p, v in neigh:
+                    try:
+                        if int(self.sense.species_of(nid)) == my_species:
+                            filtered.append((nid, p, v))
+                    except Exception:
+                        pass
+                neigh_use = filtered
+            else:
+                neigh_use = neigh
+            neigh_pos = [p for _, p, _ in neigh_use]
+            neigh_vel = [v for _, _, v in neigh_use]
             components.append((st_align(vel, neigh_vel), self.flock_alignment))
             components.append((st_cohere(pos, neigh_pos), self.flock_cohesion))
             components.append((st_separate(pos, neigh_pos, self.config.separation_radius), self.flock_separation))
@@ -159,10 +198,20 @@ class FishBrain:
                 my_sz = max(1, int(self.sense.size_of(self.fish_id)))
             except Exception:
                 my_sz = 3
+            try:
+                my_species = int(self.sense.species_of(self.fish_id))
+            except Exception:
+                my_species = -1
             peer_id: Optional[int] = None
             peer_pos: Optional[Vec2] = None
             best_d2 = float("inf")
             for nid, p, v in neigh:
+                if my_species != -1:
+                    try:
+                        if int(self.sense.species_of(nid)) != my_species:
+                            continue
+                    except Exception:
+                        pass
                 try:
                     ns = max(1, int(self.sense.size_of(nid)))
                 except Exception:

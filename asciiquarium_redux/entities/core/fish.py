@@ -192,6 +192,10 @@ class Fish:
     turn_min_interval: float = 6.0
     # Optional AI brain (constructed by first update if enabled)
     _brain: Any = None
+    # Species/type info
+    species_id: int = -1
+    # Logical size bucket; by default set from sprite height at creation
+    size_bucket: int = 0
 
     @property
     def width(self) -> int:

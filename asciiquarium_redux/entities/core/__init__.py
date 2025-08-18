@@ -9,6 +9,7 @@ from .seaweed import Seaweed
 from .bubble import Bubble
 from .splat import Splat
 from .fish import Fish
+from .species import Species, all_species, species_frames, species_count
 
 __all__ = [
     "FISH_RIGHT",
@@ -20,4 +21,8 @@ __all__ = [
     "Bubble",
     "Splat",
     "Fish",
+    "Species",
+    "all_species",
+    "species_frames",
+    "species_count",
 ]
