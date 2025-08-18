@@ -267,6 +267,47 @@ class Fish:
 
         # Kinematics integration (horizontal)
         self.x += self.vx * dt * MOVEMENT_MULTIPLIER * speed_scale
+        # If fish tank mode is enabled, clamp at margins and force a turn if crossed
+        try:
+            if bool(getattr(app.settings, "fish_tank", False)) and not self.hooked:
+                margin = max(0, int(getattr(app.settings, "fish_tank_margin", 3)))
+                left_limit = 0 + margin
+                right_limit = screen.width - self.width - margin
+                # Clamp within bounds first
+                if self.x > right_limit:
+                    self.x = float(right_limit)
+                    if not self.turning and self.vx > 0:
+                        # Initiate turn immediately at boundary
+                        self.start_turn()
+                        # If AI brain present, apply a cooldown so it doesn't instantly re-request
+                        if getattr(self, "_brain", None) is not None:
+                            try:
+                                height_bias = max(1.0, float(self.height))
+                                base_cd = float(getattr(app.settings, "ai_turn_base_cooldown", 1.2))
+                                size_fac = float(getattr(app.settings, "ai_turn_size_factor", 0.08))
+                                self._brain.turn_cooldown = base_cd * (1.0 + size_fac * (height_bias - 1.0))
+                            except Exception:
+                                pass
+                elif self.x < left_limit:
+                    self.x = float(left_limit)
+                    if not self.turning and self.vx < 0:
+                        self.start_turn()
+                        if getattr(self, "_brain", None) is not None:
+                            try:
+                                height_bias = max(1.0, float(self.height))
+                                base_cd = float(getattr(app.settings, "ai_turn_base_cooldown", 1.2))
+                                size_fac = float(getattr(app.settings, "ai_turn_size_factor", 0.08))
+                                self._brain.turn_cooldown = base_cd * (1.0 + size_fac * (height_bias - 1.0))
+                            except Exception:
+                                pass
+                # While turning, ensure we do not drift beyond boundaries due to shrink phase momentum
+                if self.turning:
+                    if self.vx > 0 and self.x > right_limit:
+                        self.x = float(right_limit)
+                    elif self.vx < 0 and self.x < left_limit:
+                        self.x = float(left_limit)
+        except Exception:
+            pass
 
         # Vertical vy already handled by behavior engine for both modes
 
@@ -351,11 +392,12 @@ class Fish:
             app.bubbles.append(Bubble(x=bubble_x, y=bubble_y))
             self.next_bubble = random.uniform(self.bubble_min, self.bubble_max)
 
-        # Respawn when off-screen
-        if self.vx > 0 and self.x > screen.width:
-            self.respawn(screen, direction=1)
-        elif self.vx < 0 and self.x + self.width < 0:
-            self.respawn(screen, direction=-1)
+        # Respawn when off-screen (disabled in fish tank mode)
+        if not bool(getattr(app.settings, "fish_tank", False)):
+            if self.vx > 0 and self.x > screen.width:
+                self.respawn(screen, direction=1)
+            elif self.vx < 0 and self.x + self.width < 0:
+                self.respawn(screen, direction=-1)
 
         # Advance turn animation
         if self.turning:
