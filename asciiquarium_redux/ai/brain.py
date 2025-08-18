@@ -58,6 +58,10 @@ class FishBrain:
     hunger: float = 0.0
     _noise: LeakyNoise = field(init=False)
     _selector: UtilitySelector = field(init=False)
+    # Expose last chosen action for higher-level behavior decisions (e.g., turning policy)
+    last_action: Optional[str] = None
+    # Cooldown timer controlling how often AI may request a turn
+    turn_cooldown: float = 0.0
 
     def __post_init__(self) -> None:
         a = max(1e-3, min(5.0, float(self.wander_tau)))
@@ -104,6 +108,8 @@ class FishBrain:
             "EXPLORE": curiosity * 1.0,
         }
         action, _ = self._selector.softmax_choice(utilities)
+        # remember last action for external policies
+        self.last_action = action
         # Compose steering
         components: list[tuple[Vec2, float]] = []
         if action == "EAT" and dist_food < float("inf"):

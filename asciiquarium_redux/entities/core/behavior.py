@@ -60,6 +60,18 @@ class AIBehaviorEngine(BehaviorEngine):
 
     def step(self, fish: "Fish", dt: float, screen: "Screen", app: "AsciiQuariumProtocol") -> BehaviorResult:
         res = BehaviorResult()
+        # AI turn cool-down and intent gating
+        # Larger fish are lazier: scale cooldown by height (more rows -> longer cooldown)
+        height_bias = max(1.0, float(getattr(fish, "height", 1)))
+        base_cooldown = float(getattr(app.settings, "ai_turn_base_cooldown", 1.2))
+        size_factor = float(getattr(app.settings, "ai_turn_size_factor", 0.08))
+        cooldown = base_cooldown * (1.0 + size_factor * (height_bias - 1.0))
+        # Decrement AI brain cooldown timer if present
+        if getattr(fish, "_brain", None) is not None:
+            try:
+                fish._brain.turn_cooldown = max(0.0, float(getattr(fish._brain, "turn_cooldown", 0.0)) - dt)
+            except Exception:
+                pass
         try:
             from ...ai.brain import FishBrain  # local import to avoid cycles at import time
             from ...ai.vector import Vec2
@@ -111,12 +123,20 @@ class AIBehaviorEngine(BehaviorEngine):
                 res.desired_vx = float(new_vel.x)
                 v_max_ai = max(0.0, float(getattr(app.settings, "fish_vertical_speed_max", 0.3)))
                 res.desired_vy = max(-v_max_ai, min(v_max_ai, float(new_vel.y)))
-                # request turn if desired direction differs
+                # request turn if desired direction differs AND there's a reason AND cooldown elapsed
                 desired_sign = 1 if new_vel.x > 0 else (-1 if new_vel.x < 0 else 0)
                 current_sign = 1 if fish.vx >= 0 else -1
-                if desired_sign != 0 and desired_sign != current_sign:
-                    if not fish.turning:
+                reason = None
+                if getattr(fish._brain, "last_action", None) in ("EAT", "HIDE", "FLOCK"):
+                    reason = fish._brain.last_action
+                # bigger fish are extra lazy: require stronger reason except EAT
+                if reason == "FLOCK" and height_bias >= 4.0:
+                    # occasionally skip flock-motivated turns for large fish unless cooldown is fully elapsed
+                    pass  # reason remains FLOCK but will still honor cooldown
+                if desired_sign != 0 and desired_sign != current_sign and reason is not None:
+                    if float(getattr(fish._brain, "turn_cooldown", 0.0)) <= 0.0 and not fish.turning:
                         res.request_turn = True
+                        fish._brain.turn_cooldown = cooldown
         except Exception:
             pass
         return res
