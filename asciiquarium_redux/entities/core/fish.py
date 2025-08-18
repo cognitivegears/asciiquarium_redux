@@ -527,7 +527,36 @@ class Fish:
         candidate = list(zip(src, src_masks))
         frames, mask = min(candidate, key=lambda fm: abs(len(fm[0]) - curr_h))
         self.frames = frames
-        self.colour_mask = randomize_colour_mask(mask) if self.colour_mask is not None else None
+        # Preserve existing colours when turning by mirroring the current colour_mask
+        if self.colour_mask is not None:
+            try:
+                old_mask = self.colour_mask
+                new_mask: list[str] = []
+                # Helper to center-crop or pad a row to a desired length
+                def _fit(row: str, target_len: int) -> str:
+                    if len(row) == target_len:
+                        return row
+                    if len(row) > target_len:
+                        # center-crop
+                        drop = len(row) - target_len
+                        left = drop // 2
+                        return row[left:left+target_len]
+                    # pad with spaces (default colour) to fit
+                    pad = target_len - len(row)
+                    left = pad // 2
+                    right = pad - left
+                    return (" " * left) + row + (" " * right)
+                for dy, row in enumerate(frames):
+                    src_row = old_mask[dy] if dy < len(old_mask) else ""
+                    # mirror horizontally
+                    mirrored = src_row[::-1]
+                    new_mask.append(_fit(mirrored, len(row)))
+                self.colour_mask = new_mask
+            except Exception:
+                # Fallback: keep previous mask to avoid colour jump
+                pass
+        else:
+            self.colour_mask = None
         # Reverse velocity sign, magnitude picked from base_speed magnitude
         speed_mag = abs(self.base_speed) if self.base_speed != 0 else random.uniform(self.speed_min, self.speed_max)
         self.vx = speed_mag * direction
