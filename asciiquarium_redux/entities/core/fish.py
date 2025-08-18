@@ -472,22 +472,48 @@ class Fish:
                     vis -= 1
             else:
                 vis = 1
-            # Centered slice: remove inside columns one from each side means converge to center
-            left = (w - vis) // 2
-            right = left + vis
-            def slice_cols(rows: List[str], l: int, r: int) -> List[str]:
-                out: List[str] = []
-                for row in rows:
-                    seg = row[l:r] if 0 <= l < len(row) else row
-                    # Ensure at least 1 char width; pad if empty
-                    if seg == "":
-                        seg = " "
-                    out.append(seg)
-                return out
-            lines = slice_cols(lines, left, right)
-            if mask is not None:
-                mask = slice_cols(mask, left, right)
+            # Accordion compression: for each row, keep glyphs, drop spaces, and center a slice of length `vis`.
+            # This guarantees each non-empty row retains at least one glyph until vis=1.
+            def _compress_row(row: str, target: int) -> str:
+                # Collect glyphs (non-space)
+                glyphs = [ch for ch in row if ch != ' ']
+                if not glyphs:
+                    return ' ' * max(1, target)
+                # Choose centered slice of glyphs of length <= target
+                k = min(len(glyphs), max(1, target))
+                start = (len(glyphs) - k) // 2
+                sel = glyphs[start:start + k]
+                # Center within target width
+                pad = max(0, target - len(sel))
+                left = pad // 2
+                right = pad - left
+                return (' ' * left) + ''.join(sel) + (' ' * right)
+            def _compress_mask_row(row: str, mrow: str, target: int) -> str:
+                # Mirror the selection logic used in _compress_row to align colours with kept glyphs
+                pairs = [(ch, (mrow[i] if i < len(mrow) else ' ')) for i, ch in enumerate(row) if ch != ' ']
+                if not pairs:
+                    return ' ' * max(1, target)
+                k = min(len(pairs), max(1, target))
+                start = (len(pairs) - k) // 2
+                sel = pairs[start:start + k]
+                mchars = [mc for (_, mc) in sel]
+                pad = max(0, target - len(mchars))
+                left = pad // 2
+                right = pad - left
+                return (' ' * left) + ''.join(mchars) + (' ' * right)
+            # Apply compression per row
+            new_lines: List[str] = []
+            new_mask: Optional[List[str]] = [] if mask is not None else None
+            for dy, row in enumerate(lines):
+                new_lines.append(_compress_row(row, vis))
+                if new_mask is not None:
+                    mrow = mask[dy] if dy < len(mask) else ''  # type: ignore[index]
+                    new_mask.append(_compress_mask_row(row, mrow, vis))
+            lines = new_lines
+            if new_mask is not None:
+                mask = new_mask  # type: ignore[assignment]
             # Shift draw position so the center stays stable during shrink/expand
+            left = (w - vis) // 2
             x_off = left
         if mask is not None:
             draw_sprite_masked(screen, lines, mask, int(self.x) + x_off, int(self.y), self.colour)
