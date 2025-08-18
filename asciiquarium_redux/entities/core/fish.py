@@ -11,6 +11,7 @@ else:
     from ...screen_compat import Screen
 
 from ...util import draw_sprite, draw_sprite_masked, randomize_colour_mask
+from .behavior import BehaviorEngine, ClassicBehaviorEngine, AIBehaviorEngine
 from .fish_assets import (
     FISH_RIGHT,
     FISH_LEFT,
@@ -218,12 +219,9 @@ class Fish:
             screen: Screen interface for boundary checking
             app: Main application instance for spawning bubbles
         """
-        # Handle turn timer/chance
-        if not self.hooked and self.turn_enabled:
-            self.next_turn_ok_in = max(0.0, self.next_turn_ok_in - dt)
-            if not self.turning and self.next_turn_ok_in <= 0.0:
-                if random.random() < max(0.0, self.turn_chance_per_second) * dt:
-                    self.start_turn()
+        # Select behavior engine once per update
+        use_ai = bool(getattr(app.settings, "ai_enabled", False))
+        engine: BehaviorEngine = AIBehaviorEngine() if use_ai else ClassicBehaviorEngine()
 
         # Movement with speed ramp depending on turning phase
         speed_scale = 1.0
@@ -235,81 +233,18 @@ class Fish:
             else:
                 speed_scale = 0.0
 
-        # AI steering (optional)
-        if getattr(app.settings, "ai_enabled", False) and FishBrain is not None and not self.hooked:
-            if self._brain is None:
-                try:
-                    from ...ai.steering import SteeringConfig as _SteeringCfg  # local import
-                except Exception:  # pragma: no cover
-                    _SteeringCfg = None  # type: ignore[assignment]
-                max_speed = max(self.speed_min, self.speed_max)
-                cfg = (
-                    _SteeringCfg(
-                        max_speed=max_speed,
-                        max_force=max_speed,
-                        separation_radius=float(getattr(app.settings, "ai_separation_radius", 3.0)),
-                        obstacle_radius=float(getattr(app.settings, "ai_obstacle_radius", 3.0)),
-                        align_weight=float(getattr(app.settings, "ai_flock_alignment", 0.8)),
-                        cohere_weight=float(getattr(app.settings, "ai_flock_cohesion", 0.5)),
-                        separate_weight=float(getattr(app.settings, "ai_flock_separation", 1.2)),
-                        avoid_weight=float(getattr(app.settings, "ai_baseline_avoid", 0.9)),
-                        wander_weight=float(getattr(app.settings, "ai_explore_gain", 0.6)),
-                    )
-                    if _SteeringCfg is not None
-                    else None
-                )
-                import random as _rand
-                sub_seed = _rand.randrange(1 << 30)
-                rng = _rand.Random(sub_seed)
-                self._brain = FishBrain(
-                    fish_id=id(self),
-                    rng=rng,
-                    sense=app,  # type: ignore[arg-type]
-                    config=cfg,  # type: ignore[arg-type]
-                    util_temp=float(getattr(app.settings, "ai_action_temperature", 0.6)),
-                    wander_tau=float(getattr(app.settings, "ai_wander_tau", 1.2)),
-                    eat_gain=float(getattr(app.settings, "ai_eat_gain", 1.2)),
-                    hide_gain=float(getattr(app.settings, "ai_hide_gain", 1.5)),
-                    flock_alignment=float(getattr(app.settings, "ai_flock_alignment", 0.8)),
-                    flock_cohesion=float(getattr(app.settings, "ai_flock_cohesion", 0.5)),
-                    flock_separation=float(getattr(app.settings, "ai_flock_separation", 1.2)),
-                    baseline_separation=float(getattr(app.settings, "ai_baseline_separation", 0.6)),
-                    baseline_avoid=float(getattr(app.settings, "ai_baseline_avoid", 0.9)),
-                )
-            try:
-                pos = Vec2(float(self.x), float(self.y))  # type: ignore[call-arg]
-                vel = Vec2(float(self.vx), float(self.vy))  # type: ignore[call-arg]
-                new_vel = self._brain.update(dt, pos, vel)
-                v_max_ai = max(0.0, float(getattr(app.settings, "fish_vertical_speed_max", 0.3)))
-                self.vy = max(-v_max_ai, min(v_max_ai, float(new_vel.y)))
-                desired_sign = 0
-                if new_vel.x > 0:
-                    desired_sign = 1
-                elif new_vel.x < 0:
-                    desired_sign = -1
-                current_sign = 1 if self.vx >= 0 else -1
-                if desired_sign != 0 and desired_sign != current_sign:
-                    if not self.turning:
-                        self.start_turn()
-                else:
-                    # Record desired vx for smoothing; apply after AI block
-                    self.desired_vx = float(new_vel.x)
-            except Exception:
-                pass
-        else:
-            # Non-AI desired vx: keep current direction, aim for a drifting speed target
-            if not self.hooked:
-                # Lazy-init speed target on first update
-                if self.speed_target <= 0.0:
-                    self.speed_target = max(self.speed_min, min(self.speed_max, abs(self.vx)))
-                # Countdown and retarget periodically
-                self.speed_change_in -= dt
-                if self.speed_change_in <= 0.0:
-                    self.speed_target = random.uniform(self.speed_min, self.speed_max)
-                    self.speed_change_in = random.uniform(self.speed_change_interval_min, self.speed_change_interval_max)
-                # Desired vx preserves current sign
-                sign = 1.0 if self.vx >= 0.0 else -1.0
-                self.desired_vx = sign * float(self.speed_target)
+        # Behavior engine proposes desired velocities and turn request
+        try:
+            behavior = engine.step(self, dt, screen, app)
+        except Exception:
+            behavior = None
+        if behavior is not None:
+            if behavior.request_turn and not self.turning and not self.hooked:
+                self.start_turn()
+            if behavior.desired_vx is not None:
+                self.desired_vx = float(behavior.desired_vx)
+            if behavior.desired_vy is not None:
+                self.vy = float(behavior.desired_vy)
 
         # Apply acceleration-limited change toward desired_vx (if set)
         if not self.hooked:
@@ -333,17 +268,10 @@ class Fish:
         # Kinematics integration (horizontal)
         self.x += self.vx * dt * MOVEMENT_MULTIPLIER * speed_scale
 
-        # Vertical drift when AI is disabled; AI controls vy otherwise
-        v_max = max(0.0, float(getattr(app.settings, "fish_vertical_speed_max", 0.3)))
-        if not self.hooked and v_max > 0.0 and not getattr(app.settings, "ai_enabled", False):
-            if random.random() < 0.8 * dt:
-                new_vy = random.uniform(-v_max, v_max)
-                min_mag = min(0.3, v_max * 0.5)
-                if abs(new_vy) < min_mag:
-                    new_vy = min_mag if new_vy >= 0 else -min_mag
-                self.vy = new_vy
+        # Vertical vy already handled by behavior engine for both modes
 
         # Vertical bounds handling
+        v_max = max(0.0, float(getattr(app.settings, "fish_vertical_speed_max", 0.3)))
         top_bound = max(self.waterline_top + self.water_rows + 1, 1)
         bottom_bound = max(top_bound, screen.height - self.height - 2)
         next_y = self.y + self.vy * dt
