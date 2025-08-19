@@ -1078,6 +1078,11 @@ class AsciiQuarium:
         # Scale per-fish speed range based on its height so small fish are faster
         _, fish_height = sprite_size(frames)
         speed_scale = self._speed_scale_for_height(fish_height)
+        # Choose a preferred vertical band based on size when no explicit band override is provided
+        if self.settings.fish_y_band:
+            band_low, band_high = self.settings.fish_y_band
+        else:
+            band_low, band_high = self._preferred_band_for_height(fish_height)
         return Fish(
             frames=frames,
             x=x,
@@ -1089,11 +1094,36 @@ class AsciiQuarium:
             speed_max=self.settings.fish_speed_max * speed_scale,
             bubble_min=self.settings.fish_bubble_min,
             bubble_max=self.settings.fish_bubble_max,
-            band_low_frac=(self.settings.fish_y_band[0] if self.settings.fish_y_band else 0.0),
-            band_high_frac=(self.settings.fish_y_band[1] if self.settings.fish_y_band else 1.0),
+            band_low_frac=band_low,
+            band_high_frac=band_high,
             waterline_top=self.settings.waterline_top,
             water_rows=len(WATER_SEGMENTS),
         )
+
+    def _preferred_band_for_height(self, fish_height: int) -> tuple[float, float]:
+        """Return a (low, high) vertical band fraction based on fish size.
+
+        Rules of thumb:
+        - Small fish (<= 3 rows): wide roaming, most of the tank.
+        - Medium fish (4-5 rows): mid band.
+        - Big fish (>= 6 rows): prefer lower band.
+
+        The water surface rows are handled by Fish itself; bands are expressed
+        as fractions of total screen height and will be clamped against
+        waterline and fish height at spawn/respawn.
+        """
+        try:
+            # Customizable thresholds via settings if provided later
+            if fish_height >= 6:
+                # Bottom 40% by default
+                return (0.55, 0.95)
+            if fish_height >= 4:
+                # Middle band
+                return (0.35, 0.75)
+            # Small fish: wide roaming
+            return (0.10, 0.95)
+        except Exception:
+            return (0.0, 1.0)
 
     def _configure_fish_behavior(self, fish: Fish) -> None:
         """Configure fish behavior parameters and timers.

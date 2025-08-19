@@ -249,7 +249,8 @@ class Settings:
     fish_speed_min: float = 0.6
     fish_speed_max: float = 2.5
     # Max vertical drift speed (rows/sec); small to keep mostly horizontal motion
-    fish_vertical_speed_max: float = 0.3
+    # Slightly increased for more responsive vertical movement
+    fish_vertical_speed_max: float = 0.5
     fish_bubble_min: float = 2.0
     fish_bubble_max: float = 5.0
     fish_turn_enabled: bool = True
@@ -319,8 +320,8 @@ class Settings:
     restock_after_seconds: float = 20.0
     restock_min_fraction: float = 0.6  # if below 60% of target, trigger restock
     # Fish tank mode: if enabled, fish turn before reaching left/right edges
-    fish_tank: bool = False
-    fish_tank_margin: int = 3
+    fish_tank: bool = True
+    fish_tank_margin: int = 0
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:

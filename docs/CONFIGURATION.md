@@ -118,8 +118,8 @@ chest_burst_seconds = 60.0 # Seconds between treasure chest bubbles
 restock_enabled = true     # Replenish fish if counts stay low
 restock_after_seconds = 20.0   # Time below threshold before restock
 restock_min_fraction = 0.6     # Threshold: fraction of target count
-fish_tank = false              # If true, fish turn before hitting left/right edges
-fish_tank_margin = 3           # Columns from each side considered the glass margin
+fish_tank = true               # If true, fish turn before hitting left/right edges
+fish_tank_margin = 0           # Columns from each side considered the glass margin
 ```
 
 ### Settings Reference
@@ -135,8 +135,8 @@ fish_tank_margin = 3           # Columns from each side considered the glass mar
 | `restock_enabled` | boolean | `true` | - | If true and fish population remains below threshold for `restock_after_seconds`, gently add fish |
 | `restock_after_seconds` | float | `20.0` | `5.0-600.0` | Duration below threshold before restock triggers |
 | `restock_min_fraction` | float | `0.6` | `0.1-1.0` | Threshold fraction of target fish count that defines "low" |
-| `fish_tank` | boolean | `false` | - | Treat scene as a tank; fish turn before reaching side edges |
-| `fish_tank_margin` | integer | `3` | `0-40` | Margin (columns) from each side where fish will turn when `fish_tank` is true |
+| `fish_tank` | boolean | `true` | - | Treat scene as a tank; fish turn before reaching side edges |
+| `fish_tank_margin` | integer | `0` | `0-40` | Margin (columns) from each side where fish will turn when `fish_tank` is true |
 
 ### Example Configurations
 
@@ -292,7 +292,7 @@ speed_min = 0.6            # Minimum fish speed (units/second)
 speed_max = 2.5            # Maximum fish speed
 bubble_min = 2.0           # Minimum seconds between bubbles
 bubble_max = 5.0           # Maximum seconds between bubbles
-vertical_speed_max = 0.3   # Max vertical drift speed (rows/sec); lower = calmer
+vertical_speed_max = 0.5   # Max vertical drift speed (rows/sec); lower = calmer
 turn_enabled = true        # Enable fish turning behavior
 turn_chance_per_second = 0.01  # Probability of turning per second
 turn_min_interval = 6.0    # Minimum time between turns (seconds)
@@ -314,7 +314,7 @@ turn_expand_seconds = 0.35 # Duration of expand animation
 | `direction_bias` | float | `0.5` | `0.0-1.0` | Probability fish spawn moving rightward |
 | `speed_min/max` | float | `0.6/2.5` | `0.1-10.0` | Fish speed range (screen units/second) |
 | `bubble_min/max` | float | `2.0/5.0` | `0.5-30.0` | Time range between bubble generation |
-| `vertical_speed_max` | float | `0.3` | `0.0-10.0` | Clamp on vertical drift speed (rows/sec). Smaller values produce calmer, more horizontal motion |
+| `vertical_speed_max` | float | `0.5` | `0.0-10.0` | Clamp on vertical drift speed (rows/sec). Smaller values produce calmer, more horizontal motion |
 | `turn_enabled` | boolean | `true` | - | Whether fish can turn around mid-swim |
 | `turn_chance_per_second` | float | `0.01` | `0.0-1.0` | Probability of initiating turn per second |
 
