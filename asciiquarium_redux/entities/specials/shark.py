@@ -2,6 +2,9 @@ from __future__ import annotations
 
 import random
 from ...screen_compat import Screen
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
 from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked
 from ..core import Splat, Fish
@@ -17,7 +20,7 @@ from ...constants import (
 
 
 class Shark(Actor):
-    def __init__(self, screen: Screen, app):
+    def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
         self.dir = random.choice([-1, 1])
         self.speed = SHARK_SPEED * self.dir
         self.y = random.randint(max(9, 1), max(9, screen.height - 10))
@@ -97,14 +100,19 @@ class Shark(Actor):
         wl, hl = sprite_size(self.img_left)
         self._w_right, self._h_right = wr, hr
         self._w_left, self._h_left = wl, hl
-        self.x = -wr if self.dir > 0 else screen.width
+        # Spawn at scene edges so shark traverses the entire scene when panning
+        try:
+            scene_w = int(getattr(getattr(app, "settings", None), "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        self.x = -wr if self.dir > 0 else scene_w
         self._active = True
 
     @property
     def active(self) -> bool:  # type: ignore[override]
         return self._active
 
-    def update(self, dt: float, screen: Screen, app) -> None:
+    def update(self, dt: float, screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> None:
         self.x += self.speed * dt * MOVEMENT_MULTIPLIER
         # Collision parity: a single point collider at the teeth location
         if self.dir > 0:
@@ -119,13 +127,17 @@ class Shark(Actor):
             # point-in-rect test
             if int(f.x) <= tx < int(f.x + f.width) and int(f.y) <= ty < int(f.y + f.height):
                 # Spawn splat at the teeth position so it appears in front/at mouth
-                app.splats.append(Splat(x=tx, y=ty))
+                app.splats.append(Splat(x=tx, y=ty, coord_space="scene"))
                 app.fish.remove(f)
         # Off-screen deactivation so spawner can schedule the next special
-        if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x < -self._w_left):
+        try:
+            scene_w = int(getattr(getattr(app, "settings", None), "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        if (self.dir > 0 and self.x > scene_w) or (self.dir < 0 and self.x < -self._w_left):
             self._active = False
 
-    def draw(self, screen: Screen, mono: bool = False) -> None:
+    def draw(self, screen: "ScreenProtocol", mono: bool = False) -> None:
         if self.dir > 0:
             img = self.img_right
             msk = self.mask_right
@@ -139,5 +151,5 @@ class Shark(Actor):
             draw_sprite_masked(screen, img, msk, int(self.x), int(self.y), Screen.COLOUR_CYAN)
 
 
-def spawn_shark(screen: Screen, app):
+def spawn_shark(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
     return [Shark(screen, app)]

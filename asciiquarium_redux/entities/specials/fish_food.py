@@ -14,7 +14,15 @@ class FishFoodFlake(Actor):
 
     def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol", x: int):
         s = app.settings
-        self.x: float = float(max(0, min(screen.width - 1, int(x))))
+        # Interpret x as SCENE coordinate. Clamp to scene width in scene mode; else clamp to screen width.
+        try:
+            if not bool(getattr(s, "fish_tank", True)):
+                scene_w = int(getattr(s, "scene_width", screen.width))
+                self.x = float(max(0, min(scene_w - 1, int(x))))
+            else:
+                self.x = float(max(0, min(screen.width - 1, int(x))))
+        except Exception:
+            self.x = float(max(0, min(screen.width - 1, int(x))))
         self.y: float = float(int(s.waterline_top))  # float along surface
         # Phase: 0 = float, 1 = sink
         self._phase: int = 0
@@ -49,6 +57,13 @@ class FishFoodFlake(Actor):
     def update(self, dt: float, screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> None:
         if not self._active:
             return
+        # Determine world width (scene width in scene mode, else screen width)
+        try:
+            scene_mode = not bool(getattr(app.settings, "fish_tank", True))
+            world_w = int(getattr(app.settings, "scene_width", screen.width)) if scene_mode else screen.width
+        except Exception:
+            scene_mode = False
+            world_w = screen.width
         if self._phase == 0:
             # Float with surface dispersion
             self._float_t -= dt
@@ -60,8 +75,8 @@ class FishFoodFlake(Actor):
             if self.x < 0:
                 self.x = 0
                 self._surface_drift_speed = abs(self._surface_drift_speed)
-            elif self.x > screen.width - 1:
-                self.x = screen.width - 1
+            elif self.x > world_w - 1:
+                self.x = world_w - 1
                 self._surface_drift_speed = -abs(self._surface_drift_speed)
             if self._float_t <= 0:
                 self._phase = 1
@@ -72,8 +87,8 @@ class FishFoodFlake(Actor):
                 self.x += random.uniform(-self._drift_speed, self._drift_speed) * dt * 10.0
             if self.x < 0:
                 self.x = 0
-            elif self.x > screen.width - 1:
-                self.x = screen.width - 1
+            elif self.x > world_w - 1:
+                self.x = world_w - 1
             if int(self.y) >= screen.height - 1:
                 self._active = False
 
@@ -103,8 +118,13 @@ def spawn_fish_food(screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> Li
         cmax = cmin
     count = max(1, random.randint(cmin, cmax))
     flakes: List[FishFoodFlake] = []
-    # Choose a single drop point along the water surface, like a pinch of food
-    x0 = random.randint(0, max(0, screen.width - 1))
+    # Choose a single drop point along the water surface within the CURRENT VIEW, then convert to scene X
+    try:
+        off = int(getattr(app.settings, "scene_offset", 0))
+    except Exception:
+        off = 0
+    x0_screen = random.randint(0, max(0, screen.width - 1))
+    x0 = off + x0_screen
     for _ in range(count):
         flakes.append(FishFoodFlake(screen, app, x0))
     return flakes
@@ -127,7 +147,11 @@ def spawn_fish_food_at(screen: "ScreenProtocol", app: "AsciiQuariumProtocol", x:
         cmax = cmin
     count = max(1, random.randint(cmin, cmax))
     flakes: List[FishFoodFlake] = []
-    x0 = max(0, min(screen.width - 1, int(x)))
+    try:
+        off = int(getattr(app.settings, "scene_offset", 0))
+    except Exception:
+        off = 0
+    x0 = off + max(0, min(screen.width - 1, int(x)))
     for _ in range(count):
         flakes.append(FishFoodFlake(screen, app, x0))
     return flakes

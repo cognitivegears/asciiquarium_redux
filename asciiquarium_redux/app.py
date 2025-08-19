@@ -62,7 +62,7 @@ else:
 
 from .util import sprite_size, draw_sprite, draw_sprite_masked, fill_rect, draw_sprite_masked_with_bg
 from .util.buffer import DoubleBufferedScreen
-from .entities.environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK, waterline_row
+from .entities.environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK, waterline_row, CHEST_CLOSED
 from .util.settings import Settings
 from .entities.core import Seaweed, Bubble, Splat, Fish, random_fish_frames
 from .entities.base import Actor
@@ -198,6 +198,34 @@ class AsciiQuarium:
         Args:
             screen: Screen interface for dimension calculations and spawning
         """
+        # Establish scene dimensions and initial view offset BEFORE spawning entities
+        try:
+            if not bool(getattr(self.settings, "fish_tank", True)):
+                factor = max(1, int(getattr(self.settings, "scene_width_factor", 5)))
+                scene_width = max(screen.width, screen.width * factor)
+                max_off = max(0, int(scene_width) - int(screen.width))
+                center_off = max_off // 2
+                setattr(self.settings, "scene_width", int(scene_width))
+                setattr(self.settings, "scene_offset", int(center_off))
+                # Precompute a fixed castle scene-x so it's visible on the initial (centered) view
+                try:
+                    castle_w, _castle_h = sprite_size(CASTLE)
+                except Exception:
+                    castle_w = 30
+                init_castle_x = max(0, min(int(scene_width) - castle_w - 2, int(center_off) + screen.width - castle_w - 2))
+                setattr(self.settings, "castle_scene_x", int(init_castle_x))
+            else:
+                # Tank mode: one-screen scene and castle near right edge
+                setattr(self.settings, "scene_width", int(screen.width))
+                setattr(self.settings, "scene_offset", 0)
+                try:
+                    castle_w, _castle_h = sprite_size(CASTLE)
+                except Exception:
+                    castle_w = 30
+                setattr(self.settings, "castle_scene_x", max(0, screen.width - castle_w - 2))
+        except Exception:
+            pass
+
         self._clear_entities()
         self._initialize_seaweed(screen)
         self._initialize_decor(screen)
@@ -220,14 +248,19 @@ class AsciiQuarium:
         Args:
             screen: Screen interface for dimension calculations
         """
-        # Calculate seaweed count (optional override by config)
+        # Calculate seaweed count (optional override by config) and scale by scene width in scene mode
+        try:
+            scene_w = int(getattr(self.settings, "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        width_for_density = scene_w if not bool(getattr(self.settings, "fish_tank", True)) else screen.width
         if self.settings.seaweed_count_base is not None and self.settings.seaweed_count_per_80_cols is not None:
-            units: float = max(1.0, screen.width / SCREEN_WIDTH_UNIT_DIVISOR)
+            units: float = max(1.0, width_for_density / SCREEN_WIDTH_UNIT_DIVISOR)
             base: int = self.settings.seaweed_count_base
             per: float = self.settings.seaweed_count_per_80_cols
             count: int = max(1, int((base + per * units) * self.settings.density * self.settings.seaweed_scale))
         else:
-            count = max(1, int((screen.width // SEAWEED_DENSITY_WIDTH_DIVISOR) * self.settings.density * self.settings.seaweed_scale))
+            count = max(1, int((width_for_density // SEAWEED_DENSITY_WIDTH_DIVISOR) * self.settings.density * self.settings.seaweed_scale))
 
         # Create seaweed entities with randomized properties
         for _ in range(count):
@@ -242,7 +275,21 @@ class AsciiQuarium:
         # Persistent decor: treasure chest
         if getattr(self.settings, "chest_enabled", True):
             try:
-                self.decor.extend(spawn_treasure_chest(screen, self))
+                chests = spawn_treasure_chest(screen, self)
+                # Ensure at least one chest starts in the initial view when in scene mode
+                try:
+                    if chests and not bool(getattr(self.settings, "fish_tank", True)):
+                        off = int(getattr(self.settings, "scene_offset", 0))
+                        view_lo, view_hi = off, off + screen.width
+                        vis_any = any((c.x + sprite_size(CHEST_CLOSED)[0] > view_lo) and (c.x < view_hi) for c in chests)
+                        if not vis_any:
+                            # Move the first chest into view near 1/3 of the window
+                            margin = 2
+                            target_x = max(view_lo + margin, min(view_hi - sprite_size(CHEST_CLOSED)[0] - margin, off + screen.width // 3))
+                            chests[0].x = int(target_x)
+                except Exception:
+                    pass
+                self.decor.extend(chests)
             except Exception as e:
                 # Fail-safe: ignore decor errors so app still runs, but log the issue
                 logging.warning(f"Failed to spawn treasure chest: {e}")
@@ -254,7 +301,13 @@ class AsciiQuarium:
             screen: Screen interface for dimension calculations
         """
         water_top: int = self.settings.waterline_top
-        area: int = max(1, (screen.height - (water_top + 4)) * screen.width)
+        # Scale target population by scene width in scene mode
+        try:
+            scene_w = int(getattr(self.settings, "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        width_for_density = scene_w if not bool(getattr(self.settings, "fish_tank", True)) else screen.width
+        area: int = max(1, (screen.height - (water_top + 4)) * width_for_density)
 
         # Calculate fish count (optional override by config)
         if self.settings.fish_count_base is not None and self.settings.fish_count_per_80_cols is not None:
@@ -289,8 +342,13 @@ class AsciiQuarium:
                 x, y, vx = self._calculate_fish_positioning(direction, frames_g, screen)
                 # Slight offset for group members
                 if gi > 0:
-                    x = max(0, min(screen.width - len(frames_g[0]) - 1, x + random.randint(-3, 3)))
-                    y = max(self.settings.waterline_top + 5, min(screen.height - len(frames_g) - 2, y + random.randint(-1, 1)))
+                    try:
+                        scene_w2 = int(getattr(self.settings, "scene_width", screen.width))
+                    except Exception:
+                        scene_w2 = screen.width
+                    fw, fh = sprite_size(frames_g)
+                    x = max(0, min(scene_w2 - fw - 1, int(x) + random.randint(-3, 3)))
+                    y = max(self.settings.waterline_top + 5, min(screen.height - fh - 2, int(y) + random.randint(-1, 1)))
                 fish = self._create_fish_entity(frames_g, x, y, vx, colour_mask, screen)
                 self._configure_fish_behavior(fish)
                 self.fish.append(fish)
@@ -304,8 +362,10 @@ class AsciiQuarium:
         Args:
             screen: Screen interface for rendering operations
         """
-        for segment_index, _ in enumerate(WATER_SEGMENTS):
-            row: str = waterline_row(segment_index, screen.width)
+        for segment_index, seg in enumerate(WATER_SEGMENTS):
+            base_row: str = waterline_row(segment_index, screen.width + len(seg))
+            off = int(getattr(self.settings, "scene_offset", 0)) % max(1, len(seg))
+            row: str = base_row[off:off + screen.width]
             waterline_y: int = self.settings.waterline_top + segment_index
             if waterline_y < screen.height:
                 colour: int = Screen.COLOUR_WHITE if self.settings.color == "mono" else Screen.COLOUR_CYAN
@@ -357,7 +417,18 @@ class AsciiQuarium:
         castle_width: int
         castle_height: int
         castle_width, castle_height = sprite_size(lines)
-        castle_x: int = max(0, screen.width - castle_width - 2)
+        # Place castle at a fixed scene coordinate computed during rebuild
+        try:
+            off = int(getattr(self.settings, "scene_offset", 0))
+            scene_castle_x = int(getattr(self.settings, "castle_scene_x", -1))
+            if scene_castle_x < 0:
+                # Fallback to rightmost if not set
+                scene_w = int(getattr(self.settings, "scene_width", screen.width))
+                scene_castle_x = max(0, scene_w - castle_width - 2)
+        except Exception:
+            off = 0
+            scene_castle_x = max(0, screen.width - castle_width - 2)
+        castle_x: int = scene_castle_x - off
         castle_y: int = max(0, screen.height - castle_height - 1)
         if self.settings.color == "mono":
             # In mono, still keep castle opaque within its silhouette
@@ -378,6 +449,21 @@ class AsciiQuarium:
             frame_no: Current frame number for debugging and timing
         """
         dt *= self.settings.speed
+
+        # Compute scene width and clamp view offset when fish_tank is disabled
+        try:
+            if not bool(getattr(self.settings, "fish_tank", True)):
+                factor = max(1, int(getattr(self.settings, "scene_width_factor", 5)))
+                scene_width = max(screen.width, screen.width * factor)
+            else:
+                scene_width = screen.width
+            setattr(self.settings, "scene_width", int(scene_width))
+            max_off = max(0, int(scene_width) - int(screen.width))
+            cur_off = int(getattr(self.settings, "scene_offset", 0))
+            cur_off = max(0, min(cur_off, max_off))
+            setattr(self.settings, "scene_offset", cur_off)
+        except Exception:
+            pass
 
         if not self._paused:
             self._update_all_entities(dt, screen)
@@ -599,7 +685,9 @@ class AsciiQuarium:
         fy: float | None = None
         for f in self.fish:
             if id(f) == fish_id:
-                fx, fy = float(f.x), float(f.y)
+                # Use scene coordinates to decouple from panning
+                fx = float(getattr(f, "scene_x", f.x))
+                fy = float(getattr(f, "scene_y", f.y))
                 break
         if fx is None or fy is None:
             return (Vec2(0.0, 0.0), float("inf"))
@@ -631,7 +719,8 @@ class AsciiQuarium:
         fy: float | None = None
         for f in self.fish:
             if id(f) == fish_id:
-                fx, fy = float(f.x), float(f.y)
+                fx = float(getattr(f, "scene_x", f.x))
+                fy = float(getattr(f, "scene_y", f.y))
                 break
         if fx is None or fy is None:
             return (Vec2(0.0, 0.0), float("inf"))
@@ -729,9 +818,24 @@ class AsciiQuarium:
             screen: Screen interface for rendering
             mono: Whether to use monochrome rendering mode
         """
+        off = int(getattr(self.settings, "scene_offset", 0))
         for seaweed in self.seaweed:
             animation_tick: int = int(self._seaweed_tick / SEAWEED_ANIMATION_STEP)
-            seaweed.draw(screen, animation_tick, mono)
+            # Temporarily map scene -> screen for drawing
+            orig_x = getattr(seaweed, "x", 0)
+            try:
+                draw_x = int(orig_x) - off
+                # Cull if entirely off-screen horizontally (seaweed width is 2)
+                if draw_x + 2 < 0 or draw_x >= screen.width:
+                    continue
+                seaweed.x = draw_x
+                seaweed.draw(screen, animation_tick, mono)
+            finally:
+                # Restore original scene x
+                try:
+                    seaweed.x = orig_x
+                except Exception:
+                    pass
 
     def _render_decor(self, screen: Screen, mono: bool) -> None:
         """Render decorative entities with backwards compatibility.
@@ -740,11 +844,26 @@ class AsciiQuarium:
             screen: Screen interface for rendering
             mono: Whether to use monochrome rendering mode
         """
+        off = int(getattr(self.settings, "scene_offset", 0))
         for decoration in self.decor:
+            # Many decor have an x attribute; map if present to support scene panning
+            has_x = hasattr(decoration, "x")
+            orig_x = getattr(decoration, "x", 0)
+            if has_x:
+                try:
+                    setattr(decoration, "x", int(orig_x) - off)
+                except Exception:
+                    has_x = False
             try:
                 decoration.draw(screen, mono)  # type: ignore[call-arg]
             except TypeError:
                 decoration.draw(screen)
+            finally:
+                if has_x:
+                    try:
+                        setattr(decoration, "x", orig_x)
+                    except Exception:
+                        pass
 
     def _render_fish(self, screen: Screen, mono: bool) -> None:
         """Render fish entities with proper z-order sorting.
@@ -755,7 +874,18 @@ class AsciiQuarium:
         """
         # Draw fish back-to-front by z to mimic Perl's fish_start..fish_end layering
         fish_to_draw: List[Fish] = sorted(self.fish, key=lambda fish: getattr(fish, 'z', 0))
+        off = int(getattr(self.settings, "scene_offset", 0))
         for fish in fish_to_draw:
+            try:
+                sx = int(getattr(fish, 'scene_x', fish.x)) - off
+                sy = int(getattr(fish, 'scene_y', fish.y))
+                fish.x = sx
+                fish.y = sy
+            except Exception:
+                pass
+            # Cull horizontally off-screen
+            if fish.x + fish.width < 0 or fish.x >= screen.width:
+                continue
             if mono:
                 draw_sprite(screen, fish.frames, int(fish.x), int(fish.y), Screen.COLOUR_WHITE)
             else:
@@ -792,11 +922,27 @@ class AsciiQuarium:
             screen: Screen interface for rendering
             mono: Whether to use monochrome rendering mode
         """
+        off = int(getattr(self.settings, "scene_offset", 0))
+        from .entities.specials import FishHook  # type: ignore
         for special_actor in list(self.specials):
+            # Most specials should pan with the scene; FishHook remains screen-relative
+            has_x = hasattr(special_actor, "x") and not isinstance(special_actor, FishHook)
+            orig_x = getattr(special_actor, "x", 0)
+            if has_x:
+                try:
+                    setattr(special_actor, "x", int(orig_x) - off)
+                except Exception:
+                    has_x = False
             try:
                 special_actor.draw(screen, mono)  # type: ignore[call-arg]
             except TypeError:
                 special_actor.draw(screen)
+            finally:
+                if has_x:
+                    try:
+                        setattr(special_actor, "x", orig_x)
+                    except Exception:
+                        pass
 
     def _render_splats(self, screen: Screen, mono: bool) -> None:
         """Render splat effects on top of all other entities.
@@ -805,8 +951,29 @@ class AsciiQuarium:
             screen: Screen interface for rendering
             mono: Whether to use monochrome rendering mode
         """
+        off = int(getattr(self.settings, "scene_offset", 0))
         for splat in self.splats:
-            splat.draw(screen, mono)
+            try:
+                # Determine scene->screen mapping only for scene-space splats
+                if getattr(splat, "coord_space", "scene") == "scene":
+                    sx = int(getattr(splat, "x", 0)) - off
+                    sy = int(getattr(splat, "y", 0))
+                    # Cull if outside current view
+                    if sx < -8 or sx >= screen.width + 8 or sy < -4 or sy >= screen.height + 4:
+                        continue
+                    # Temporarily remap for draw
+                    ox = splat.x
+                    try:
+                        splat.x = sx
+                        splat.draw(screen, mono)
+                    finally:
+                        splat.x = ox
+                else:
+                    # Screen-space splats (if any) draw directly
+                    splat.draw(screen, mono)
+            except Exception:
+                # Best-effort draw; ignore individual failures
+                pass
 
     def spawn_random(self, screen: Screen) -> None:
         """Spawn a random special entity based on configured weights and cooldowns.
@@ -903,9 +1070,19 @@ class AsciiQuarium:
             "",
             "Controls:",
             "  q: quit    p: pause/resume    r: rebuild    f: feed fish",
+            "  Left/Right arrows: pan view (scene mode)",
             "  Left-click: drop fishhook to clicked spot",
             "  h/?: toggle this help",
         ]
+        # In scene mode, include a one-line scene summary (width/offset/factor)
+        try:
+            if not bool(getattr(self.settings, "fish_tank", True)):
+                scene_w = int(getattr(self.settings, "scene_width", screen.width))
+                off = int(getattr(self.settings, "scene_offset", 0))
+                factor = int(getattr(self.settings, "scene_width_factor", 5))
+                lines.insert(3, f"scene: width={scene_w}  offset={off}  factor={factor}x")
+        except Exception:
+            pass
         help_x: int = 2
         help_y: int = 1
         help_width: int = max(len(line) for line in lines) + 4
@@ -918,20 +1095,26 @@ class AsciiQuarium:
     # --- Live population management helpers ---
     def _compute_target_counts(self, screen: Screen) -> tuple[int, int]:
         """Return (fish_count, seaweed_count) desired for current settings and screen size."""
+        # Scale by scene width in scene mode
+        try:
+            scene_w = int(getattr(self.settings, "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        width_for_density = scene_w if not bool(getattr(self.settings, "fish_tank", True)) else screen.width
         # Seaweed
         if self.settings.seaweed_count_base is not None and self.settings.seaweed_count_per_80_cols is not None:
-            screen_units = max(1.0, screen.width / SCREEN_WIDTH_UNIT_DIVISOR)
+            screen_units = max(1.0, width_for_density / SCREEN_WIDTH_UNIT_DIVISOR)
             base_count = self.settings.seaweed_count_base
             per_unit_count = self.settings.seaweed_count_per_80_cols
             seaweed_count = max(1, int((base_count + per_unit_count * screen_units) * self.settings.density * self.settings.seaweed_scale))
         else:
-            seaweed_count = max(1, int((screen.width // SEAWEED_DENSITY_WIDTH_DIVISOR) * self.settings.density * self.settings.seaweed_scale))
+            seaweed_count = max(1, int((width_for_density // SEAWEED_DENSITY_WIDTH_DIVISOR) * self.settings.density * self.settings.seaweed_scale))
 
         # Fish
         water_top = self.settings.waterline_top
-        water_area = max(1, (screen.height - (water_top + 4)) * screen.width)
+        water_area = max(1, (screen.height - (water_top + 4)) * width_for_density)
         if self.settings.fish_count_base is not None and self.settings.fish_count_per_80_cols is not None:
-            screen_units = max(1.0, screen.width / SCREEN_WIDTH_UNIT_DIVISOR)
+            screen_units = max(1.0, width_for_density / SCREEN_WIDTH_UNIT_DIVISOR)
             base_count = int(self.settings.fish_count_base)
             per_unit_count = float(self.settings.fish_count_per_80_cols)
             fish_count = max(FISH_MINIMUM_COUNT, int((base_count + per_unit_count * screen_units) * self.settings.density * self.settings.fish_scale))
@@ -1053,8 +1236,15 @@ class AsciiQuarium:
         water_top = self.settings.waterline_top
         # initial y will be refined by Fish.respawn; use temp fallback
         fish_y = random.randint(max(water_top + 3, 1), max(water_top + 3, screen.height - fish_height - 2))
-        # Start slightly off-screen on the entry side to keep symmetry
-        fish_x = (-fish_width - 1 if direction > 0 else screen.width + 1)
+        # In scene mode, distribute initial spawns across the whole scene; in tank mode, spawn just off-screen
+        try:
+            if not bool(getattr(self.settings, "fish_tank", True)):
+                scene_w = int(getattr(self.settings, "scene_width", screen.width))
+                fish_x = random.randint(0, max(0, scene_w - fish_width))
+            else:
+                fish_x = (-fish_width - 1 if direction > 0 else screen.width + 1)
+        except Exception:
+            fish_x = (-fish_width - 1 if direction > 0 else screen.width + 1)
         speed_scale = self._speed_scale_for_height(fish_height)
         velocity_x = random.uniform(self.settings.fish_speed_min, self.settings.fish_speed_max) * speed_scale * direction
 
@@ -1167,7 +1357,12 @@ class AsciiQuarium:
 
     def _make_one_seaweed(self, screen: Screen) -> Seaweed:
         seaweed_height = random.randint(SEAWEED_HEIGHT_MIN, SEAWEED_HEIGHT_MAX)
-        seaweed_x = random.randint(1, max(1, screen.width - 3))
+        # Spawn across the whole scene if fish tank is disabled
+        try:
+            scene_w = int(getattr(self.settings, "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        seaweed_x = random.randint(1, max(1, scene_w - 3))
         base_y = screen.height - 2
         seaweed = Seaweed(x=seaweed_x, base_y=base_y, height=seaweed_height, phase=random.randint(0, SEAWEED_PHASE_MAX))
         # Apply configured lifecycle ranges (and initialize current params within those ranges)
@@ -1322,6 +1517,23 @@ def _handle_keyboard_events(event, app: AsciiQuarium, screen: Screen) -> bool:
         app.specials.extend(spawn_fish_food(screen, app))
     elif key == ord(" "):
         _handle_fishhook_toggle(app, screen)
+    else:
+        # Optional: arrow key panning in terminal backend
+        try:
+            from asciimatics.screen import Screen as _TermScreen  # type: ignore
+            if key in (_TermScreen.KEY_LEFT, _TermScreen.KEY_RIGHT):
+                frac = float(getattr(app.settings, "scene_pan_step_fraction", 0.2))
+                step = max(1, int(screen.width * max(0.01, min(1.0, frac))))
+                off = int(getattr(app.settings, "scene_offset", 0))
+                scene_w = int(getattr(app.settings, "scene_width", screen.width))
+                max_off = max(0, scene_w - screen.width)
+                if key == _TermScreen.KEY_LEFT:
+                    off = max(0, off - step)
+                else:
+                    off = min(max_off, off + step)
+                setattr(app.settings, "scene_offset", int(off))
+        except Exception:
+            pass
 
     return False
 

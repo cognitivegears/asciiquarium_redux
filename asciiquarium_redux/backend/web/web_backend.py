@@ -397,7 +397,8 @@ class WebApp:
     def on_key(self, key: str):
         if not self.app or not self.screen:
             return
-        k = key.lower()
+        k_raw = key
+        k = (key or "").lower()
         if k == "q":
             # No-op in web; page owns lifecycle
             return
@@ -420,6 +421,19 @@ class WebApp:
                     f.start_turn()
                 except Exception as e:
                     logging.warning(f"Failed to start fish turn: {e}")
+            return
+        # Panning via arrow keys in the web frontend
+        if k_raw in ("ArrowLeft", "ArrowRight"):
+            frac = float(getattr(self.settings, "scene_pan_step_fraction", 0.2))
+            step = max(1, int(self.screen.width * max(0.01, min(1.0, frac))))
+            off = int(getattr(self.settings, "scene_offset", 0))
+            scene_w = int(getattr(self.settings, "scene_width", self.screen.width))
+            max_off = max(0, scene_w - self.screen.width)
+            if k_raw == "ArrowLeft":
+                off = max(0, off - step)
+            else:
+                off = min(max_off, off + step)
+            setattr(self.settings, "scene_offset", off)
             return
         if k == " ":
             # Space: toggle hook (retract if present, else spawn)

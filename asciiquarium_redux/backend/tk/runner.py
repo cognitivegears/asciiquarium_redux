@@ -276,6 +276,22 @@ def run_tk(settings) -> None:
                                 h.retract_now()
                     else:
                         app.specials.extend(spawn_fishhook(screen, app))  # type: ignore[arg-type]
+                if k in ("LEFT", "RIGHT"):
+                    # Pan the scene when fish_tank is disabled
+                    try:
+                        if not bool(getattr(settings, "fish_tank", True)):
+                            frac = float(getattr(settings, "scene_pan_step_fraction", 0.2))
+                            step = max(1, int(screen.width * max(0.01, min(1.0, frac))))
+                            scene_w = int(getattr(settings, "scene_width", screen.width))
+                            max_off = max(0, scene_w - screen.width)
+                            off = int(getattr(settings, "scene_offset", 0))
+                            if k == "LEFT":
+                                off = max(0, off - step)
+                            else:
+                                off = min(max_off, off + step)
+                            setattr(settings, "scene_offset", off)
+                    except Exception:
+                        pass
             elif isinstance(ev, MEv):
                 # Mouse event
                 if ev.button == 1:

@@ -5,6 +5,9 @@ from dataclasses import dataclass
 from typing import List
 
 from ...screen_compat import Screen
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
 from ..base import Actor
 from ..core import Bubble
@@ -37,7 +40,7 @@ class TreasureChest(Actor):
         self._next_small = random.uniform(self.small_bubble_min, self.small_bubble_max)
         self._burst_timer = self.burst_period * random.uniform(0.7, 1.3)
 
-    def update(self, dt: float, screen: Screen, app) -> None:  # type: ignore[override]
+    def update(self, dt: float, screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> None:  # type: ignore[override]
         self._time += dt
         self._next_small -= dt
         self._burst_timer -= dt
@@ -49,11 +52,27 @@ class TreasureChest(Actor):
             baseline = self.y + h_closed - 1
             baseline = min(screen.height - 2, max(0, baseline))
             y_draw = max(0, min(screen.height - h, baseline - h + 1))
-            x_draw = max(0, min(screen.width - w, self.x))
+            # Map scene -> screen using current view offset for correct bubble positions
+            try:
+                off = int(getattr(app.settings, "scene_offset", 0))
+            except Exception:
+                off = 0
+            x_draw = int(self.x) - off
+            # Cull/clamp to on-screen bounds for bubble emission logic
+            x_draw = max(0, min(screen.width - w, x_draw))
             return x_draw, y_draw, w, h
 
+        # Determine visibility for emission culling (scene mode)
+        try:
+            off = int(getattr(app.settings, "scene_offset", 0))
+        except Exception:
+            off = 0
+        w_vis, _h_vis = sprite_size(CHEST_CLOSED)
+        chest_x_view = int(self.x) - off
+        visible = (chest_x_view + w_vis > 0) and (chest_x_view < screen.width)
+
         # Emit occasional small bubble from the lid area when not bursting
-        if self._next_small <= 0 and not self._bursting:
+        if self._next_small <= 0 and not self._bursting and visible:
             x_draw, y_draw, w, h = current_origin(False)
             lid_x = x_draw + max(2, min(w - 2, 5 + random.randint(-1, 1)))
             lid_y = y_draw - 1
@@ -65,7 +84,7 @@ class TreasureChest(Actor):
             self._burst_time_left = float(self.burst_duration)  # burst animation duration
             self._burst_timer = self.burst_period * random.uniform(0.9, 1.1)
             self._burst_emit_accum = 0.0
-        if self._bursting:
+        if self._bursting and visible:
             # Emit a stream of bubbles from the lid while open
             x_draw, y_draw, w, h = current_origin(True)
             # Ensure burst_emit_rate is always non-negative
@@ -82,7 +101,7 @@ class TreasureChest(Actor):
             if self._burst_time_left <= 0:
                 self._bursting = False
 
-    def draw(self, screen: Screen, mono: bool = False) -> None:
+    def draw(self, screen: "ScreenProtocol", mono: bool = False) -> None:
         # Choose current sprite and anchor drawing by a fixed baseline (bottom)
         lines = CHEST_OPEN if self._bursting else CHEST_CLOSED
         w, h = sprite_size(lines)
@@ -96,7 +115,8 @@ class TreasureChest(Actor):
         y = baseline - h + 1
         # Clamp within top edge if needed
         y = max(0, min(screen.height - h, y))
-        x = max(0, min(screen.width - w, self.x))
+        # Use scene-mapped x directly; clipping is handled by drawing utilities
+        x = int(self.x)
         fg = Screen.COLOUR_WHITE if mono else Screen.COLOUR_YELLOW
         # Opaque mask like castle to avoid see-through artifacts
         draw_sprite_masked_with_bg(screen, lines, CHEST_MASK, x, y, fg, Screen.COLOUR_BLACK)
@@ -108,10 +128,26 @@ class TreasureChest(Actor):
 
 
 def spawn_treasure_chest(screen: Screen, app) -> List[TreasureChest]:
-    # Place near bottom-left-ish, leaving some space from edges
+    # Enforce single pirate chest overall, similar to the castle.
     lines = CHEST_CLOSED
     w, h = sprite_size(lines)
-    x = max(0, min(screen.width - w - 2, 2))
     y = max(0, screen.height - h - 1)
-    chest = TreasureChest(x=x, y=y, burst_period=getattr(app.settings, "chest_burst_seconds", 60.0))
-    return [chest]
+    try:
+        scene_w = int(getattr(app.settings, "scene_width", screen.width))
+        tank_mode = bool(getattr(app.settings, "fish_tank", True))
+        off = int(getattr(app.settings, "scene_offset", 0))
+    except Exception:
+        scene_w = screen.width
+        tank_mode = True
+        off = 0
+    # Tank mode: single chest near left
+    if tank_mode:
+        x = max(0, min(screen.width - w - 2, 2))
+        return [TreasureChest(x=x, y=y, burst_period=getattr(app.settings, "chest_burst_seconds", 60.0))]
+    # Scene mode: place the single chest within the initial centered view
+    view_lo, view_hi = off, off + screen.width
+    margin = 2
+    x = max(view_lo + margin, min(view_hi - w - margin, off + screen.width // 3))
+    # Clamp within scene bounds
+    x = max(0, min(scene_w - w - 1, x))
+    return [TreasureChest(x=int(x), y=y, burst_period=getattr(app.settings, "chest_burst_seconds", 60.0))]

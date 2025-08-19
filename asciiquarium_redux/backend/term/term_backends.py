@@ -231,6 +231,14 @@ class TkEventStream:
         self.root.bind("<Button-1>", self._on_click)
 
     def _on_key(self, event: Any) -> None:
+        # Support printable chars and arrow keys via keysym
+        try:
+            keysym = getattr(event, "keysym")
+        except Exception:
+            keysym = None
+        if keysym in ("Left", "Right"):
+            self._queue.append(KeyEvent(key=("LEFT" if keysym == "Left" else "RIGHT")))
+            return
         if event.char:
             self._queue.append(KeyEvent(key=event.char))
 

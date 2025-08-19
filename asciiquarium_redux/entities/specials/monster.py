@@ -2,13 +2,16 @@ from __future__ import annotations
 
 import random
 from ...screen_compat import Screen
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
 from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked
 from ..base import Actor
 
 
 class Monster(Actor):
-    def __init__(self, screen: Screen, app):
+    def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
         self.dir = random.choice([-1, 1])
         self.y = 2
 
@@ -125,7 +128,11 @@ class Monster(Actor):
 
         # Movement/spawn similar to Perl
         self.speed = 40.0 * self.dir
-        self.x = -64 if self.dir > 0 else screen.width - 2
+        try:
+            scene_w = int(getattr(getattr(app, "settings", None), "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        self.x = -64 if self.dir > 0 else scene_w - 2
         self._frame_idx = 0
         self._frame_t = 0.0
         self._frame_dt = 0.25
@@ -135,16 +142,20 @@ class Monster(Actor):
     def active(self) -> bool:  # type: ignore[override]
         return self._active
 
-    def update(self, dt: float, screen: Screen, app) -> None:
+    def update(self, dt: float, screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> None:
         self.x += self.speed * dt
         self._frame_t += dt
         if self._frame_t >= self._frame_dt:
             self._frame_t = 0.0
             self._frame_idx = (self._frame_idx + 1) % 4
-        if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x < -self._w_left):
+        try:
+            scene_w = int(getattr(getattr(app, "settings", None), "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        if (self.dir > 0 and self.x > scene_w) or (self.dir < 0 and self.x < -self._w_left):
             self._active = False
 
-    def draw(self, screen: Screen, mono: bool = False) -> None:
+    def draw(self, screen: "ScreenProtocol", mono: bool = False) -> None:
         if self.dir > 0:
             img = self.frames_right[self._frame_idx]
             msk = self.masks_right[self._frame_idx]
@@ -157,5 +168,5 @@ class Monster(Actor):
             draw_sprite_masked(screen, img, msk, int(self.x), int(self.y), Screen.COLOUR_GREEN)
 
 
-def spawn_monster(screen: Screen, app):
+def spawn_monster(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
     return [Monster(screen, app)]

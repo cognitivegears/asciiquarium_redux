@@ -3,6 +3,9 @@ from __future__ import annotations
 import random
 from typing import List
 from ...screen_compat import Screen
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
 from ...util import parse_sprite, sprite_size, draw_sprite_masked, draw_sprite
 from ..base import Actor
@@ -31,7 +34,7 @@ def _compose_frames(base: List[str], sp_align: int, spout_frames: List[List[str]
 
 
 class Whale(Actor):
-    def __init__(self, screen: Screen, app):
+    def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
         self.dir = random.choice([-1, 1])
         # Keep whale relatively slow, similar to Perl pacing
         self.speed = 10.0 * self.dir
@@ -187,14 +190,18 @@ class Whale(Actor):
         w_r, _ = sprite_size(whale_right)
         w_l, _ = sprite_size(whale_left)
         self._w_right, self._w_left = w_r, w_l
-        self.x = -18 if self.dir > 0 else screen.width - 2
+        try:
+            scene_w = int(getattr(getattr(app, "settings", None), "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        self.x = -18 if self.dir > 0 else scene_w - 2
         self._active = True
 
     @property
     def active(self) -> bool:  # type: ignore[override]
         return self._active
 
-    def update(self, dt: float, screen: Screen, app) -> None:
+    def update(self, dt: float, screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> None:
         self.x += self.speed * dt / 2
         self._frame_t += dt
         if self._frame_t >= self._frame_dt:
@@ -202,10 +209,14 @@ class Whale(Actor):
             # advance/cycle through frames
             total = len(self.frames_right) if self.dir > 0 else len(self.frames_left)
             self._frame_idx = (self._frame_idx + 1) % total
-        if (self.dir > 0 and self.x > screen.width) or (self.dir < 0 and self.x < -self._w_left):
+        try:
+            scene_w = int(getattr(getattr(app, "settings", None), "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        if (self.dir > 0 and self.x > scene_w) or (self.dir < 0 and self.x < -self._w_left):
             self._active = False
 
-    def draw(self, screen: Screen, mono: bool = False) -> None:
+    def draw(self, screen: "ScreenProtocol", mono: bool = False) -> None:
         if self.dir > 0:
             img = self.frames_right[self._frame_idx]
             msk = self.masks_right[self._frame_idx]
@@ -219,5 +230,5 @@ class Whale(Actor):
             draw_sprite_masked(screen, img, msk, int(self.x), int(self.y), Screen.COLOUR_BLUE)
 
 
-def spawn_whale(screen: Screen, app):
+def spawn_whale(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
     return [Whale(screen, app)]

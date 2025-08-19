@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 import random
+from typing import TYPE_CHECKING
 from ...screen_compat import Screen
+if TYPE_CHECKING:
+    from ...protocols import ScreenProtocol
+else:
+    from ...screen_compat import Screen as ScreenProtocol
 
 from ...util import parse_sprite, draw_sprite, aabb_overlap
 from ..core import Fish, Splat
@@ -19,7 +24,7 @@ from ...constants import (
 
 
 class FishHook(Actor):
-    def __init__(self, screen: Screen, app, target_x: int | None = None, target_y: int | None = None):
+    def __init__(self, screen: "ScreenProtocol", app, target_x: int | None = None, target_y: int | None = None):
         # Hook ASCII: hook point relative offset is (dx=1, dy=2)
         if target_x is not None:
             # Align hook point (x+1) to target_x
@@ -46,7 +51,7 @@ class FishHook(Actor):
     def active(self) -> bool:
         return True if self._active else False
 
-    def update(self, dt: float, screen: Screen, app) -> None:
+    def update(self, dt: float, screen: "ScreenProtocol", app) -> None:
         if self.state == "lowering":
             limit_reached = False
             # Move down towards target or depth limit
@@ -70,7 +75,7 @@ class FishHook(Actor):
                         continue
                     if aabb_overlap(hx, hy, 1, 1, int(f.x), int(f.y), f.width, f.height):
                         # Play splat animation at impact point and attach fish to hook
-                        app.splats.append(Splat(x=hx, y=hy))
+                        app.splats.append(Splat(x=hx, y=hy, coord_space="scene"))
                         self.caught = f
                         f.attach_to_hook(hx, hy)
                         # Pause briefly so the splat is visible
@@ -101,7 +106,7 @@ class FishHook(Actor):
                     if f.hooked:
                         continue
                     if aabb_overlap(hx, hy, 1, 1, int(f.x), int(f.y), f.width, f.height):
-                        app.splats.append(Splat(x=hx, y=hy))
+                        app.splats.append(Splat(x=hx, y=hy, coord_space="scene"))
                         self.caught = f
                         f.attach_to_hook(hx, hy)
                         # Brief impact pause before retracting for visibility
@@ -123,7 +128,7 @@ class FishHook(Actor):
                     if f.hooked:
                         continue
                     if aabb_overlap(hx, hy, 1, 1, int(f.x), int(f.y), f.width, f.height):
-                        app.splats.append(Splat(x=hx, y=hy))
+                        app.splats.append(Splat(x=hx, y=hy, coord_space="scene"))
                         self.caught = f
                         f.attach_to_hook(hx, hy)
                         # Brief pause to show the splat, then continue retracting
@@ -139,7 +144,7 @@ class FishHook(Actor):
                         pass
                 self._active = False
 
-    def draw(self, screen: Screen, mono: bool = False) -> None:
+    def draw(self, screen: "ScreenProtocol", mono: bool = False) -> None:
         top = FISHHOOK_LINE_TOP
         line_len = int(self.y) - top
         for i in range(line_len):
@@ -159,14 +164,14 @@ class FishHook(Actor):
         draw_sprite(screen, hook, self.x, int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)
 
 
-def spawn_fishhook(screen: Screen, app):
+def spawn_fishhook(screen: "ScreenProtocol", app):
     # Enforce single fishhook: if one is active, do not spawn another
     if any(isinstance(a, FishHook) and a.active for a in app.specials):
         return []
     return [FishHook(screen, app)]
 
 
-def spawn_fishhook_to(screen: Screen, app, target_x: int, target_y: int):
+def spawn_fishhook_to(screen: "ScreenProtocol", app, target_x: int, target_y: int):
     # Enforce single fishhook for targeted spawns as well
     if any(isinstance(a, FishHook) and a.active for a in app.specials):
         return []

@@ -3,16 +3,23 @@ from __future__ import annotations
 import random
 import math
 from ...screen_compat import Screen
+from typing import TYPE_CHECKING
+if TYPE_CHECKING:
+    from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
 from ...util import parse_sprite, draw_sprite, draw_sprite_masked
 from ..base import Actor
 
 
 class Dolphins(Actor):
-    def __init__(self, screen: Screen, app):
+    def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
         self.dir = random.choice([-1, 1])
         self.speed = 20.0 * self.dir
-        self.x = -13 if self.dir > 0 else screen.width
+        try:
+            scene_w = int(getattr(getattr(app, "settings", None), "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        self.x = -13 if self.dir > 0 else scene_w
         self.base_y = 5
         self.t = 0.0
         self.distance = 15 * self.dir
@@ -84,17 +91,21 @@ class Dolphins(Actor):
     def active(self) -> bool:
         return self._active
 
-    def update(self, dt: float, screen: Screen, app) -> None:
+    def update(self, dt: float, screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> None:
         self.t += dt
         self.x += self.speed * dt
         self._frame_t += dt
         if self._frame_t >= self._frame_dt:
             self._frame_t = 0.0
             self._frame_idx = (self._frame_idx + 1) % len(self.frames)
-        if (self.dir > 0 and self.x > screen.width + 30) or (self.dir < 0 and self.x < -30):
+        try:
+            scene_w = int(getattr(getattr(app, "settings", None), "scene_width", screen.width))
+        except Exception:
+            scene_w = screen.width
+        if (self.dir > 0 and self.x > scene_w + 30) or (self.dir < 0 and self.x < -30):
             self._active = False
 
-    def draw(self, screen: Screen, mono: bool = False) -> None:
+    def draw(self, screen: "ScreenProtocol", mono: bool = False) -> None:
         # Match Perl: body coloured mostly blue, with one cyan highlight dolphin
         colours = [Screen.COLOUR_BLUE, Screen.COLOUR_BLUE, Screen.COLOUR_CYAN]
         for i in range(3):
@@ -107,5 +118,5 @@ class Dolphins(Actor):
                 draw_sprite_masked(screen, frame, self.mask, px, py, colours[i])
 
 
-def spawn_dolphins(screen: Screen, app):
+def spawn_dolphins(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
     return [Dolphins(screen, app)]

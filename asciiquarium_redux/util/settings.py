@@ -182,6 +182,9 @@ class Settings:
         castle_enabled (bool): Enable castle decoration. Default: True
         chest_enabled (bool): Enable treasure chest decoration. Default: True
         chest_burst_seconds (float): Treasure chest animation interval. Default: 60.0
+    chest_spacing_min (int): Minimum spacing between treasure chests in scene mode. Default: 80
+    chest_spacing_max (int): Maximum spacing between treasure chests in scene mode. Default: 120
+    chest_max_count (int): Maximum number of treasure chests in scene mode. Default: 8
 
         fish_direction_bias (float): Fish movement bias (0.0=left, 1.0=right). Default: 0.5
         fish_speed_min/max (float): Fish movement speed range. Default: 0.6-2.5
@@ -245,6 +248,9 @@ class Settings:
     castle_enabled: bool = True
     chest_enabled: bool = True
     chest_burst_seconds: float = 60.0
+    chest_spacing_min: int = 80
+    chest_spacing_max: int = 120
+    chest_max_count: int = 8
     fish_direction_bias: float = 0.5
     fish_speed_min: float = 0.6
     fish_speed_max: float = 2.5
@@ -324,6 +330,12 @@ class Settings:
     fish_tank_margin: int = 0
     # Mouse click action: 'hook' (drop fishhook) or 'feed' (spawn flakes at clicked X on surface)
     click_action: str = "hook"
+    # Scene width factor (how many times wider than the screen the scene is, only when fish_tank is false)
+    scene_width_factor: int = 5
+    # Current scene offset (in columns, 0 = leftmost)
+    scene_offset: int = 0
+    # Panning step size as a fraction of current screen width (e.g., 0.2 = 20% of screen width)
+    scene_pan_step_fraction: float = 0.2
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
@@ -475,6 +487,9 @@ def _parse_scene_settings(s: Settings, scene: dict) -> None:
     _safe_set_bool(s, "castle_enabled", scene)
     _safe_set_bool(s, "chest_enabled", scene)
     _safe_set_float(s, "chest_burst_seconds", scene)
+    _safe_set_int(s, "chest_spacing_min", scene)
+    _safe_set_int(s, "chest_spacing_max", scene)
+    _safe_set_int(s, "chest_max_count", scene)
     # Click action (hook|feed)
     if "click_action" in scene:
         try:
@@ -483,6 +498,43 @@ def _parse_scene_settings(s: Settings, scene: dict) -> None:
                 s.click_action = val
         except Exception:
             pass
+    # Scene width factor
+    if "scene_width_factor" in scene:
+        try:
+            raw = scene.get("scene_width_factor")
+            if raw is not None:
+                val = int(raw)
+                if val >= 1:
+                    s.scene_width_factor = val
+        except Exception:
+            pass
+    # Scene offset
+    if "scene_offset" in scene:
+        try:
+            raw = scene.get("scene_offset")
+            if raw is not None:
+                val = int(raw)
+                s.scene_offset = max(0, val)
+        except Exception:
+            pass
+
+    # Scene panning step (fraction of screen width). Accept several keys/aliases.
+    try:
+        if "scene_pan_step_fraction" in scene:
+            val = scene.get("scene_pan_step_fraction")
+            if val is not None:
+                s.scene_pan_step_fraction = max(0.01, min(1.0, float(val)))
+        # Friendly aliases
+        if "scene_pan_step" in scene:
+            val = scene.get("scene_pan_step")
+            if val is not None:
+                s.scene_pan_step_fraction = max(0.01, min(1.0, float(val)))
+        if "scene-pan-step" in scene:
+            val = scene.get("scene-pan-step")
+            if val is not None:
+                s.scene_pan_step_fraction = max(0.01, min(1.0, float(val)))
+    except Exception:
+        pass
 
     # Population resilience (restocking)
     _safe_set_bool(s, "restock_enabled", scene)
@@ -497,6 +549,12 @@ def _parse_scene_settings(s: Settings, scene: dict) -> None:
             s.fish_tank = bool(scene.get("fish-tank"))
         if "fish-tank-margin" in scene:
             s.fish_tank_margin = max(0, int(scene.get("fish-tank-margin") or 0))
+        if "chest-spacing-min" in scene:
+            s.chest_spacing_min = int(scene.get("chest-spacing-min") or s.chest_spacing_min)
+        if "chest-spacing-max" in scene:
+            s.chest_spacing_max = int(scene.get("chest-spacing-max") or s.chest_spacing_max)
+        if "chest-max-count" in scene:
+            s.chest_max_count = int(scene.get("chest-max-count") or s.chest_max_count)
     except Exception:
         pass
 
@@ -760,6 +818,9 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--no-fullscreen", dest="fullscreen", action="store_false")
     parser.add_argument("--castle", dest="castle_enabled", action="store_true", default=None)
     parser.add_argument("--no-castle", dest="castle_enabled", action="store_false")
+    parser.add_argument("--chest-spacing-min", dest="chest_spacing_min", type=int)
+    parser.add_argument("--chest-spacing-max", dest="chest_spacing_max", type=int)
+    parser.add_argument("--chest-max-count", dest="chest_max_count", type=int)
     parser.add_argument("--font-min", dest="ui_font_min_size", type=int)
     parser.add_argument("--font-max", dest="ui_font_max_size", type=int)
     parser.add_argument("--ai", dest="ai_enabled", action="store_true")
@@ -770,6 +831,9 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--no-fish-tank", dest="fish_tank", action="store_false")
     parser.add_argument("--fish-tank-margin", dest="fish_tank_margin", type=int)
     parser.add_argument("--click", dest="click_action", choices=["hook", "feed"])
+    parser.add_argument("--scene-width-factor", dest="scene_width_factor", type=int)
+    parser.add_argument("--scene-offset", dest="scene_offset", type=int)
+    parser.add_argument("--scene-pan-step", dest="scene_pan_step_fraction", type=float)
     parser.set_defaults(fish_tank=None)
     args = parser.parse_args(argv)
 
@@ -789,6 +853,12 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
         s.ui_fullscreen = bool(args.fullscreen)
     if getattr(args, "castle_enabled", None) is not None:
         s.castle_enabled = bool(args.castle_enabled)
+    if getattr(args, "chest_spacing_min", None) is not None:
+        s.chest_spacing_min = max(1, int(args.chest_spacing_min))
+    if getattr(args, "chest_spacing_max", None) is not None:
+        s.chest_spacing_max = max(1, int(args.chest_spacing_max))
+    if getattr(args, "chest_max_count", None) is not None:
+        s.chest_max_count = max(1, int(args.chest_max_count))
     if getattr(args, "ai_enabled", None) is not None:
         s.ai_enabled = bool(args.ai_enabled)
     if getattr(args, "fish_tank", None) is not None:
@@ -797,6 +867,17 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
         s.fish_tank_margin = max(0, int(args.fish_tank_margin))
     if getattr(args, "click_action", None) is not None:
         s.click_action = str(args.click_action)
+    if getattr(args, "scene_width_factor", None) is not None:
+        val = int(args.scene_width_factor)
+        if val >= 1:
+            s.scene_width_factor = val
+    if getattr(args, "scene_offset", None) is not None:
+        s.scene_offset = max(0, int(args.scene_offset))
+    if getattr(args, "scene_pan_step_fraction", None) is not None:
+        try:
+            s.scene_pan_step_fraction = max(0.01, min(1.0, float(args.scene_pan_step_fraction)))
+        except Exception:
+            pass
     if getattr(args, "ui_font_min_size", None) is not None:
         s.ui_font_min_size = max(6, min(64, int(args.ui_font_min_size)))
     if getattr(args, "ui_font_max_size", None) is not None:

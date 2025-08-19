@@ -19,6 +19,8 @@ class Splat:
     y: int
     age_frames: int = 0
     max_frames: int = 15
+    # Coordinate space for x,y: "scene" (pans with scene) or "screen" (fixed to current view)
+    coord_space: str = "scene"
 
     FRAMES: List[List[str]] = field(
         default_factory=lambda: [

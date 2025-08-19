@@ -215,6 +215,25 @@ class Fish:
         """
         return self.height
 
+    # --- Scene coordinate properties for large scene support ---
+    @property
+    def scene_x(self) -> float:
+        return getattr(self, '_scene_x', self.x)
+
+    @scene_x.setter
+    def scene_x(self, value: float) -> None:
+        self._scene_x = value
+        self.x = value
+
+    @property
+    def scene_y(self) -> float:
+        return getattr(self, '_scene_y', self.y)
+
+    @scene_y.setter
+    def scene_y(self, value: float) -> None:
+        self._scene_y = value
+        self.y = value
+
     def update(self, dt: float, screen: "Screen", app: "AsciiQuariumProtocol") -> None:
         """Update fish behavior including movement, turning, and bubble generation.
 
@@ -286,7 +305,7 @@ class Fish:
                 pass
 
         # Kinematics integration (horizontal)
-        self.x += self.vx * dt * MOVEMENT_MULTIPLIER * speed_scale
+        self.scene_x += self.vx * dt * MOVEMENT_MULTIPLIER * speed_scale
         # If fish tank mode is enabled, clamp at margins and force a turn if crossed
         try:
             if bool(getattr(app.settings, "fish_tank", False)) and not self.hooked:
@@ -294,8 +313,8 @@ class Fish:
                 left_limit = 0 + margin
                 right_limit = screen.width - self.width - margin
                 # Clamp within bounds first
-                if self.x > right_limit:
-                    self.x = float(right_limit)
+                if self.scene_x > right_limit:
+                    self.scene_x = float(right_limit)
                     if not self.turning and self.vx > 0:
                         # Initiate turn immediately at boundary
                         self.start_turn()
@@ -308,8 +327,8 @@ class Fish:
                                 self._brain.turn_cooldown = base_cd * (1.0 + size_fac * (height_bias - 1.0))
                             except Exception:
                                 pass
-                elif self.x < left_limit:
-                    self.x = float(left_limit)
+                elif self.scene_x < left_limit:
+                    self.scene_x = float(left_limit)
                     if not self.turning and self.vx < 0:
                         self.start_turn()
                         if getattr(self, "_brain", None) is not None:
@@ -322,10 +341,10 @@ class Fish:
                                 pass
                 # While turning, ensure we do not drift beyond boundaries due to shrink phase momentum
                 if self.turning:
-                    if self.vx > 0 and self.x > right_limit:
-                        self.x = float(right_limit)
-                    elif self.vx < 0 and self.x < left_limit:
-                        self.x = float(left_limit)
+                    if self.vx > 0 and self.scene_x > right_limit:
+                        self.scene_x = float(right_limit)
+                    elif self.vx < 0 and self.scene_x < left_limit:
+                        self.scene_x = float(left_limit)
         except Exception:
             pass
 
@@ -344,27 +363,27 @@ class Fish:
                     self.vy *= (1.0 - k)
         except Exception:
             pass
-        next_y = self.y + self.vy * dt
+        next_y = self.scene_y + self.vy * dt
         if next_y < top_bound:
             if random.random() < 0.5:
                 self.vy = 0.0
             else:
                 self.vy = abs(self.vy) if self.vy != 0 else random.uniform(0.05, v_max)
-            self.y = float(top_bound)
+            self.scene_y = float(top_bound)
         elif next_y > bottom_bound:
             if random.random() < 0.5:
                 self.vy = 0.0
             else:
                 self.vy = -abs(self.vy) if self.vy != 0 else -random.uniform(0.05, v_max)
-            self.y = float(bottom_bound)
+            self.scene_y = float(bottom_bound)
         else:
-            self.y = next_y
+            self.scene_y = next_y
 
         # Mouth collision with fish food flakes
         try:
             from ..specials import FishFoodFlake  # type: ignore
-            mx = int(self.x + (self.width - 1 if self.vx > 0 else 0))
-            my = int(self.y + self.height // 2)
+            mx = int(self.scene_x + (self.width - 1 if self.vx > 0 else 0))
+            my = int(self.scene_y + self.height // 2)
             # Prefer fish food: if any active flakes are present and intersect, consume them
             ate_food = False
             for s in list(app.specials):
@@ -391,9 +410,9 @@ class Fish:
                                 continue
                             ox, oy = int(other.x), int(other.y + other.height // 2)
                             if abs(ox - mx) <= 1 and abs(oy - my) <= 0:
-                                # Visual splat effect at predation point
+                                # Visual splat effect at predation point (scene coords)
                                 try:
-                                    app.splats.append(Splat(x=mx, y=my))
+                                    app.splats.append(Splat(x=int(self.scene_x + (self.width - 1 if self.vx > 0 else 0)), y=int(self.scene_y + self.height // 2), coord_space="scene"))
                                 except Exception:
                                     pass
                                 # Immediately respawn the prey elsewhere to prevent population drop
@@ -416,17 +435,20 @@ class Fish:
         # Bubbles
         self.next_bubble -= dt
         if self.next_bubble <= 0:
-            bubble_y = int(self.y + self.height // 2)
-            bubble_x = int(self.x + (self.width if self.vx > 0 else -1))
+            bubble_y = int(self.scene_y + self.height // 2)
+            view_off = int(getattr(app.settings, "scene_offset", 0))
+            bubble_x = int(self.scene_x - view_off + (self.width if self.vx > 0 else -1))
             app.bubbles.append(Bubble(x=bubble_x, y=bubble_y))
             self.next_bubble = random.uniform(self.bubble_min, self.bubble_max)
 
-        # Respawn when off-screen (disabled in fish tank mode)
+        # Respawn when leaving scene bounds (scene mode): reappear off current view
         if not bool(getattr(app.settings, "fish_tank", False)):
-            if self.vx > 0 and self.x > screen.width:
-                self.respawn(screen, direction=1)
-            elif self.vx < 0 and self.x + self.width < 0:
-                self.respawn(screen, direction=-1)
+            scene_width = int(getattr(app.settings, 'scene_width', screen.width))
+            if self.vx > 0 and self.scene_x > scene_width:
+                self.respawn_out_of_view(screen, app, direction=1)
+            elif self.vx < 0 and self.scene_x + self.width < 0:
+                self.respawn_out_of_view(screen, app, direction=-1)
+
 
         # Advance turn animation
         if self.turning:
@@ -473,10 +495,80 @@ class Fish:
         if max_y < min_y or screen.height < self.height + 4:
             # Fallback for very small screens: place fish in middle
             self.y = max(1, min(screen.height - self.height - 1, screen.height // 2))
+            self.scene_y = self.y
         else:
             self.y = random.randint(min_y, max(min_y, max_y))
+            self.scene_y = self.y
         self.x = -self.width if direction > 0 else screen.width
+        self.scene_x = self.x
         # Reset turning animation state on respawn, but keep cooldown timer so turns still happen across respawns
+        self.turning = False
+        self.turn_phase = "idle"
+        self.turn_t = 0.0
+
+    def respawn_out_of_view(self, screen: "Screen", app: "AsciiQuariumProtocol", direction: int) -> None:
+        """Respawn at a random scene position that is not within the current view window.
+
+        In scene mode: fish reappear somewhere in the wider scene but never popping into the visible window.
+        In fish-tank mode: fallback to classic edge respawn.
+        """
+        try:
+            if bool(getattr(app.settings, "fish_tank", False)):
+                # Classic behavior in tank mode
+                self.respawn(screen, direction)
+                return
+            scene_w = int(getattr(app.settings, "scene_width", screen.width))
+            off = int(getattr(app.settings, "scene_offset", 0))
+        except Exception:
+            self.respawn(screen, direction)
+            return
+
+        # Re-roll frames/colour/speed as in respawn()
+        if direction > 0:
+            frame_choices = list(zip(FISH_RIGHT, FISH_RIGHT_MASKS))
+        else:
+            frame_choices = list(zip(FISH_LEFT, FISH_LEFT_MASKS))
+        frames, colour_mask = random.choice(frame_choices)
+        self.frames = frames
+        self.colour_mask = randomize_colour_mask(colour_mask)
+        self.vx = random.uniform(self.speed_min, self.speed_max) * direction
+        self.speed_target = abs(self.vx)
+        self.desired_vx = self.vx
+        self.speed_change_in = random.uniform(self.speed_change_interval_min, self.speed_change_interval_max)
+
+        # Vertical band
+        default_low_y = max(self.waterline_top + self.water_rows + 1, 1)
+        min_y = max(default_low_y, int(screen.height * self.band_low_frac))
+        max_y = min(screen.height - self.height - 2, int(screen.height * self.band_high_frac) - 1)
+        if max_y < min_y:
+            min_y = max(1, default_low_y)
+            max_y = max(min_y, screen.height - self.height - 2)
+        if max_y < min_y or screen.height < self.height + 4:
+            self.y = max(1, min(screen.height - self.height - 1, screen.height // 2))
+            self.scene_y = self.y
+        else:
+            self.y = random.randint(min_y, max(min_y, max_y))
+            self.scene_y = self.y
+
+        # Pick a scene_x outside the current view
+        fish_w = self.width
+        view_lo = off
+        view_hi = off + screen.width
+        left_lo, left_hi = 0, max(0, view_lo - fish_w)
+        right_lo, right_hi = max(0, view_hi), max(0, scene_w - fish_w)
+        ranges: list[tuple[int, int]] = []
+        if left_hi > left_lo:
+            ranges.append((left_lo, left_hi))
+        if right_hi > right_lo:
+            ranges.append((right_lo, right_hi))
+        if ranges:
+            lo, hi = random.choice(ranges)
+            self.scene_x = float(random.randint(lo, max(lo, hi)))
+        else:
+            # Fallback if the view covers the entire scene
+            self.scene_x = float(-fish_w if direction > 0 else scene_w + 1)
+        self.x = self.scene_x
+        # Reset turning state
         self.turning = False
         self.turn_phase = "idle"
         self.turn_t = 0.0
@@ -560,6 +652,9 @@ class Fish:
         if self.hooked:
             self.x = hook_x + self.hook_dx
             self.y = hook_y + self.hook_dy
+            # Keep scene coordinates in sync with visual position
+            self.scene_x = self.x
+            self.scene_y = self.y
 
     # Turning control
     def start_turn(self):

@@ -56,6 +56,16 @@ class Actor:
         - Entity System Documentation: docs/ENTITY_SYSTEM.md
     """
 
+    @property
+    def scene_x(self) -> float:
+        """Scene X coordinate (leftmost in scene = 0)."""
+        ...
+
+    @property
+    def scene_y(self) -> float:
+        """Scene Y coordinate (topmost in scene = 0)."""
+        ...
+
     def update(self, dt: float, screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> None:
         """Update entity state for the current frame.
 
