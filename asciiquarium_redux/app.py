@@ -80,6 +80,7 @@ from .entities.specials import (
     spawn_big_fish,
     spawn_treasure_chest,
     spawn_fish_food,
+    spawn_fish_food_at,
 )
 from .constants import (
     SCREEN_WIDTH_UNIT_DIVISOR,
@@ -1382,14 +1383,18 @@ def _handle_mouse_events(event, app: AsciiQuarium, screen: Screen, settings: Set
 
             # Only accept clicks below waterline and above bottom-1
             if water_top + 1 <= click_y <= screen.height - 2:
-                active_hooks = [special for special in app.specials if isinstance(special, FishHook) and special.active]
-                if active_hooks:
-                    # Retract existing hook on click
-                    for hook in active_hooks:
-                        if hasattr(hook, "retract_now"):
-                            hook.retract_now()
+                action = str(getattr(settings, "click_action", "hook")).lower()
+                if action == "feed":
+                    app.specials.extend(spawn_fish_food_at(screen, app, click_x))
                 else:
-                    app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))
+                    active_hooks = [special for special in app.specials if isinstance(special, FishHook) and special.active]
+                    if active_hooks:
+                        # Retract existing hook on click
+                        for hook in active_hooks:
+                            if hasattr(hook, "retract_now"):
+                                hook.retract_now()
+                    else:
+                        app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))
 
         app._mouse_buttons = event.buttons
         app._last_mouse_event_time = now

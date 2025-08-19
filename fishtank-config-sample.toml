@@ -1,0 +1,29 @@
+# Sample overrides for a glass fish tank setup
+# Use with: asciiquarium_redux --config fishtank-config-sample.toml
+
+[scene]
+# Keep fish inside the tank; turn before edges
+fish_tank = true
+# No extra glass margin; turn right at the edges
+fish_tank_margin = 0
+
+click_action = "feed"
+
+# Decor: treasure chest in both; castle only in the fish tank
+castle_enabled = true
+chest_enabled = true
+
+# Specials: realistic for a tank
+# - No ocean wildlife in a tank (disable)
+# - Keep big fish
+# - Leave fishhook at default (present); set to 0.0 here if you prefer none
+[spawn.specials]
+shark = 0.0
+whale = 0.0
+ship = 0.0
+ducks = 0.0
+dolphins = 0.0
+swan = 0.0
+monster = 0.0
+big_fish = 1.0
+fishhook = 0.0

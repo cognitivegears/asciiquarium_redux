@@ -447,13 +447,20 @@ class WebApp:
             return
         water_top = self.settings.waterline_top
         if water_top + 1 <= y <= self.screen.height - 2:
-            hooks = [a for a in self.app.specials if isinstance(a, FishHook) and a.active]
-            if hooks:
-                for h in hooks:
-                    if hasattr(h, "retract_now"):
-                        h.retract_now()
+            action = str(getattr(self.settings, "click_action", "hook")).lower()
+            if action == "feed":
+                try:
+                    self.app.specials.extend(spawn_fish_food_at(self.screen, self.app, int(x)))  # type: ignore[arg-type]
+                except Exception:
+                    pass
             else:
-                self.app.specials.extend(spawn_fishhook_to(self.screen, self.app, int(x), int(y)))  # type: ignore[arg-type]
+                hooks = [a for a in self.app.specials if isinstance(a, FishHook) and a.active]
+                if hooks:
+                    for h in hooks:
+                        if hasattr(h, "retract_now"):
+                            h.retract_now()
+                else:
+                    self.app.specials.extend(spawn_fishhook_to(self.screen, self.app, int(x), int(y)))  # type: ignore[arg-type]
 
 
 # Singleton used by the JS side

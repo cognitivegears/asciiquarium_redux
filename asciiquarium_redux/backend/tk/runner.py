@@ -283,14 +283,19 @@ def run_tk(settings) -> None:
                     click_y = int(getattr(ev, "y", 0))
                     water_top = settings.waterline_top
                     if water_top + 1 <= click_y <= screen.height - 2:
-                        from ...entities.specials import FishHook, spawn_fishhook_to
-                        hooks = [a for a in app.specials if isinstance(a, FishHook) and a.active]
-                        if hooks:
-                            for h in hooks:
-                                if hasattr(h, "retract_now"):
-                                    h.retract_now()
+                        action = str(getattr(settings, "click_action", "hook")).lower()
+                        if action == "feed":
+                            from ...entities.specials import spawn_fish_food_at
+                            app.specials.extend(spawn_fish_food_at(screen, app, click_x))  # type: ignore[arg-type]
                         else:
-                            app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))  # type: ignore[arg-type]
+                            from ...entities.specials import FishHook, spawn_fishhook_to
+                            hooks = [a for a in app.specials if isinstance(a, FishHook) and a.active]
+                            if hooks:
+                                for h in hooks:
+                                    if hasattr(h, "retract_now"):
+                                        h.retract_now()
+                            else:
+                                app.specials.extend(spawn_fishhook_to(screen, app, click_x, click_y))  # type: ignore[arg-type]
         try:
             ctx.clear()
             app.update(dt, cast(Screen, screen), frame_no)

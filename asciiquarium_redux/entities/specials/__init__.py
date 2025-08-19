@@ -8,7 +8,7 @@ from .monster import Monster, spawn_monster
 from .ship import Ship, spawn_ship
 from .big_fish import BigFish, spawn_big_fish
 from .treasure_chest import TreasureChest, spawn_treasure_chest
-from .fish_food import FishFoodFlake, spawn_fish_food
+from .fish_food import FishFoodFlake, spawn_fish_food, spawn_fish_food_at
 
 __all__ = [
     "Shark",
@@ -34,4 +34,5 @@ __all__ = [
     "spawn_treasure_chest",
     "FishFoodFlake",
     "spawn_fish_food",
+    "spawn_fish_food_at",
 ]

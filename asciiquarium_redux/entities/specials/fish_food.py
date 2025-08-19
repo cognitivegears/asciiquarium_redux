@@ -108,3 +108,26 @@ def spawn_fish_food(screen: "ScreenProtocol", app: "AsciiQuariumProtocol") -> Li
     for _ in range(count):
         flakes.append(FishFoodFlake(screen, app, x0))
     return flakes
+
+def spawn_fish_food_at(screen: "ScreenProtocol", app: "AsciiQuariumProtocol", x: int) -> List[FishFoodFlake]:
+    """Spawn a pinch of fish food flakes centered at a specific X along the surface.
+
+    Args:
+        screen: Screen for bounds
+        app: App for settings
+        x: X coordinate on surface where flakes should appear
+    """
+    s = app.settings
+    try:
+        cmin = int(getattr(s, "fish_food_count_min", 8))
+        cmax = int(getattr(s, "fish_food_count_max", 20))
+    except Exception:
+        cmin, cmax = 8, 20
+    if cmax < cmin:
+        cmax = cmin
+    count = max(1, random.randint(cmin, cmax))
+    flakes: List[FishFoodFlake] = []
+    x0 = max(0, min(screen.width - 1, int(x)))
+    for _ in range(count):
+        flakes.append(FishFoodFlake(screen, app, x0))
+    return flakes

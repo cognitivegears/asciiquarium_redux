@@ -322,6 +322,8 @@ class Settings:
     # Fish tank mode: if enabled, fish turn before reaching left/right edges
     fish_tank: bool = True
     fish_tank_margin: int = 0
+    # Mouse click action: 'hook' (drop fishhook) or 'feed' (spawn flakes at clicked X on surface)
+    click_action: str = "hook"
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
@@ -473,6 +475,14 @@ def _parse_scene_settings(s: Settings, scene: dict) -> None:
     _safe_set_bool(s, "castle_enabled", scene)
     _safe_set_bool(s, "chest_enabled", scene)
     _safe_set_float(s, "chest_burst_seconds", scene)
+    # Click action (hook|feed)
+    if "click_action" in scene:
+        try:
+            val = str(scene.get("click_action")).strip().lower()
+            if val in ("hook", "feed"):
+                s.click_action = val
+        except Exception:
+            pass
 
     # Population resilience (restocking)
     _safe_set_bool(s, "restock_enabled", scene)
@@ -759,6 +769,7 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--fish-tank", dest="fish_tank", action="store_true")
     parser.add_argument("--no-fish-tank", dest="fish_tank", action="store_false")
     parser.add_argument("--fish-tank-margin", dest="fish_tank_margin", type=int)
+    parser.add_argument("--click", dest="click_action", choices=["hook", "feed"])
     parser.set_defaults(fish_tank=None)
     args = parser.parse_args(argv)
 
@@ -784,6 +795,8 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
         s.fish_tank = bool(args.fish_tank)
     if getattr(args, "fish_tank_margin", None) is not None:
         s.fish_tank_margin = max(0, int(args.fish_tank_margin))
+    if getattr(args, "click_action", None) is not None:
+        s.click_action = str(args.click_action)
     if getattr(args, "ui_font_min_size", None) is not None:
         s.ui_font_min_size = max(6, min(64, int(args.ui_font_min_size)))
     if getattr(args, "ui_font_max_size", None) is not None:

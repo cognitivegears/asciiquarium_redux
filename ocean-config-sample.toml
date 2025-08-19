@@ -1,0 +1,26 @@
+# Sample overrides for an open ocean setup
+# Use with: asciiquarium_redux --config ocean-config-sample.toml
+[scene]
+# Let fish swim off-screen; ocean has no glass constraints
+fish_tank = false
+# Margin irrelevant when fish_tank=false, but set to a reasonable default
+fish_tank_margin = 0
+
+# Decor: no castle in the ocean, treasure chest can still appear
+castle_enabled = false
+chest_enabled = true
+
+# Specials: rich ocean life
+# - Ocean wildlife enabled
+# - Monster and swan allowed only in ocean
+# - Big fish present in both
+[spawn.specials]
+shark = 1.0
+whale = 1.0
+ship = 1.0
+ducks = 1.0
+dolphins = 1.0
+swan = 1.0
+monster = 1.0
+big_fish = 1.0
+# fishhook = 0.0   # uncomment to disable hooks in ocean mode
