@@ -403,7 +403,9 @@ function recomputeFontAndGrid() {
     "font_auto","ui_font_min_size","ui_font_max_size","waterline_top"
   ].forEach(id => {
   const el = document.getElementById(id);
-  el.addEventListener("input", () => {
+  const handler = () => {
+    // If Pyodide isn't ready yet, ignore UI changes
+    if (!window.pyodide) return;
     // Keep font min/max sliders consistent: if the active slider crosses the other,
     // drag the other along so min <= max always holds without blocking the user's motion.
     if (id === "ui_font_min_size" || id === "ui_font_max_size") {
@@ -452,17 +454,20 @@ function recomputeFontAndGrid() {
       }
     }
     const opts = collectOptionsFromUI();
-      const pyOpts = pyodide.toPy(opts);
+      const pyOpts = window.pyodide.toPy(opts);
       try {
-        pyodide.globals.set("W_OPTS", pyOpts);
+        window.pyodide.globals.set("W_OPTS", pyOpts);
       } finally {
         pyOpts.destroy();
       }
-      window.pyodide?.runPython(`web_backend.web_app.set_options(W_OPTS)`);
+      window.pyodide.runPython(`web_backend.web_app.set_options(W_OPTS)`);
       if (["font_auto","ui_font_min_size","ui_font_max_size","waterline_top"].includes(id)) {
         recomputeFontAndGrid();
       }
-  });
+  };
+  // Use both input and change to catch <select> updates reliably across browsers
+  el.addEventListener("input", handler);
+  el.addEventListener("change", handler);
 });
 
 // Turn test button: ask backend to turn a random fish (same as pressing 't')

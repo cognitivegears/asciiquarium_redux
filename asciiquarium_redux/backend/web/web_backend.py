@@ -16,7 +16,7 @@ from typing import Callable, List, Optional
 
 from ...app import AsciiQuarium
 from ...util.settings import Settings
-from ...entities.specials import FishHook, spawn_fishhook, spawn_fishhook_to, spawn_treasure_chest, spawn_fish_food
+from ...entities.specials import FishHook, spawn_fishhook, spawn_fishhook_to, spawn_treasure_chest, spawn_fish_food, spawn_fish_food_at
 from ...entities.specials.treasure_chest import TreasureChest
 from .web_screen import WebScreen
 from ...util.types import FlushHook, FlushBatch
@@ -367,7 +367,7 @@ class WebApp:
         # click_action
         if "click_action" in options:
             try:
-                val = str(options["click_action"]).lower()
+                val = str(options["click_action"]).strip().lower()
                 if val not in ("hook", "feed"):
                     val = "hook"
                 self.settings.click_action = val  # type: ignore[assignment]
