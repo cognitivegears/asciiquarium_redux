@@ -925,8 +925,8 @@ class AsciiQuarium:
         off = int(getattr(self.settings, "scene_offset", 0))
         from .entities.specials import FishHook  # type: ignore
         for special_actor in list(self.specials):
-            # Most specials should pan with the scene; FishHook remains screen-relative
-            has_x = hasattr(special_actor, "x") and not isinstance(special_actor, FishHook)
+            # All specials, including FishHook, are treated as scene-space now
+            has_x = hasattr(special_actor, "x")
             orig_x = getattr(special_actor, "x", 0)
             if has_x:
                 try:

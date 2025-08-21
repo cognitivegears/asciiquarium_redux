@@ -26,11 +26,27 @@ from ...constants import (
 class FishHook(Actor):
     def __init__(self, screen: "ScreenProtocol", app, target_x: int | None = None, target_y: int | None = None):
         # Hook ASCII: hook point relative offset is (dx=1, dy=2)
+        # World width for horizontal clamping: scene width in scene mode, else screen
+        try:
+            world_w = int(getattr(app.settings, "scene_width", screen.width))
+            if bool(getattr(app.settings, "fish_tank", False)):
+                world_w = screen.width
+        except Exception:
+            world_w = screen.width
         if target_x is not None:
-            # Align hook point (x+1) to target_x
-            self.x = max(0, min(screen.width - 8, int(target_x) - 1))
+            # target_x is in scene coordinates: align hook point (x+1) to target_x
+            self.x = int(target_x) - 1
         else:
-            self.x = random.randint(10, max(11, screen.width - 10))
+            # Choose a random scene X within current view
+            try:
+                off = int(getattr(app.settings, "scene_offset", 0))
+            except Exception:
+                off = 0
+            lo = max(0, off + 10)
+            hi = max(lo + 1, min(off + screen.width - 10, world_w - 1))
+            self.x = random.randint(lo, hi) - 1
+        # Clamp within world bounds considering hook sprite width (~8)
+        self.x = max(0, min(world_w - 8, int(self.x)))
         self.y = -4
         self.state = "lowering"
         self.speed = FISHHOOK_SPEED
@@ -168,11 +184,29 @@ def spawn_fishhook(screen: "ScreenProtocol", app):
     # Enforce single fishhook: if one is active, do not spawn another
     if any(isinstance(a, FishHook) and a.active for a in app.specials):
         return []
-    return [FishHook(screen, app)]
+    # Spawn within current view in scene coordinates
+    try:
+        off = int(getattr(app.settings, "scene_offset", 0))
+        world_w = int(getattr(app.settings, "scene_width", screen.width))
+        if bool(getattr(app.settings, "fish_tank", False)):
+            world_w = screen.width
+    except Exception:
+        off = 0
+        world_w = screen.width
+    lo = max(0, off + 5)
+    hi = max(lo + 1, min(off + screen.width - 5, world_w - 1))
+    x_scene = random.randint(lo, hi)
+    return [FishHook(screen, app, target_x=x_scene, target_y=None)]
 
 
 def spawn_fishhook_to(screen: "ScreenProtocol", app, target_x: int, target_y: int):
     # Enforce single fishhook for targeted spawns as well
     if any(isinstance(a, FishHook) and a.active for a in app.specials):
         return []
-    return [FishHook(screen, app, target_x=target_x, target_y=target_y)]
+    # Convert screen click x to scene x
+    try:
+        off = int(getattr(app.settings, "scene_offset", 0))
+        x_scene = int(target_x) + off
+    except Exception:
+        x_scene = int(target_x)
+    return [FishHook(screen, app, target_x=x_scene, target_y=target_y)]

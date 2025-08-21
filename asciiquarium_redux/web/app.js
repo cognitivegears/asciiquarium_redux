@@ -299,6 +299,7 @@ function collectOptionsFromUI() {
     chest: chk("chest"),
   castle: chk("castle"),
     turn: chk("turn"),
+  click_action: val("click_action"),
   ai_enabled: chk("ai_enabled"),
   // Fish tank
   fish_tank: chk("fish_tank"),
@@ -318,6 +319,8 @@ function collectOptionsFromUI() {
   seaweed_sway_max: num("seaweed_sway_max"),
     // Scene & spawn
     waterline_top: num("waterline_top"),
+  scene_width_factor: num("scene_width_factor"),
+  scene_pan_step_fraction: (num("scene_pan_step_fraction") || 20) / 100.0,
     chest_burst_seconds: num("chest_burst_seconds"),
     spawn_start_delay_min: num("spawn_start_delay_min"),
     spawn_start_delay_max: num("spawn_start_delay_max"),
@@ -392,6 +395,8 @@ function recomputeFontAndGrid() {
     // scene & spawn
   "waterline_top","chest_burst_seconds","fish_tank","fish_tank_margin","spawn_start_delay_min","spawn_start_delay_max","spawn_interval_min","spawn_interval_max",
     "spawn_max_concurrent","spawn_cooldown_global","w_shark","w_fishhook","w_whale","w_ship","w_ducks","w_dolphins","w_swan","w_monster","w_big_fish",
+  // scene controls
+  "scene_width_factor","scene_pan_step_fraction","click_action",
     // fishhook
     "fishhook_dwell_seconds",
     // UI font + scene affecting font fit

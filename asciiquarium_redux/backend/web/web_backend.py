@@ -90,6 +90,7 @@ class WebApp:
         needs_rebuild |= self._apply_fish(options)
         needs_rebuild |= self._apply_seaweed(options)
         needs_rebuild |= self._apply_scene_spawn(options)
+        needs_rebuild |= self._apply_scene_controls(options)
         self._apply_special_weights(options)
         self._apply_fishhook(options)
         return bool(needs_rebuild)
@@ -335,6 +336,53 @@ class WebApp:
                                         pass
                 except Exception:
                     pass
+        return needs_rebuild
+
+    def _apply_scene_controls(self, options: dict) -> bool:
+        """Apply scene width/pan/click controls.
+
+        Changing scene_width_factor affects scene size and requires rebuild to re-place decor and distribute spawns.
+        scene_pan_step_fraction and click_action can be applied live.
+        """
+        needs_rebuild = False
+        # scene_width_factor
+        if "scene_width_factor" in options:
+            try:
+                new_val = max(1, int(options["scene_width_factor"]))
+                old_val = int(getattr(self.settings, "scene_width_factor", new_val))
+                if new_val != old_val:
+                    self.settings.scene_width_factor = new_val  # type: ignore[assignment]
+                    needs_rebuild = True
+            except Exception:
+                pass
+        # scene_pan_step_fraction
+        if "scene_pan_step_fraction" in options:
+            try:
+                v = float(options["scene_pan_step_fraction"])  # expects 0.0..1.0
+                # Clamp to sane range
+                v = max(0.01, min(1.0, v))
+                self.settings.scene_pan_step_fraction = v  # type: ignore[assignment]
+            except Exception:
+                pass
+        # click_action
+        if "click_action" in options:
+            try:
+                val = str(options["click_action"]).lower()
+                if val not in ("hook", "feed"):
+                    val = "hook"
+                self.settings.click_action = val  # type: ignore[assignment]
+            except Exception:
+                pass
+        # If scene width changed, clamp offset to new max now to avoid out-of-range
+        if needs_rebuild and self.app is not None and self.screen is not None:
+            try:
+                scene_w = int(getattr(self.settings, "scene_width", self.screen.width))
+                max_off = max(0, scene_w - self.screen.width)
+                off = int(getattr(self.settings, "scene_offset", 0))
+                off = max(0, min(max_off, off))
+                setattr(self.settings, "scene_offset", off)
+            except Exception:
+                pass
         return needs_rebuild
 
     def _apply_special_weights(self, options: dict) -> None:
