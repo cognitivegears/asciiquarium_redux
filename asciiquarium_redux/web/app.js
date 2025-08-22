@@ -453,6 +453,13 @@ function recomputeFontAndGrid() {
         maxEl.value = String(maxVal);
       }
     }
+    // If font size sliders are adjusted, disable auto font
+    if (id === "ui_font_min_size" || id === "ui_font_max_size") {
+      const fa = document.getElementById("font_auto");
+      if (fa && fa.checked) {
+        fa.checked = false;
+      }
+    }
     const opts = collectOptionsFromUI();
       const pyOpts = window.pyodide.toPy(opts);
       try {
@@ -470,10 +477,21 @@ function recomputeFontAndGrid() {
   el.addEventListener("change", handler);
 });
 
-// Turn test button: ask backend to turn a random fish (same as pressing 't')
-document.getElementById("turn_test")?.addEventListener("click", () => {
-  window.pyodide?.runPython(`web_backend.web_app.on_key("t")`);
-});
+// Grey-out scene controls when fish tank is enabled
+function applyFishTankDisableState() {
+  const ft = document.getElementById("fish_tank");
+  const disabled = !!ft?.checked;
+  const ids = ["scene_width_factor","scene_pan_step_fraction","fish_tank_margin"];
+  ids.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) {
+      el.disabled = disabled;
+    }
+  });
+}
+document.getElementById("fish_tank")?.addEventListener("change", applyFishTankDisableState);
+document.addEventListener("DOMContentLoaded", applyFishTankDisableState);
+
 
 document.getElementById("reset").addEventListener("click", () => location.reload());
 

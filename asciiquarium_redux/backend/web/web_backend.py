@@ -345,8 +345,9 @@ class WebApp:
         scene_pan_step_fraction and click_action can be applied live.
         """
         needs_rebuild = False
+        fish_tank_enabled = bool(getattr(self.settings, "fish_tank", False))
         # scene_width_factor
-        if "scene_width_factor" in options:
+        if "scene_width_factor" in options and not fish_tank_enabled:
             try:
                 new_val = max(1, int(options["scene_width_factor"]))
                 old_val = int(getattr(self.settings, "scene_width_factor", new_val))
@@ -356,7 +357,7 @@ class WebApp:
             except Exception:
                 pass
         # scene_pan_step_fraction
-        if "scene_pan_step_fraction" in options:
+        if "scene_pan_step_fraction" in options and not fish_tank_enabled:
             try:
                 v = float(options["scene_pan_step_fraction"])  # expects 0.0..1.0
                 # Clamp to sane range

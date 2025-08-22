@@ -37,6 +37,7 @@ body {
 .field input[type="text"], .field select { width: 150px; padding: 6px 8px; border: 1px solid #004a5e; border-radius: 6px; background: #001c24; color: #e6f7ff; }
 .field input[type="range"] { width: 160px; }
 .field input[type="checkbox"] { width: 18px; height: 18px; accent-color: #20b8d4; }
+.field:has(input:disabled), .field:has(select:disabled) { opacity: 0.6; }
 .weights-grid { display: grid; grid-template-columns: 1fr; gap: 6px; }
 .weights-grid .subheader { grid-column: 1 / -1; margin: 4px 0 0; font-size: 12px; color: #9fdbe2; }
 .actions { display: flex; gap: 8px; }
@@ -62,5 +63,5 @@ body {
 }
 
 @media (min-width: 1100px) {
-  .weights-grid { grid-template-columns: 1fr 1fr; }
+  .weights-grid { grid-template-columns: 1fr 1fr; column-gap: 28px; }
 }

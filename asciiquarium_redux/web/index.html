@@ -23,11 +23,13 @@
     <form class="control-form" method="dialog" onsubmit="return false;">
       <div class="dialog-head">
         <h2>Settings</h2>
-        <button id="closeSettings" class="close" value="cancel" aria-label="Close">×</button>
+        <div class="actions">
+          <button id="reset" type="button">Reset</button>
+          <button id="closeSettings" class="close" value="cancel" aria-label="Close">×</button>
+        </div>
       </div>
       <section class="group">
         <h3>Basics</h3>
-        <div class="field"><label for="fps">FPS</label><input class="opt" id="fps" type="range" min="5" max="60" value="24"></div>
         <div class="field"><label for="speed">Speed</label><input class="opt" id="speed" type="range" min="0.1" max="3.0" step="0.05" value="0.75"></div>
         <div class="field"><label for="density">Density</label><input class="opt" id="density" type="range" min="0.1" max="5.0" step="0.1" value="1.0"></div>
         <div class="field"><label for="color">Color</label>
@@ -38,22 +40,26 @@
             <option value="256">256</option>
           </select>
         </div>
-        <div class="field"><label for="seed">Seed</label><input class="opt" id="seed" type="text" placeholder="random"></div>
         <div class="field"><label for="chest">Treasure chest</label><input class="opt" id="chest" type="checkbox" checked></div>
         <div class="field"><label for="castle">Castle</label><input class="opt" id="castle" type="checkbox" checked></div>
-        <div class="field"><label for="turn">Fish turning</label><input class="opt" id="turn" type="checkbox" checked></div>
         <div class="field"><label for="click_action">Click action</label>
           <select class="opt" id="click_action">
             <option value="hook" selected>hook</option>
             <option value="feed">feed</option>
           </select>
         </div>
-  <div class="field"><label for="ai_enabled">AI behavior</label><input class="opt" id="ai_enabled" type="checkbox" checked></div>
-  <div class="field"><button id="turn_test" type="button">Turn a fish now</button></div>
   <div class="field"><label for="font_auto">Auto font (fit castle)</label><input class="opt" id="font_auto" type="checkbox" checked></div>
   <div class="field"><label for="ui_font_min_size">Font min size (px)</label><input class="opt" id="ui_font_min_size" type="range" min="6" max="72" step="1" value="10"></div>
   <div class="field"><label for="ui_font_max_size">Font max size (px)</label><input class="opt" id="ui_font_max_size" type="range" min="6" max="72" step="1" value="22"></div>
       </section>
+
+      <details class="group">
+        <summary>Other Options</summary>
+        <div class="field"><label for="fps">FPS</label><input class="opt" id="fps" type="range" min="5" max="60" value="24"></div>
+        <div class="field"><label for="turn">Fish turning</label><input class="opt" id="turn" type="checkbox" checked></div>
+        <div class="field"><label for="ai_enabled">AI behavior</label><input class="opt" id="ai_enabled" type="checkbox" checked></div>
+        <div class="field"><label for="seed">Seed</label><input class="opt" id="seed" type="text" placeholder="random"></div>
+      </details>
 
       <details class="group">
         <summary>Fish</summary>
@@ -70,14 +76,14 @@
         <div class="field"><label for="seaweed_sway_max">Sway max</label><input class="opt" id="seaweed_sway_max" type="range" min="0.1" max="1.5" step="0.01" value="0.5"></div>
       </details>
 
-      <details class="group">
-        <summary>Scene</summary>
-        <div class="field"><label for="waterline_top">Waterline top (row)</label><input class="opt" id="waterline_top" type="range" min="2" max="20" step="1" value="5"></div>
+    <details class="group">
+    <summary>Scene</summary>
+  <div class="field"><label for="fish_tank">Fish tank mode</label><input class="opt" id="fish_tank" type="checkbox" checked></div>
   <div class="field"><label for="scene_width_factor">Scene width (× screen)</label><input class="opt" id="scene_width_factor" type="range" min="1" max="10" step="1" value="5"></div>
   <div class="field"><label for="scene_pan_step_fraction">Pan step (% of screen)</label><input class="opt" id="scene_pan_step_fraction" type="range" min="5" max="100" step="5" value="20"></div>
-        <div class="field"><label for="chest_burst_seconds">Chest burst (s)</label><input class="opt" id="chest_burst_seconds" type="range" min="10" max="300" step="5" value="60"></div>
-  <div class="field"><label for="fish_tank">Fish tank mode</label><input class="opt" id="fish_tank" type="checkbox" checked></div>
-  <div class="field"><label for="fish_tank_margin">Fish tank margin (cols)</label><input class="opt" id="fish_tank_margin" type="range" min="0" max="20" step="1" value="0"></div>
+   <div class="field"><label for="fish_tank_margin">Fish tank margin (cols)</label><input class="opt" id="fish_tank_margin" type="range" min="0" max="20" step="1" value="0"></div>
+    <div class="field"><label for="waterline_top">Waterline top (row)</label><input class="opt" id="waterline_top" type="range" min="2" max="20" step="1" value="5"></div>
+    <div class="field"><label for="chest_burst_seconds">Chest burst (s)</label><input class="opt" id="chest_burst_seconds" type="range" min="10" max="300" step="5" value="60"></div>
       </details>
 
       <details class="group">
@@ -111,7 +117,7 @@
         <div class="field"><label for="fishhook_dwell_seconds">Hook dwell (s)</label><input class="opt" id="fishhook_dwell_seconds" type="range" min="2" max="60" step="1" value="20.0"></div>
       </details>
 
-      <div class="actions"><button id="reset" type="button">Reset</button></div>
+  <!-- Reset moved to header -->
     </form>
   </dialog>
 
