@@ -1,0 +1,37 @@
+name: Purge Cloudflare cache
+
+on:
+  push:
+    branches: [ gh-pages ]
+  workflow_dispatch:
+    inputs:
+      zone_id:
+        description: 'Cloudflare Zone ID (optional override)'
+        required: false
+      domain:
+        description: 'Domain to purge (informational)'
+        required: false
+
+jobs:
+  purge:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Purge cache via Cloudflare API
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ZONE_ID_SECRET: ${{ secrets.CF_ZONE_ID }}
+          CF_ZONE_ID_INPUT: ${{ inputs.zone_id }}
+        run: |
+          set -euo pipefail
+          CF_ZONE_ID="${CF_ZONE_ID_INPUT:-}"
+          if [ -z "$CF_ZONE_ID" ]; then CF_ZONE_ID="${CF_ZONE_ID_SECRET:-}"; fi
+          if [ -z "${CF_API_TOKEN:-}" ] || [ -z "${CF_ZONE_ID:-}" ]; then
+            echo "CF_API_TOKEN and CF_ZONE_ID secrets are required" >&2
+            exit 1
+          fi
+          echo "Purging Cloudflare cache for zone ${CF_ZONE_ID}..."
+          curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/purge_cache" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" \
+            -H 'Content-Type: application/json' \
+            --data '{"purge_everything":true}'
+          echo "Purge requested."

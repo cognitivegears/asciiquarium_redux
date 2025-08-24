@@ -1,0 +1,51 @@
+name: Cloudflare DNS Upsert (CNAME for GitHub Pages)
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: 'Record name (e.g., ascifi.sh or www)'
+        required: true
+      content:
+        description: 'CNAME target (e.g., cognitivegears.github.io)'
+        required: true
+      proxied:
+        description: 'Enable Cloudflare proxy (orange cloud)? true/false'
+        required: false
+        default: 'true'
+
+jobs:
+  upsert:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install jq
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y jq
+      - name: Upsert DNS record
+        env:
+          CF_API_TOKEN: ${{ secrets.CF_API_TOKEN }}
+          CF_ZONE_ID: ${{ secrets.CF_ZONE_ID }}
+          REC_NAME: ${{ inputs.name }}
+          REC_CONTENT: ${{ inputs.content }}
+          REC_PROXIED: ${{ inputs.proxied }}
+        run: |
+          set -euo pipefail
+          if [ -z "${CF_API_TOKEN:-}" ] || [ -z "${CF_ZONE_ID:-}" ]; then
+            echo "CF_API_TOKEN and CF_ZONE_ID secrets are required" >&2
+            exit 1
+          fi
+          # Find existing record ID
+          rec_id=$(curl -fsS -X GET "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records?type=CNAME&name=${REC_NAME}" \
+            -H "Authorization: Bearer ${CF_API_TOKEN}" -H 'Content-Type: application/json' | jq -r '.result[0].id // empty')
+          body=$(jq -n --arg type CNAME --arg name "$REC_NAME" --arg content "$REC_CONTENT" --argjson proxied $( [ "${REC_PROXIED}" = "true" ] && echo true || echo false ) '{type:$type,name:$name,content:$content,proxied:$proxied,ttl:1}')
+          if [ -n "${rec_id:-}" ]; then
+            echo "Updating existing DNS record ${rec_id}..."
+            curl -fsS -X PATCH "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records/${rec_id}" \
+              -H "Authorization: Bearer ${CF_API_TOKEN}" -H 'Content-Type: application/json' --data "$body" >/dev/null
+          else
+            echo "Creating DNS record..."
+            curl -fsS -X POST "https://api.cloudflare.com/client/v4/zones/${CF_ZONE_ID}/dns_records" \
+              -H "Authorization: Bearer ${CF_API_TOKEN}" -H 'Content-Type: application/json' --data "$body" >/dev/null
+          fi
+          echo "Done."

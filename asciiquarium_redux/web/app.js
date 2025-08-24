@@ -117,10 +117,21 @@ function loop(now) {
 }
 
 async function boot() {
-  // Register service worker for PWA (HTTPS/localhost only)
+  // Register service worker for PWA (HTTPS/localhost only). Append a version
+  // from wheels/manifest.json so CDNs/proxies (e.g., Cloudflare) pick up updates deterministically.
   if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
     try {
-      await navigator.serviceWorker.register('./service-worker.js');
+      let swUrl = './service-worker.js';
+      try {
+        const r = await fetch('./wheels/manifest.json', { cache: 'no-store' });
+        if (r.ok) {
+          const m = await r.json();
+          if (m && m.wheel) {
+            swUrl += `?v=${encodeURIComponent(String(m.wheel))}`;
+          }
+        }
+      } catch {}
+      await navigator.serviceWorker.register(swUrl);
       console.log('Service worker registered');
     } catch (err) {
       console.warn('Service worker registration failed', err);
