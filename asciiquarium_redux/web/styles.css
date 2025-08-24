@@ -17,6 +17,8 @@ body {
 .hero .tag { padding: 2px 8px; border-radius: 10px; background: #003746; color: #66f3ff; font-size: 12px; }
 .links a { color: #9fdbe2; text-decoration: none; border: 1px solid #004a5e; padding: 6px 10px; border-radius: 6px; background: #001c24; }
 .links a:hover { background: #003241; color: #66f3ff; }
+.install-btn { margin-right: 8px; padding: 6px 10px; border: 1px solid #2b4fa8; border-radius: 6px; background: #0b3d91; color: #e6f7ff; cursor: pointer; }
+.install-btn:hover { background: #0d47a1; }
 .settings-btn { margin-right: 8px; padding: 6px 10px; border: 1px solid #005e75; border-radius: 6px; background: #003746; color: #66f3ff; cursor: pointer; }
 .settings-btn:hover { background: #004353; }
 .controls::backdrop { background: rgba(0,0,0,0.55); }

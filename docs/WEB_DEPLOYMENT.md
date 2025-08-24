@@ -125,6 +125,13 @@ The web interface ([`index.html`](../asciiquarium_redux/web/index.html)) include
 
 ## GitHub Pages Deployment
 
+### PWA notes
+
+- The web frontend is an installable PWA using `manifest.webmanifest` and a `service-worker.js` at the web root.
+- Cache busting: bump `CACHE_VERSION` in `asciiquarium_redux/web/service-worker.js` when you change the web shell (HTML/CSS/JS) to force updates.
+- Test locally on `localhost` (service workers are allowed): `uv run python main.py --backend web --open`. Inspect DevTools → Application → Service Workers.
+- After first online visit, the aquarium starts offline using the cached shell; dynamic CDN/PyPI resources use network when available.
+
 ### Automatic Deployment
 
 The project uses GitHub Actions for automatic deployment to GitHub Pages:

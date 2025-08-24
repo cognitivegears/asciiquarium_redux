@@ -4,6 +4,12 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Asciiquarium Redux (Web)</title>
+  <meta name="theme-color" content="#0b3d91" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <!-- iOS PWA support -->
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
@@ -13,6 +19,7 @@
       <span class="tag">Web (WASM)</span>
     </div>
     <nav class="links">
+      <button id="installBtn" class="install-btn" type="button" aria-label="Install Asciiquarium app" hidden>Install App</button>
       <button id="settingsBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="settingsDialog">Settings</button>
   <button id="aboutBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="aboutDialog">About</button>
       <a class="repo" href="https://github.com/cognitivegears/asciiquarium_redux" target="_blank" rel="noopener noreferrer" title="Repository">GitHub</a>

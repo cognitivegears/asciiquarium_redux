@@ -10,6 +10,7 @@ const aboutDialog = document.getElementById("aboutDialog");
 const closeAbout = document.getElementById("closeAbout");
 const aboutContent = document.getElementById("aboutContent");
 const closeSettings = document.getElementById("closeSettings");
+const installBtn = document.getElementById("installBtn");
 const ctx2d = canvas.getContext("2d", { alpha: false, desynchronized: true });
 const FONT_FAMILY = "Menlo, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
 const state = { cols: 120, rows: 40, cellW: 12, cellH: 18, baseline: 4, fps: 24, running: false, drawFontSizePx: 16 };
@@ -116,6 +117,16 @@ function loop(now) {
 }
 
 async function boot() {
+  // Register service worker for PWA (HTTPS/localhost only)
+  if ('serviceWorker' in navigator && (location.protocol === 'https:' || location.hostname === 'localhost')) {
+    try {
+      await navigator.serviceWorker.register('./service-worker.js');
+      console.log('Service worker registered');
+    } catch (err) {
+      console.warn('Service worker registration failed', err);
+    }
+  }
+
   const pyodide = await window.loadPyodide({ indexURL: "https://cdn.jsdelivr.net/pyodide/v0.25.1/full/" });
   window.pyodide = pyodide;
   await pyodide.loadPackage("micropip");
@@ -507,6 +518,40 @@ document.querySelectorAll('.controls details.group').forEach((d) => {
 });
 
 boot();
+
+// Install (A2HS) flow
+let deferredPrompt = null;
+window.addEventListener('beforeinstallprompt', (e) => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (installBtn) installBtn.hidden = false;
+});
+installBtn?.addEventListener('click', async () => {
+  if (!deferredPrompt) return;
+  installBtn.hidden = true;
+  deferredPrompt.prompt();
+  try {
+    await deferredPrompt.userChoice;
+  } catch {}
+  deferredPrompt = null;
+});
+window.addEventListener('appinstalled', () => {
+  if (installBtn) installBtn.hidden = true;
+});
+
+// iOS A2HS hint when not supported and not already standalone
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
+}
+document.addEventListener('DOMContentLoaded', () => {
+  const isiOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+  if (isiOS && !isStandalone() && installBtn) {
+    installBtn.hidden = false;
+    installBtn.textContent = 'Add to Home Screen';
+    installBtn.title = 'Open Share and use “Add to Home Screen”';
+    installBtn.addEventListener('click', () => alert('On iOS: open the Share menu and tap “Add to Home Screen”.'));
+  }
+});
 
 // Very small markdown renderer (headings, code blocks, inline code, paragraphs, links, lists)
 function renderMarkdownBasic(md) {
