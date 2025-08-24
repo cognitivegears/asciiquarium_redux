@@ -80,6 +80,7 @@ Author:
 See Also:
     - Original Asciiquarium: https://robobunny.com/projects/asciiquarium/
     - GitHub Repository: https://github.com/cognitivegears/asciiquarium_redux
+    - Live site: https://ascifi.sh/
     - Documentation: https://cognitivegears.github.io/asciiquarium_redux/
 """
 

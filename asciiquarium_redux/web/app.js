@@ -274,7 +274,11 @@ v
       }
       if (!md) throw new Error('README not found');
       // Minimal markdown to HTML converter for headings, lists, code blocks; keep it simple
-      const html = renderMarkdownBasic(md);
+  // Remove the top "Live demo" badge/link row and hide live-site links from the in-app About
+  md = md.replace(/\[!\[[^\]]*\]\([^)]*\)\s*\[!\[[^\]]*\]\([^)]*\)\s*\[!\[[^\]]*\]\([^)]*\).*\n/, '');
+  // Drop any lines that directly advertise the hosted web link to avoid redundant/looping links in the dialog
+  md = md.split(/\r?\n/).filter(line => !(/ascifi\.sh\/?/i.test(line) || /cognitivegears\.github\.io\/asciiquarium_redux\/?/i.test(line))).join('\n');
+  const html = renderMarkdownBasic(md);
       aboutContent.innerHTML = html;
       aboutLoaded = true;
     } catch (e) {

@@ -1,6 +1,6 @@
 # Asciiquarium Redux 🐠
 
-[![PyPI version](https://img.shields.io/pypi/v/asciiquarium-redux.svg)](https://pypi.org/project/asciiquarium-redux/) [![Live demo](https://img.shields.io/badge/web%20demo-open-0aaac0?logo=githubpages&logoColor=white)](https://cognitivegears.github.io/asciiquarium_redux/) [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/) [![CI](https://github.com/cognitivegears/asciiquarium_redux/actions/workflows/ci.yml/badge.svg)](https://github.com/cognitivegears/asciiquarium_redux/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/cognitivegears/asciiquarium_redux.svg)](LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/asciiquarium-redux.svg)](https://pypi.org/project/asciiquarium-redux/) [![Live demo](https://img.shields.io/badge/web%20demo-ascifi.sh-0aaac0?logo=icloud&logoColor=white)](https://ascifi.sh/) [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/) [![CI](https://github.com/cognitivegears/asciiquarium_redux/actions/workflows/ci.yml/badge.svg)](https://github.com/cognitivegears/asciiquarium_redux/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/cognitivegears/asciiquarium_redux.svg)](LICENSE)
 
 A joyful, colorful Python reimagining of the classic terminal aquarium. Watch fish swim, seaweed sway, hooks drop, sharks prowl, and bubbles pop—right in your terminal or a windowed Tk screen.
 
@@ -8,7 +8,9 @@ Original Asciiquarium by Kirk Baucom (Perl): [robobunny.com/projects/asciiquariu
 
 Status: Playable, configurable, and window-ready (Tk). Bring your own snacks (for the ducks).
 
-👉 Try it in your browser (no install): [Live web version](https://cognitivegears.github.io/asciiquarium_redux/)
+👉 Try it in your browser (no install): [ascifi.sh](https://ascifi.sh/) (primary)
+
+Secondary (direct GitHub Pages): <https://cognitivegears.github.io/asciiquarium_redux/>
 
 ![Preview – Asciiquarium Redux](docs/screenshot.png)
 
@@ -132,6 +134,12 @@ Option A — one-click from VS Code
 1) Use the provided task: “Deploy web to GitHub Pages”. It creates (or overwrites) a `gh-pages` branch with the contents of `asciiquarium_redux/web/` and pushes it to `origin`.
 2) In your GitHub repo Settings → Pages, choose “Branch: gh-pages / root”.
 3) Visit <https://USERNAME.github.io/REPO/>
+
+Custom domain via Cloudflare (optional)
+
+- Point your domain (e.g., ascifi.sh) at GitHub Pages with an orange-cloud proxy in Cloudflare. You can proxy/caches from `https://USERNAME.github.io/REPO/` to your apex/root.
+- Add a `CNAME` record to your domain in Cloudflare that targets `USERNAME.github.io` and enable the proxy. In the repo Settings → Pages → Custom domain, set your domain and enable HTTPS.
+- Service worker and PWA assets use relative paths in this repo, so they work under a subpath or a custom domain without changes.
 
 Option B — manual commands (equivalent)
 

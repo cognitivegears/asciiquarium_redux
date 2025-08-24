@@ -12,7 +12,7 @@ This guide covers setting up, running, and deploying the Asciiquarium Redux web 
 
 ## Overview
 
-The web backend allows running Asciiquarium Redux in a browser using WebAssembly (WASM) through Pyodide. The system supports both local development and GitHub Pages deployment.
+The web backend allows running Asciiquarium Redux in a browser using WebAssembly (WASM) through Pyodide. The system supports both local development and GitHub Pages deployment. A production instance is available at <https://ascifi.sh/>.
 
 ## Architecture
 
@@ -128,9 +128,9 @@ The web interface ([`index.html`](../asciiquarium_redux/web/index.html)) include
 ### PWA notes
 
 - The web frontend is an installable PWA using `manifest.webmanifest` and a `service-worker.js` at the web root.
-- Cache busting: bump `CACHE_VERSION` in `asciiquarium_redux/web/service-worker.js` when you change the web shell (HTML/CSS/JS) to force updates.
+- Cache busting: the service worker derives its cache name from `web/wheels/manifest.json` (wheel filename/version). When you deploy a new wheel or update the web shell, the cache key changes and old caches are purged automatically on activation.
 - Test locally on `localhost` (service workers are allowed): `uv run python main.py --backend web --open`. Inspect DevTools → Application → Service Workers.
-- After first online visit, the aquarium starts offline using the cached shell; dynamic CDN/PyPI resources use network when available.
+- After first online visit, the aquarium starts offline using the cached shell; dynamic CDN/PyPI resources use network when available and are cached with a stale‑while‑revalidate strategy.
 
 ### Automatic Deployment
 
@@ -175,6 +175,18 @@ cp out/index.html out/404.html
 | **Update Method** | Rebuild wheel + restart server | Push to main branch |
 | **Installation** | [`app.js`](../asciiquarium_redux/web/app.js) loads local wheel | [`app.js`](../asciiquarium_redux/web/app.js) installs from PyPI |
 | **Performance** | Faster (pre-built wheel) | Slower initial load |
+
+## Custom domain and CDN/proxy (Cloudflare)
+
+You can serve the GitHub Pages site at a custom domain such as `https://ascifi.sh/` behind Cloudflare for caching and TLS termination.
+
+- In GitHub → Settings → Pages, set your Custom domain to your apex (e.g., `ascifi.sh`) and enable Enforce HTTPS.
+- In Cloudflare DNS, add a proxied CNAME from your apex (or `www`) to `USERNAME.github.io` (orange cloud enabled).
+- Optionally, configure a Page Rule/Redirect to map `https://ascifi.sh/*` → `https://USERNAME.github.io/REPO/$1` if serving from a project page.
+- This repo uses relative URLs for all PWA assets (`./manifest.webmanifest`, `./service-worker.js`, icons), so the app works under either a subpath (`/REPO/`) or the apex domain without path rewrites.
+- The service worker chooses a versioned cache name derived from the local `wheels/manifest.json` so updates roll out cleanly across domains.
+
+Tip: If you change the shell files (`index.html`, `app.js`, `styles.css`, `manifest.webmanifest`), a shift‑refresh will bypass Cloudflare’s edge cache. You can also purge cache in Cloudflare after a deployment if users report stale assets.
 
 ## Configuration
 
@@ -239,18 +251,20 @@ asciiquarium-redux web --port 8080
 #### Package Not Loading in Browser
 
 1. **Check wheel build**:
-   ```bash
-   ls -la dist/
-   # Should show asciiquarium_redux-*.whl files
-   ```
 
-2. **Verify wheel copying**:
-   ```bash
-   ls -la asciiquarium_redux/web/wheels/
-   # Should show asciiquarium_redux-latest.whl and manifest.json
-   ```
+  ```bash
+  ls -la dist/
+  # Should show asciiquarium_redux-*.whl files
+  ```
 
-3. **Check browser console** for Pyodide loading errors
+1. **Verify wheel copying**:
+
+  ```bash
+  ls -la asciiquarium_redux/web/wheels/
+  # Should show asciiquarium_redux-latest.whl and manifest.json
+  ```
+
+1. **Check browser console** for Pyodide loading errors
 
 #### GitHub Pages Deployment Failing
 
@@ -277,7 +291,7 @@ location.reload();
 
 ## Security Considerations
 
-### Local Development
+### Local Development (performance)
 
 - Server binds to `127.0.0.1` (localhost only)
 - No authentication required for development
@@ -292,7 +306,7 @@ location.reload();
 
 ## Performance Optimization
 
-### Local Development
+### Local Development (security)
 
 - **Wheel caching**: Server only updates wheels when file changes
 - **Static serving**: Direct file serving with appropriate MIME types

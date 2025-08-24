@@ -80,7 +80,8 @@ self.addEventListener('fetch', (event) => {
   const { request } = event;
   const url = new URL(request.url);
   // Special-case icons: serve embedded placeholders if not present on disk
-  if (url.origin === location.origin && url.pathname.startsWith('/icons/') && url.pathname.match(/icon-(192|512|maskable-512)\.png$/)) {
+  // Allow icons to be under any base path (root or project pages); match by segment and filename
+  if (url.origin === location.origin && url.pathname.includes('/icons/') && url.pathname.match(/icon-(192|512|maskable-512)\.png$/)) {
     event.respondWith((async () => {
       const cache = await openVersionedCache();
       const cached = await cache.match(request);
@@ -136,19 +137,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // App shell static: cache-first
+  // App shell static: stale-while-revalidate (serves cached immediately, refreshes in background)
   if (APP_SHELL.some((p) => url.pathname.endsWith(p.replace('./', '/')))) {
     event.respondWith((async () => {
       const cache = await openVersionedCache();
       const cached = await cache.match(request);
-      if (cached) return cached;
-      try {
-        const resp = await fetch(request);
+      const fetchPromise = fetch(request).then((resp) => {
         cache.put(request, resp.clone());
         return resp;
-      } catch (e) {
-        return cached || Response.error();
-      }
+      }).catch(() => undefined);
+      return cached || fetchPromise || fetch(request);
     })());
     return;
   }
