@@ -1,6 +1,35 @@
-/* Simple, versioned service worker for Asciiquarium Redux (GitHub Pages scope: ./) */
-const CACHE_VERSION = 'v1';
-const CACHE_NAME = `asciiquarium-cache-${CACHE_VERSION}`;
+/* Simple, versioned service worker for Asciiquarium Redux (GitHub Pages scope: ./)
+ * Cache name is derived dynamically from wheels/manifest.json so you don't
+ * need to edit this file to bump versions. It keys to the current wheel version.
+ */
+const CACHE_PREFIX = 'asciiquarium-cache-';
+let cacheNamePromise = null; // Promise<string>
+
+async function resolveCacheName() {
+  try {
+    const resp = await fetch('./wheels/manifest.json', { cache: 'no-store' });
+    if (resp.ok) {
+      const m = await resp.json();
+      const wheel = String(m.wheel || 'asciiquarium_redux-latest.whl');
+      // Try to extract version from filename e.g. asciiquarium_redux-0.6.0-py3-none-any.whl
+      const match = wheel.match(/asciiquarium[_-]redux-([^-/]+)-/i);
+      const ver = match?.[1] || 'latest';
+      return `${CACHE_PREFIX}${ver}`;
+    }
+  } catch {}
+  // Fallback to a date-based cache to avoid permanent staleness
+  return `${CACHE_PREFIX}${new Date().toISOString().slice(0, 10)}`;
+}
+
+function getCacheNamePromise() {
+  if (!cacheNamePromise) cacheNamePromise = resolveCacheName();
+  return cacheNamePromise;
+}
+
+async function openVersionedCache() {
+  const name = await getCacheNamePromise();
+  return caches.open(name);
+}
 const APP_SHELL = [
   './',
   './index.html',
@@ -24,15 +53,21 @@ function transparentPngResponse() {
 
 self.addEventListener('install', (event) => {
   self.skipWaiting();
-  event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)).catch(() => {})
-  );
+  event.waitUntil((async () => {
+    try {
+      const cache = await openVersionedCache();
+      await cache.addAll(APP_SHELL);
+    } catch (e) {
+      // ignore
+    }
+  })());
 });
 
 self.addEventListener('activate', (event) => {
   event.waitUntil((async () => {
+    const current = await getCacheNamePromise();
     const keys = await caches.keys();
-    await Promise.all(keys.map((k) => (k !== CACHE_NAME ? caches.delete(k) : undefined)));
+    await Promise.all(keys.map((k) => (k.startsWith(CACHE_PREFIX) && k !== current ? caches.delete(k) : undefined)));
     await self.clients.claim();
   })());
 });
@@ -47,7 +82,7 @@ self.addEventListener('fetch', (event) => {
   // Special-case icons: serve embedded placeholders if not present on disk
   if (url.origin === location.origin && url.pathname.startsWith('/icons/') && url.pathname.match(/icon-(192|512|maskable-512)\.png$/)) {
     event.respondWith((async () => {
-      const cache = await caches.open(CACHE_NAME);
+      const cache = await openVersionedCache();
       const cached = await cache.match(request);
       if (cached) return cached;
       // Try network first (if actual files exist), else fallback to embedded
@@ -68,7 +103,7 @@ self.addEventListener('fetch', (event) => {
   // Handle jsDelivr Pyodide assets with stale-while-revalidate for offline resilience
   if (url.hostname.includes('cdn.jsdelivr.net') && url.pathname.includes('/pyodide/')) {
     event.respondWith((async () => {
-      const cache = await caches.open(CACHE_NAME);
+      const cache = await openVersionedCache();
       const cached = await cache.match(request);
       const fetchPromise = fetch(request).then((resp) => {
         cache.put(request, resp.clone());
@@ -88,11 +123,11 @@ self.addEventListener('fetch', (event) => {
       try {
         const resp = await fetch(request);
         // Optionally, update cached index.html
-        const cache = await caches.open(CACHE_NAME);
+        const cache = await openVersionedCache();
         cache.put('./index.html', resp.clone());
         return resp;
       } catch (e) {
-        const cache = await caches.open(CACHE_NAME);
+        const cache = await openVersionedCache();
         const cached = await cache.match('./index.html');
         if (cached) return cached;
         return new Response('<h1>Offline</h1>', { headers: { 'Content-Type': 'text/html' }, status: 200 });
@@ -104,7 +139,7 @@ self.addEventListener('fetch', (event) => {
   // App shell static: cache-first
   if (APP_SHELL.some((p) => url.pathname.endsWith(p.replace('./', '/')))) {
     event.respondWith((async () => {
-      const cache = await caches.open(CACHE_NAME);
+      const cache = await openVersionedCache();
       const cached = await cache.match(request);
       if (cached) return cached;
       try {
@@ -120,7 +155,7 @@ self.addEventListener('fetch', (event) => {
 
   // Default strategy: stale-while-revalidate
   event.respondWith((async () => {
-    const cache = await caches.open(CACHE_NAME);
+    const cache = await openVersionedCache();
     const cached = await cache.match(request);
     const fetchPromise = fetch(request).then((resp) => {
       cache.put(request, resp.clone());
