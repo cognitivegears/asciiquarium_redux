@@ -81,7 +81,6 @@ from __future__ import annotations
 
 import random
 import sys
-from .screen_compat import Screen
 
 from .util.settings import load_settings_from_sources
 from .app import run as _run
@@ -124,7 +123,6 @@ def main(argv: list[str] | None = None) -> None:
     if backend == "tk":
         try:
             # Preflight to provide a clearer error if Tk isn't present
-            import tkinter  # type: ignore
             from .backend.tk import run_tk
             run_tk(settings)
             return

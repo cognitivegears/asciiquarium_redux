@@ -52,15 +52,14 @@ from __future__ import annotations
 import random
 import time
 import logging
-from typing import List, Dict, Tuple, Optional, Union, Any, TYPE_CHECKING, cast
+from typing import List, Dict, Tuple, Any, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from .protocols import ScreenProtocol, AsciiQuariumProtocol, SettingsProtocol, ActorProtocol
     from .screen_compat import Screen
 else:
     from .screen_compat import Screen
 
-from .util import sprite_size, draw_sprite, draw_sprite_masked, fill_rect, draw_sprite_masked_with_bg
+from .util import sprite_size, draw_sprite, draw_sprite_masked_with_bg
 from .util.buffer import DoubleBufferedScreen
 from .entities.environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK, waterline_row, CHEST_CLOSED
 from .util.settings import Settings
@@ -923,7 +922,6 @@ class AsciiQuarium:
             mono: Whether to use monochrome rendering mode
         """
         off = int(getattr(self.settings, "scene_offset", 0))
-        from .entities.specials import FishHook  # type: ignore
         for special_actor in list(self.specials):
             # All specials, including FishHook, are treated as scene-space now
             has_x = hasattr(special_actor, "x")
@@ -1174,7 +1172,6 @@ class AsciiQuarium:
         """
         if frames is None:
             frames = random_fish_frames(direction)
-        colour = random.choice(colours)
 
         # Build initial colour mask consistent with frames
         from .entities.core import (
