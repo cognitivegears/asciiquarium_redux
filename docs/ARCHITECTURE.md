@@ -18,37 +18,37 @@ Asciiquarium Redux is a multi-platform ASCII art aquarium simulation built with 
 ┌─────────────────────────────────────────────────────────────┐
 │                    Application Layer                        │
 ├─────────────────────────────────────────────────────────────┤
-│  AsciiQuarium (Main Controller)                            │
-│  - Entity lifecycle management                             │
-│  - Game loop and update logic                             │
-│  - Rendering coordination                                  │
+│  AsciiQuarium (Main Controller)                             │
+│  - Entity lifecycle management                              │
+│  - Game loop and update logic                               │
+│  - Rendering coordination                                   │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                    Entity System                            │
 ├─────────────────────────────────────────────────────────────┤
-│  Core Entities:        Special Entities:                   │
-│  • Fish (swimming)     • Shark (predator)                  │
-│  • Seaweed (static)    • Whale (large)                     │
-│  • Bubble (floating)   • Ship (surface)                    │
-│  • Splat (effects)     • Dolphins (group)                  │
-│                        • Monster (rare)                    │
+│  Core Entities:        Special Entities:                    │
+│  • Fish (swimming)     • Shark (predator)                   │
+│  • Seaweed (static)    • Whale (large)                      │
+│  • Bubble (floating)   • Ship (surface)                     │
+│  • Splat (effects)     • Dolphins (group)                   │
+│                        • Monster (rare)                     │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  Backend Abstraction                       │
+│                  Backend Abstraction                        │
 ├─────────────────────────────────────────────────────────────┤
-│  Screen Interface (Rendering Contract)                     │
-│  - Color management                                        │
-│  - Character positioning                                   │
-│  - Input event handling                                    │
+│  Screen Interface (Rendering Contract)                      │
+│  - Color management                                         │
+│  - Character positioning                                    │
+│  - Input event handling                                     │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                  Platform Backends                         │
+│                  Platform Backends                          │
 ├─────────────────────────────────────────────────────────────┤
 │  Terminal Backend     Web Backend      TkInter Backend      │
 │  - Asciimatics        - WebSocket      - Tkinter Canvas     │
@@ -166,12 +166,12 @@ Configuration Loading → Settings Validation → Backend Selection
         ┌─────────────────────────────────────────────────┐
         │                Game Loop                        │
         ├─────────────────────────────────────────────────┤
-        │  1. Input Processing (events, keys)            │
-        │  2. Entity Updates (physics, AI, lifecycle)    │
-        │  3. Collision Detection (bubbles, hooks)       │
-        │  4. Spawn Management (special entities)        │
-        │  5. Rendering Pipeline (layered drawing)       │
-        │  6. Screen Buffer Swap                         │
+        │  1. Input Processing (events, keys)             │
+        │  2. Entity Updates (physics, AI, lifecycle)     │
+        │  3. Collision Detection (bubbles, hooks)        │
+        │  4. Spawn Management (special entities)         │
+        │  5. Rendering Pipeline (layered drawing)        │
+        │  6. Screen Buffer Swap                          │
         └─────────────────────────────────────────────────┘
                                     ↓
                             Platform-Specific Output

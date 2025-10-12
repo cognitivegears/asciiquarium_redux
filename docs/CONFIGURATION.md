@@ -71,10 +71,10 @@ color = "auto"     # Color mode: "auto", "mono", "16", "256"
 
 ### Settings Reference
 
-| Setting | Type | Default | Range | Description |
-|---------|------|---------|-------|-------------|
-| `fps` | integer | `20` | `5-120` | Target frames per second. Higher values = smoother animation but more CPU usage |
-| `color` | string | `"auto"` | See below | Color palette mode |
+| Setting | Type    | Default  | Range     | Description                                                                     |
+|---------|---------|----------|-----------|---------------------------------------------------------------------------------|
+| `fps`   | integer | `20`     | `5-120`   | Target frames per second. Higher values = smoother animation but more CPU usage |
+| `color` | string  | `"auto"` | See below | Color palette mode                                                              |
 
 ### Color Modes
 
@@ -124,19 +124,19 @@ fish_tank_margin = 0           # Columns from each side considered the glass mar
 
 ### Settings Reference
 
-| Setting | Type | Default | Range | Description |
-|---------|------|---------|-------|-------------|
-| `density` | float | `1.0` | `0.1-5.0` | Scales all entity counts. Higher = more crowded aquarium |
-| `seed` | string/int | `"random"` | Any integer | Random seed for deterministic playback |
-| `speed` | float | `0.75` | `0.1-3.0` | Global time multiplier. Higher = faster movement |
-| `waterline_top` | integer | `5` | `0-20` | Top row of water surface (0 = very top of screen) |
-| `chest_enabled` | boolean | `true` | - | Whether to show treasure chest decoration |
-| `chest_burst_seconds` | float | `60.0` | `10.0-300.0` | Interval between treasure chest bubble bursts |
-| `restock_enabled` | boolean | `true` | - | If true and fish population remains below threshold for `restock_after_seconds`, gently add fish |
-| `restock_after_seconds` | float | `20.0` | `5.0-600.0` | Duration below threshold before restock triggers |
-| `restock_min_fraction` | float | `0.6` | `0.1-1.0` | Threshold fraction of target fish count that defines "low" |
-| `fish_tank` | boolean | `true` | - | Treat scene as a tank; fish turn before reaching side edges |
-| `fish_tank_margin` | integer | `0` | `0-40` | Margin (columns) from each side where fish will turn when `fish_tank` is true |
+| Setting                 | Type       | Default    | Range        | Description                                                                                      |
+|-------------------------|------------|------------|--------------|--------------------------------------------------------------------------------------------------|
+| `density`               | float      | `1.0`      | `0.1-5.0`    | Scales all entity counts. Higher = more crowded aquarium                                         |
+| `seed`                  | string/int | `"random"` | Any integer  | Random seed for deterministic playback                                                           |
+| `speed`                 | float      | `0.75`     | `0.1-3.0`    | Global time multiplier. Higher = faster movement                                                 |
+| `waterline_top`         | integer    | `5`        | `0-20`       | Top row of water surface (0 = very top of screen)                                                |
+| `chest_enabled`         | boolean    | `true`     | -            | Whether to show treasure chest decoration                                                        |
+| `chest_burst_seconds`   | float      | `60.0`     | `10.0-300.0` | Interval between treasure chest bubble bursts                                                    |
+| `restock_enabled`       | boolean    | `true`     | -            | If true and fish population remains below threshold for `restock_after_seconds`, gently add fish |
+| `restock_after_seconds` | float      | `20.0`     | `5.0-600.0`  | Duration below threshold before restock triggers                                                 |
+| `restock_min_fraction`  | float      | `0.6`      | `0.1-1.0`    | Threshold fraction of target fish count that defines "low"                                       |
+| `fish_tank`             | boolean    | `true`     | -            | Treat scene as a tank; fish turn before reaching side edges                                      |
+| `fish_tank_margin`      | integer    | `0`        | `0-40`       | Margin (columns) from each side where fish will turn when `fish_tank` is true                    |
 
 ### Example Configurations
 
@@ -201,12 +201,12 @@ ship = 0.0
 
 ### Spawn Timing
 
-| Setting | Type | Default | Description |
-|---------|------|---------|-------------|
-| `start_delay_min/max` | float | `3.0/8.0` | Initial delay range before first special entity |
-| `interval_min/max` | float | `8.0/20.0` | Time range between subsequent special spawns |
-| `max_concurrent` | integer | `1` | Maximum number of special entities active simultaneously |
-| `cooldown_global` | float | `0.0` | Global cooldown after any special spawns |
+| Setting               | Type    | Default    | Description                                              |
+|-----------------------|---------|------------|----------------------------------------------------------|
+| `start_delay_min/max` | float   | `3.0/8.0`  | Initial delay range before first special entity          |
+| `interval_min/max`    | float   | `8.0/20.0` | Time range between subsequent special spawns             |
+| `max_concurrent`      | integer | `1`        | Maximum number of special entities active simultaneously |
+| `cooldown_global`     | float   | `0.0`      | Global cooldown after any special spawns                 |
 
 ### Spawn Weights
 
@@ -309,14 +309,14 @@ turn_expand_seconds = 0.35 # Duration of expand animation
 
 ### Behavior Settings
 
-| Setting | Type | Default | Range | Description |
-|---------|------|---------|-------|-------------|
-| `direction_bias` | float | `0.5` | `0.0-1.0` | Probability fish spawn moving rightward |
-| `speed_min/max` | float | `0.6/2.5` | `0.1-10.0` | Fish speed range (screen units/second) |
-| `bubble_min/max` | float | `2.0/5.0` | `0.5-30.0` | Time range between bubble generation |
-| `vertical_speed_max` | float | `0.5` | `0.0-10.0` | Clamp on vertical drift speed (rows/sec). Smaller values produce calmer, more horizontal motion |
-| `turn_enabled` | boolean | `true` | - | Whether fish can turn around mid-swim |
-| `turn_chance_per_second` | float | `0.01` | `0.0-1.0` | Probability of initiating turn per second |
+| Setting                  | Type    | Default   | Range      | Description                                                                                     |
+|--------------------------|---------|-----------|------------|-------------------------------------------------------------------------------------------------|
+| `direction_bias`         | float   | `0.5`     | `0.0-1.0`  | Probability fish spawn moving rightward                                                         |
+| `speed_min/max`          | float   | `0.6/2.5` | `0.1-10.0` | Fish speed range (screen units/second)                                                          |
+| `bubble_min/max`         | float   | `2.0/5.0` | `0.5-30.0` | Time range between bubble generation                                                            |
+| `vertical_speed_max`     | float   | `0.5`     | `0.0-10.0` | Clamp on vertical drift speed (rows/sec). Smaller values produce calmer, more horizontal motion |
+| `turn_enabled`           | boolean | `true`    | -          | Whether fish can turn around mid-swim                                                           |
+| `turn_chance_per_second` | float   | `0.01`    | `0.0-1.0`  | Probability of initiating turn per second                                                       |
 
 ### Population Control
 
@@ -429,13 +429,13 @@ shrink_rate_max = 16.0    # Maximum shrink speed
 
 ### Lifecycle Parameters
 
-| Setting | Type | Default | Range | Description |
-|---------|------|---------|-------|-------------|
-| `sway_min/max` | float | `0.18/0.5` | `0.05-2.0` | Sway animation speed (lower = faster sway) |
-| `lifetime_min/max` | float | `25.0/60.0` | `5.0-300.0` | How long seaweed stays alive (seconds) |
-| `regrow_delay_min/max` | float | `4.0/12.0` | `1.0-60.0` | Dormant period before regrowth (seconds) |
-| `growth_rate_min/max` | float | `6.0/12.0` | `1.0-50.0` | Growing speed (screen rows/second) |
-| `shrink_rate_min/max` | float | `8.0/16.0` | `1.0-50.0` | Dying speed (screen rows/second) |
+| Setting                | Type  | Default     | Range       | Description                                |
+|------------------------|-------|-------------|-------------|--------------------------------------------|
+| `sway_min/max`         | float | `0.18/0.5`  | `0.05-2.0`  | Sway animation speed (lower = faster sway) |
+| `lifetime_min/max`     | float | `25.0/60.0` | `5.0-300.0` | How long seaweed stays alive (seconds)     |
+| `regrow_delay_min/max` | float | `4.0/12.0`  | `1.0-60.0`  | Dormant period before regrowth (seconds)   |
+| `growth_rate_min/max`  | float | `6.0/12.0`  | `1.0-50.0`  | Growing speed (screen rows/second)         |
+| `shrink_rate_min/max`  | float | `8.0/16.0`  | `1.0-50.0`  | Dying speed (screen rows/second)           |
 
 ### Seaweed States
 
@@ -491,9 +491,9 @@ Controls interactive fishing hook behavior.
 dwell_seconds = 20.0     # How long hook stays down (seconds)
 ```
 
-| Setting | Type | Default | Range | Description |
-|---------|------|---------|-------|-------------|
-| `dwell_seconds` | float | `20.0` | `5.0-120.0` | Duration hook remains deployed before retracting |
+| Setting         | Type  | Default | Range       | Description                                      |
+|-----------------|-------|---------|-------------|--------------------------------------------------|
+| `dwell_seconds` | float | `20.0`  | `5.0-120.0` | Duration hook remains deployed before retracting |
 
 ### Hook Interaction
 
@@ -537,11 +537,11 @@ When `font_auto` is enabled, the Tk backend adjusts font size on resize within `
 
 ### Backend Selection
 
-| Backend | Description | Best For |
-|---------|-------------|----------|
-| `"terminal"` | Native terminal rendering via Asciimatics | SSH, tmux, standard terminals |
-| `"web"` | Browser-based interface via WebSocket | Remote access, mobile devices |
-| `"tk"` | Desktop GUI window via Tkinter | Standalone desktop application |
+| Backend      | Description                               | Best For                       |
+|--------------|-------------------------------------------|--------------------------------|
+| `"terminal"` | Native terminal rendering via Asciimatics | SSH, tmux, standard terminals  |
+| `"web"`      | Browser-based interface via WebSocket     | Remote access, mobile devices  |
+| `"tk"`       | Desktop GUI window via Tkinter            | Standalone desktop application |
 
 ### Terminal Backend
 
@@ -644,7 +644,7 @@ baseline_avoid = 0.9
 
 Notes
 
-- Fish prefer food flakes; when very hungry and no food is available, larger fish may eat strictly smaller fish. A brief splat effect appears and prey are respawned to keep populations healthy.
+- Fish prefer food flakes; when they are very hungry and no food is available, larger fish may eat strictly smaller fish. A brief splat effect appears and prey are respawned to keep populations healthy.
 
 ## Command-Line Overrides
 

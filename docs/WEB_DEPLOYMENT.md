@@ -106,13 +106,13 @@ The web interface ([`index.html`](../asciiquarium_redux/web/index.html)) include
 
 ### Key Controls
 
-| Control | Function |
-|---------|----------|
-| **FPS** | Animation frame rate (5-60 fps) |
-| **Speed** | Global animation speed multiplier (0.1-3.0x) |
-| **Density** | Entity spawn density (0.1-5.0x) |
-| **Color** | Color mode (auto/mono/16/256) |
-| **Seed** | Random seed for reproducible layouts |
+| Control     | Function                                     |
+|-------------|----------------------------------------------|
+| **FPS**     | Animation frame rate (5-60 fps)              |
+| **Speed**   | Global animation speed multiplier (0.1-3.0x) |
+| **Density** | Entity spawn density (0.1-5.0x)              |
+| **Color**   | Color mode (auto/mono/16/256)                |
+| **Seed**    | Random seed for reproducible layouts         |
 
 ### Keyboard Shortcuts
 
@@ -169,12 +169,12 @@ cp out/index.html out/404.html
 
 ### Production vs Development Differences
 
-| Aspect | Development | Production (GitHub Pages) |
-|--------|-------------|---------------------------|
-| **Package Source** | Local wheel from `dist/` | PyPI package via Pyodide |
-| **Update Method** | Rebuild wheel + restart server | Push to main branch |
-| **Installation** | [`app.js`](../asciiquarium_redux/web/app.js) loads local wheel | [`app.js`](../asciiquarium_redux/web/app.js) installs from PyPI |
-| **Performance** | Faster (pre-built wheel) | Slower initial load |
+| Aspect             | Development                                                    | Production (GitHub Pages)                                       |
+|--------------------|----------------------------------------------------------------|-----------------------------------------------------------------|
+| **Package Source** | Local wheel from `dist/`                                       | PyPI package via Pyodide                                        |
+| **Update Method**  | Rebuild wheel + restart server                                 | Push to main branch                                             |
+| **Installation**   | [`app.js`](../asciiquarium_redux/web/app.js) loads local wheel | [`app.js`](../asciiquarium_redux/web/app.js) installs from PyPI |
+| **Performance**    | Faster (pre-built wheel)                                       | Slower initial load                                             |
 
 ## Custom domain and CDN/proxy (Cloudflare)
 
