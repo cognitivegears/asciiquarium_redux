@@ -1271,7 +1271,7 @@ class AsciiQuarium:
             band_low, band_high = self.settings.fish_y_band
         else:
             band_low, band_high = self._preferred_band_for_height(fish_height)
-        return Fish(
+        fish = Fish(
             frames=frames,
             x=x,
             y=y,
@@ -1287,6 +1287,11 @@ class AsciiQuarium:
             waterline_top=self.settings.waterline_top,
             water_rows=len(WATER_SEGMENTS),
         )
+        try:
+            setattr(fish, 'solid_fish', bool(getattr(self.settings, 'solid_fish', False)))
+        except Exception:
+            pass
+        return fish
 
     def _preferred_band_for_height(self, fish_height: int) -> tuple[float, float]:
         """Return a (low, high) vertical band fraction based on fish size.

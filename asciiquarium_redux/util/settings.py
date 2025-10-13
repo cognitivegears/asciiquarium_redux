@@ -336,6 +336,8 @@ class Settings:
     scene_offset: int = 0
     # Panning step size as a fraction of current screen width (e.g., 0.2 = 20% of screen width)
     scene_pan_step_fraction: float = 0.2
+    # Rendering options
+    solid_fish: bool = False
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
@@ -835,6 +837,8 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--scene-offset", dest="scene_offset", type=int)
     parser.add_argument("--scene-pan-step", dest="scene_pan_step_fraction", type=float)
     parser.set_defaults(fish_tank=None)
+    # Rendering flags
+    parser.add_argument("--solid-fish", dest="solid_fish", action="store_true")
     args = parser.parse_args(argv)
 
     if args.fps is not None:
@@ -884,6 +888,13 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
         s.ui_font_max_size = max(8, min(72, int(args.ui_font_max_size)))
     if s.ui_font_max_size < s.ui_font_min_size:
         s.ui_font_max_size = s.ui_font_min_size
+    # Rendering flags
+    try:
+        if getattr(args, "solid_fish", False):
+            s.solid_fish = True
+    except Exception:
+        pass
+
     try:
         if getattr(args, "web_open", False):
             s.web_open = True

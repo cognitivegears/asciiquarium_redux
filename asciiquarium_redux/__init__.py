@@ -36,7 +36,7 @@ Usage Examples:
     Programmatic API:
         >>> from asciiquarium_redux import AsciiQuarium
         >>> from asciiquarium_redux.util.settings import Settings
-        >>> from asciiquarium_redux.backends.terminal import TerminalScreen
+        >>> from asciiquarium_redux.backend.terminal import TerminalScreen
         >>>
         >>> settings = Settings(fps=30, density=1.5, color="256")
         >>> aquarium = AsciiQuarium(settings)

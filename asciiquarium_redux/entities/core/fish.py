@@ -10,7 +10,7 @@ if TYPE_CHECKING:
 else:
     from ...screen_compat import Screen
 
-from ...util import draw_sprite, draw_sprite_masked, randomize_colour_mask
+from ...util import draw_sprite, draw_sprite_masked, draw_sprite_masked_with_bg, randomize_colour_mask
 from .behavior import BehaviorEngine, ClassicBehaviorEngine, AIBehaviorEngine
 from .fish_assets import (
     FISH_RIGHT,
@@ -637,7 +637,11 @@ class Fish:
             left = (w - vis) // 2
             x_off = left
         if mask is not None:
-            draw_sprite_masked(screen, lines, mask, int(self.x) + x_off, int(self.y), self.colour)
+            if bool(getattr(self, 'solid_fish', False)):
+                # Fill the silhouette row span with the fish base colour first, then draw coloured glyphs
+                draw_sprite_masked_with_bg(screen, lines, mask, int(self.x) + x_off, int(self.y), self.colour, self.colour)
+            else:
+                draw_sprite_masked(screen, lines, mask, int(self.x) + x_off, int(self.y), self.colour)
         else:
             draw_sprite(screen, lines, int(self.x) + x_off, int(self.y), self.colour)
 
