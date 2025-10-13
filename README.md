@@ -192,12 +192,14 @@ Common flags:
 - --color <auto|mono|16|256>: color mode (mono forces white)
 - --seed (int): deterministic RNG seed; omit for random
 - --speed (float): global speed multiplier (default 0.75)
-- --backend <terminal|tk>: choose backend
+- --backend <terminal|tk|web>: choose backend
 - --fullscreen: make Tk window fullscreen
 - --font-min (int): minimum Tk font size bound for auto-resize
 - --font-max (int): maximum Tk font size bound for auto-resize
 - --ai / --no-ai: enable or disable Utility AI behaviors
 - --port (int): web server port for web backend
+- --solid-fish: render fish with opaque silhouettes (fills fish background per row)
+- --start-screen: show a centered title/controls overlay behind the scene for ~5s (shrinks away, optional post-frames)
 
 ## Notes
 

@@ -101,6 +101,20 @@ fps = 60
 color = "256"
 ```
 
+### Visual Toggles
+
+These convenience switches adjust how sprites are drawn or how the app starts up. They can be set via CLI flags or, where noted, via TOML keys.
+
+- solid fish (CLI: `--solid-fish`, Settings: `solid_fish = true`)
+  - Renders fish with an opaque per-row background fill before drawing coloured glyphs.
+  - Effect: fish silhouettes look “solid” instead of letting background show through interior spaces. This is the same as the original Perl script rendering mode.
+  - Only applies when color masks are available; mono mode still draws in white.
+
+- start screen (CLI: `--start-screen`, Settings: `start_screen = true`)
+  - Shows a centered ASCII title and a brief controls guide behind the live scene for ~5 seconds when the app starts.
+  - After the timer expires, the overlay shrinks away by removing one line from the top and bottom each frame.
+  - Optional “after” animation frames can be configured in `[ui]` (see below).
+
 ## Scene Settings
 
 **Section**: `[scene]`
@@ -531,6 +545,21 @@ font_size = 14           # Font size (tk backend only)
 font_auto = true         # Auto-fit font so the castle fits under the waterline
 font_min_size = 10       # Lower bound for auto font sizing
 font_max_size = 22       # Upper bound for auto font sizing
+```
+
+#### Start screen post-animation (optional)
+
+If you enable `--start-screen` (or `start_screen = true`), you can play a short centered text animation after the overlay shrinks away. Configure it in the `[ui]` section:
+
+```toml
+[ui]
+# Each element is a multi-line string; frames are shown centered for the given duration
+start_overlay_after_frames = [
+    "---------------------------------------------",
+    "                ------(O)------              ",
+    "                      (*)                    ",
+]
+start_overlay_after_frame_seconds = 0.08   # Seconds to hold each frame
 ```
 
 When `font_auto` is enabled, the Tk backend adjusts font size on resize within `[font_min_size, font_max_size]` to keep the minimal scene (waterline + water + castle + margin) visible.

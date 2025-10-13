@@ -91,6 +91,13 @@ from .constants import (
     MAX_DELTA_TIME,
 )
 
+# Default post-overlay frames for an "old TV turning off" effect
+DEFAULT_START_OVERLAY_AFTER_FRAMES: list[str] = [
+    "---------------------------------------------",
+    "                ------(O)------              ",
+    "                      (*)                    ",
+]
+
 
 class AsciiQuarium:
     """Main controller class for the ASCII art aquarium simulation.
@@ -605,6 +612,119 @@ class AsciiQuarium:
         """
         self.draw_waterline(screen)
         mono: bool = self.settings.color == "mono"
+
+        # Optional non-blocking start overlay: draw centered behind all entities
+        try:
+            until = float(getattr(self, "_start_overlay_until", 0.0))
+        except Exception:
+            until = 0.0
+        # Shared overlay content
+        title_lines = [
+            r"   _____                .__.__                          .__               ",
+            r"  /  _  \   ______ ____ |__|__| ________ _______ _______|__|__ __  _____  ",
+            r" /  /_\  \ /  ___// ___\|  |  |/ ____/  |  \__  \\_  __ \  |  |  \/     \ ",
+            r"/    |    \\___ \\  \___|  |  ( (_|  |  |  // __ \|  | \/  |  |  /  Y Y  \ ",
+            r"\____|__  /____  )\___  )__|__|\__   |____/(____  /__|  |__|____/|__|_|  /",
+            r"        \/     \/     \/          |__|          \/                     \/ ",
+        ]
+        guide_lines = [
+            "Controls: q quit  p pause/resume  r rebuild  f feed  SPACE fishhook",
+            "Arrows: pan view    Mouse: click to drop/retract hook    h/?: help",
+        ]
+        full_lines = title_lines + [""] + guide_lines
+        w, h = screen.width, screen.height
+        def _center_x(wi: int, s: str) -> int:
+            return max(0, (wi - len(s)) // 2)
+
+        now = time.time()
+        # Phase 1: timer-active (draw full overlay)
+        if until > 0.0 and now < until:
+            art_h = len(title_lines)
+            guide_h = len(guide_lines)
+            block_h = art_h + 1 + guide_h
+            top = max(0, (h - block_h) // 2)
+            for i, line in enumerate(title_lines):
+                screen.print_at(line, _center_x(w, line), top + i, colour=Screen.COLOUR_WHITE)
+            y = top + art_h
+            for j, line in enumerate(guide_lines):
+                screen.print_at(line, _center_x(w, line), y + 1 + j, colour=Screen.COLOUR_WHITE)
+        else:
+            # If just expired, initialize shrink phase once
+            if until > 0.0:
+                self._start_overlay_until = 0.0
+                if not getattr(self, "_start_overlay_shrinking", False):
+                    self._start_overlay_shrinking = True
+                    self._start_overlay_cut_top = 0
+                    self._start_overlay_cut_bot = 0
+
+            # Phase 2: shrinking away line by line from top & bottom
+            if getattr(self, "_start_overlay_shrinking", False):
+                total = len(full_lines)
+                cut_top = int(getattr(self, "_start_overlay_cut_top", 0))
+                cut_bot = int(getattr(self, "_start_overlay_cut_bot", 0))
+                remaining = max(0, total - (cut_top + cut_bot))
+                if remaining > 0:
+                    visible = full_lines[cut_top: total - cut_bot]
+                    block_h = len(visible)
+                    top = max(0, (h - block_h) // 2)
+                    for i, line in enumerate(visible):
+                        if not line:
+                            continue
+                        screen.print_at(line, _center_x(w, line), top + i, colour=Screen.COLOUR_WHITE)
+                    # Advance cuts for next frame
+                    self._start_overlay_cut_top = cut_top + 1
+                    self._start_overlay_cut_bot = cut_bot + 1
+
+                else:
+                    # Transition to post-overlay animation
+                    self._start_overlay_shrinking = False
+                    # Build frames from custom app attribute override or settings
+                    frames_list = getattr(self, "_start_overlay_after_frames", None)
+                    if not frames_list:
+                        raw_frames = getattr(self.settings, "start_overlay_after_frames", [])
+                        if raw_frames:
+                            frames_list = [str(fr).splitlines() for fr in raw_frames]
+                        else:
+                            # Fall back to built-in default TV-off effect
+                            frames_list = [s.splitlines() for s in DEFAULT_START_OVERLAY_AFTER_FRAMES]
+                    if frames_list:
+                        self._start_overlay_after_frames = frames_list
+                        self._start_overlay_after_index = 0
+                        hold = float(getattr(self.settings, "start_overlay_after_frame_seconds", 0.08))
+                        self._start_overlay_after_next_time = now + max(0.0, hold)
+                    else:
+                        # Nothing to play; clear any previous leftovers
+                        self._start_overlay_after_frames = []
+                        self._start_overlay_after_index = 0
+                        self._start_overlay_after_next_time = 0.0
+
+            # Phase 3: play optional post-overlay frames
+            frames = getattr(self, "_start_overlay_after_frames", None)
+            if frames:
+                idx = int(getattr(self, "_start_overlay_after_index", 0))
+                if 0 <= idx < len(frames):
+                    lines = frames[idx]
+                    block_h = len(lines)
+                    top = max(0, (h - block_h) // 2)
+                    for i, line in enumerate(lines):
+                        if not line:
+                            continue
+                        screen.print_at(line, _center_x(w, line), top + i, colour=Screen.COLOUR_WHITE)
+                    # Advance on timer
+                    nxt = float(getattr(self, "_start_overlay_after_next_time", now))
+                    if now >= nxt:
+                        hold = float(getattr(self.settings, "start_overlay_after_frame_seconds", 0.08))
+                        self._start_overlay_after_index = idx + 1
+                        self._start_overlay_after_next_time = now + max(0.0, hold)
+                else:
+                    # Finished playback; clear state
+                    try:
+                        self._start_overlay_after_frames = []
+                        self._start_overlay_after_index = 0
+                        self._start_overlay_after_next_time = 0.0
+                    except Exception:
+                        pass
+
 
         # Draw entities in correct z-order: seaweed → decor → fish → castle → bubbles → specials → splats
         self._render_seaweed(screen, mono)
@@ -1415,6 +1535,14 @@ def run(screen: Screen, settings: Settings):
     """
     app, db, timing_state = _initialize_game_state(screen, settings)
 
+    # Optional start screen
+    try:
+        if bool(getattr(settings, "start_screen", False)):
+            _show_start_screen(screen, app, db, settings, timing_state)
+    except Exception:
+        # Ignore start screen failures and continue into main loop
+        pass
+
     while True:
         timing_state = _update_frame_timing(timing_state, settings)
 
@@ -1459,6 +1587,19 @@ def _initialize_game_state(screen: Screen, settings: Settings) -> tuple[AsciiQua
     }
 
     return app, db, timing_state
+
+
+def _show_start_screen(screen: Screen, app: AsciiQuarium, db: DoubleBufferedScreen, settings: Settings, timing_state: dict) -> None:
+    """Schedule a centered title overlay rendered behind the live scene.
+
+    This function does not block or animate; it simply sets a timeout so that
+    _render_all_entities draws the overlay for a few seconds while the scene begins.
+    """
+    try:
+        app._start_overlay_until = time.time() + 5.0
+    except Exception:
+        pass
+    return
 
 
 def _update_frame_timing(timing_state: dict, settings: Settings) -> dict:
