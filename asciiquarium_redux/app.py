@@ -29,12 +29,10 @@ Usage:
 
 Example:
     >>> from asciiquarium_redux.util.settings import Settings
-    >>> from asciiquarium_redux.backends.terminal import TerminalScreen
+    >>> from asciiquarium_redux.runner import run_with_resize
     >>>
     >>> settings = Settings(fps=30, density=1.5)
-    >>> aquarium = AsciiQuarium(settings)
-    >>> screen = TerminalScreen()
-    >>> aquarium.run(screen)
+    >>> run_with_resize(settings)
 
 Performance:
     The module is optimized for 20-60 FPS animation with hundreds of entities.
@@ -134,13 +132,10 @@ class AsciiQuarium:
 
     Example:
         >>> from asciiquarium_redux.util.settings import Settings
-        >>> from asciiquarium_redux.backends.terminal import TerminalScreen
+        >>> from asciiquarium_redux.runner import run_with_resize
         >>>
         >>> settings = Settings(fps=30, density=1.5, color="256")
-        >>> aquarium = AsciiQuarium(settings)
-        >>> screen = TerminalScreen()
-        >>> aquarium.rebuild(screen)
-        >>> aquarium.run(screen)  # Start the main animation loop
+        >>> run_with_resize(settings)
 
     See Also:
         - Settings: Configuration management for all simulation parameters

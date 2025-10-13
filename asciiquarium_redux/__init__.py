@@ -34,14 +34,11 @@ Usage Examples:
         $ asciiquarium-redux --config custom.toml
 
     Programmatic API:
-        >>> from asciiquarium_redux import AsciiQuarium
         >>> from asciiquarium_redux.util.settings import Settings
-        >>> from asciiquarium_redux.backend.terminal import TerminalScreen
+        >>> from asciiquarium_redux.runner import run_with_resize
         >>>
         >>> settings = Settings(fps=30, density=1.5, color="256")
-        >>> aquarium = AsciiQuarium(settings)
-        >>> screen = TerminalScreen()
-        >>> aquarium.run(screen)
+        >>> run_with_resize(settings)
 
 Package Structure:
     asciiquarium_redux/
