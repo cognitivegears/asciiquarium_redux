@@ -269,6 +269,16 @@ class Fish:
             if behavior.desired_vy is not None:
                 self.vy = float(behavior.desired_vy)
 
+        # Random turning based on turn_chance_per_second (independent of behavior engine)
+        self.next_turn_ok_in -= dt
+        if (self.turn_enabled and
+                self.turn_chance_per_second > 0 and
+                not self.turning and
+                not self.hooked and
+                self.next_turn_ok_in <= 0):
+            if random.random() < (self.turn_chance_per_second * dt):
+                self.start_turn()
+
         # Apply acceleration-limited change toward desired_vx (if set)
         if not self.hooked:
             try:
