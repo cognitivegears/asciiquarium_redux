@@ -13,3 +13,4 @@ wheels/
 asciiquarium_*.png
 
 .DS_Store
+.idea

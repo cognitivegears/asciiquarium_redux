@@ -1,11 +1,10 @@
 from __future__ import annotations
 
-import random
 from dataclasses import dataclass, field
-from typing import List, Any, TYPE_CHECKING
+from typing import List, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from ...protocols import ScreenProtocol, AsciiQuariumProtocol
+    from ...protocols import AsciiQuariumProtocol
     from ...screen_compat import Screen
 else:
     from ...screen_compat import Screen

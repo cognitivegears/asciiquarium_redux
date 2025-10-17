@@ -47,9 +47,7 @@ from typing import Protocol, List, Dict, Optional, Union, Any, runtime_checkable
 
 if TYPE_CHECKING:
     # Forward references to avoid circular imports
-    from .entities.base import Actor
-    from .entities.core import Fish, Seaweed, Bubble, Splat
-    from .util.settings import Settings
+    pass
 
 
 @runtime_checkable

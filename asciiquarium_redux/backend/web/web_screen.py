@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from typing import List, Dict, Any, Optional, Union
-from ...util.types import FlushBatch, ScreenProtocol
+from ...util.types import FlushBatch
 
 # Minimal colour mapping compatible with Screen.COLOUR_* semantics
 COLOUR_TO_HEX: Dict[int, str] = {

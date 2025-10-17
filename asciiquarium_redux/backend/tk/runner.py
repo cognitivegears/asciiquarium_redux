@@ -56,7 +56,6 @@ def run_tk(settings) -> None:
     castle_h = sprite_size(CASTLE)[1]
     tallest_special_h = castle_h  # currently castle is the tallest element we must fit
     min_rows_required = int(getattr(settings, "waterline_top", 5)) + len(WATER_SEGMENTS) + tallest_special_h + 2
-    target_rows = max(rows, min_rows_required)
 
     # Helper to compute a font size given a target max cell height and bounds
     def _pick_font_size(max_cell_h: int, current_size: int) -> int:

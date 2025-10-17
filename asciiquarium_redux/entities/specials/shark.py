@@ -7,7 +7,7 @@ if TYPE_CHECKING:
     from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
 from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked
-from ..core import Splat, Fish
+from ..core import Splat
 from ..base import Actor
 from ...constants import (
     SHARK_SPEED,

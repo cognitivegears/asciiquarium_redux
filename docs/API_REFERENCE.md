@@ -179,12 +179,16 @@ specials_cooldowns: Dict[str, float] = {
 ```
 
 #### UI Configuration
-
 ```python
 ui_backend: str = "terminal"           # Backend: "terminal", "web", "tk"
 ui_cols: int = 120                     # Screen width
 ui_rows: int = 40                      # Screen height
-color: str = "auto"                    # Color mode: "auto", "mono", "color"
+color: str = "auto"                    # Color mode: "auto", "mono", "16", "256"
+solid_fish: bool = False               # CLI: --solid-fish (opaque fish silhouettes)
+start_screen: bool = False             # CLI: --start-screen (centered title/controls overlay)
+# Optional post-overlay animation (played after start_screen shrinks away)
+start_overlay_after_frames: List[str] = []
+start_overlay_after_frame_seconds: float = 0.08
 ```
 
 #### Example Usage

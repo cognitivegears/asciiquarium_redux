@@ -26,10 +26,10 @@ class Vec2:
 
     __rmul__ = __mul__
 
-    def __truediv__(self, k: float) -> "Vec2":
-        if k == 0:
+    def __truediv__(self, divisor: float) -> "Vec2":
+        if divisor == 0:
             return Vec2(0.0, 0.0)
-        return Vec2(self.x / k, self.y / k)
+        return Vec2(self.x / divisor, self.y / divisor)
 
     def dot(self, other: "Vec2") -> float:
         return self.x * other.x + self.y * other.y
@@ -38,16 +38,16 @@ class Vec2:
         return math.hypot(self.x, self.y)
 
     def normalized(self) -> "Vec2":
-        l = self.length()
-        if l <= 1e-6:
+        length = self.length()
+        if length <= 1e-6:
             return Vec2(0.0, 0.0)
-        return self / l
+        return self / length
 
     def clamp_length(self, max_len: float) -> "Vec2":
-        l = self.length()
-        if l <= max_len or l == 0:
+        length = self.length()
+        if length <= max_len or length == 0:
             return self
-        return self * (max_len / l)
+        return self * (max_len / length)
 
     @staticmethod
     def zero() -> "Vec2":

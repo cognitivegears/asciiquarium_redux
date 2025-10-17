@@ -1,14 +1,13 @@
 from __future__ import annotations
 
 from dataclasses import dataclass, field
-from typing import Iterable, Tuple, Optional, Protocol, List
+from typing import Iterable, Tuple, Optional, Protocol
 import random as _random
 from .vector import Vec2
 from .noise import LeakyNoise
 from .steering import (
     SteeringConfig,
     seek,
-    flee,
     align as st_align,
     cohere as st_cohere,
     separate as st_separate,
@@ -202,7 +201,6 @@ class FishBrain:
                 my_species = int(self.sense.species_of(self.fish_id))
             except Exception:
                 my_species = -1
-            peer_id: Optional[int] = None
             peer_pos: Optional[Vec2] = None
             best_d2 = float("inf")
             for nid, p, v in neigh:
@@ -221,7 +219,6 @@ class FishBrain:
                     d2 = (p.x - pos.x) ** 2 + (p.y - pos.y) ** 2
                     if d2 < best_d2:
                         best_d2 = d2
-                        peer_id = nid
                         peer_pos = p
             if peer_pos is not None:
                 components.append((seek(pos, peer_pos, self.config.max_speed), self.chase_gain))

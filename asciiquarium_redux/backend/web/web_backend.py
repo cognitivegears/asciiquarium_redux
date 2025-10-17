@@ -1,5 +1,16 @@
 from __future__ import annotations
 
+import time
+import logging
+from typing import Optional
+
+from ...app import AsciiQuarium
+from ...util.settings import Settings
+from ...entities.specials import FishHook, spawn_fishhook, spawn_fishhook_to, spawn_treasure_chest, spawn_fish_food, spawn_fish_food_at
+from ...entities.specials.treasure_chest import TreasureChest
+from .web_screen import WebScreen
+from ...util.types import FlushHook
+
 """
 Web backend bridge for running in Pyodide (WebAssembly) and drawing to an HTML5 Canvas.
 
@@ -9,17 +20,6 @@ asciimatics APIs and provides a tiny Screen-like surface that our app draws on.
 The JavaScript side should set a flush hook via set_js_flush_hook(fn), where fn
 accepts a list of batches: [{"y": int, "x": int, "text": str, "colour": str}].
 """
-
-import time
-import logging
-from typing import Callable, List, Optional
-
-from ...app import AsciiQuarium
-from ...util.settings import Settings
-from ...entities.specials import FishHook, spawn_fishhook, spawn_fishhook_to, spawn_treasure_chest, spawn_fish_food, spawn_fish_food_at
-from ...entities.specials.treasure_chest import TreasureChest
-from .web_screen import WebScreen
-from ...util.types import FlushHook, FlushBatch
 
 # Rebuild delay constants to coalesce noisy changes
 REBUILD_DELAY_RESIZE = 0.0
@@ -300,8 +300,6 @@ class WebApp:
                                 margin = max(0, int(getattr(self.settings, "fish_tank_margin", 3)))
                                 if ft:
                                     left_limit = 0 + margin
-                                    # Guard in case any fish has width > screen
-                                    right_limit = max(left_limit, self.screen.width - 1)  # default
                                     # Compute per-fish right limit to respect width
                                     for f in list(getattr(self.app, "fish", [])):
                                         try:

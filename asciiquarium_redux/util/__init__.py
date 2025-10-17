@@ -35,7 +35,7 @@ def sprite_size(lines: List[str]) -> Tuple[int, int]:
     """
     if not lines:
         return 0, 0
-    return max(len(l) for l in lines), len(lines)
+    return max(len(line) for line in lines), len(lines)
 
 
 def draw_sprite(screen: "ScreenProtocol", lines: List[str], x: int, y: int, colour: int) -> None:

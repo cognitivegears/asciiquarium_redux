@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
 from ...screen_compat import Screen
 
 from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked

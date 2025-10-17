@@ -8,7 +8,7 @@ and error handling.
 from __future__ import annotations
 
 import logging
-from typing import Dict, Any, Optional, TYPE_CHECKING, Callable, List
+from typing import Dict, TYPE_CHECKING, Callable, List
 from enum import Enum
 from dataclasses import dataclass
 
@@ -207,7 +207,7 @@ def get_available_backends() -> List[BackendType]:
 
     # Check terminal backend
     try:
-        import asciimatics
+        import asciimatics  # noqa: F401
         available.append(BackendType.TERMINAL)
     except ImportError:
         pass
@@ -217,7 +217,7 @@ def get_available_backends() -> List[BackendType]:
 
     # Check TkInter backend
     try:
-        import tkinter
+        import tkinter  # noqa: F401
         available.append(BackendType.TKINTER)
     except ImportError:
         pass

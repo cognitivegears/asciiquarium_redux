@@ -9,7 +9,7 @@ else:
     from ...screen_compat import Screen as ScreenProtocol
 
 from ...util import parse_sprite, draw_sprite, aabb_overlap
-from ..core import Fish, Splat
+from ..core import Splat
 from ..base import Actor
 from ...constants import (
     FISHHOOK_SPEED,
@@ -171,9 +171,9 @@ class FishHook(Actor):
             r"""
        o
       ||
-      ||
+ .    ||
 / \   ||
-  \__//
+ \\__//
   `--'
 """
         )
