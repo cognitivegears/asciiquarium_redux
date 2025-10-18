@@ -1581,19 +1581,6 @@ def _initialize_game_state(screen: Screen, settings: Settings) -> tuple[AsciiQua
     return app, db, timing_state
 
 
-def _show_start_screen(screen: Screen, app: AsciiQuarium, db: DoubleBufferedScreen, settings: Settings, timing_state: dict) -> None:
-    """Schedule a centered title overlay rendered behind the live scene.
-
-    This function does not block or animate; it simply sets a timeout so that
-    _render_all_entities draws the overlay for a few seconds while the scene begins.
-    """
-    try:
-        app._start_overlay_until = time.time() + 5.0
-    except Exception:
-        pass
-    return
-
-
 def _update_frame_timing(timing_state: dict, settings: Settings) -> dict:
     """Update timing calculations for the current frame.
 
