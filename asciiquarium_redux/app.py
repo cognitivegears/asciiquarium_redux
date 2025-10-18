@@ -1402,10 +1402,7 @@ class AsciiQuarium:
             waterline_top=self.settings.waterline_top,
             water_rows=len(WATER_SEGMENTS),
         )
-        try:
-            setattr(fish, 'solid_fish', bool(getattr(self.settings, 'solid_fish', False)))
-        except Exception:
-            pass
+        setattr(fish, 'solid_fish', bool(getattr(self.settings, 'solid_fish', True)))
         return fish
 
     def _preferred_band_for_height(self, fish_height: int) -> tuple[float, float]:
@@ -1535,13 +1532,8 @@ def run(screen: Screen, settings: Settings):
     """
     app, db, timing_state = _initialize_game_state(screen, settings)
 
-    # Optional start screen
-    try:
-        if bool(getattr(settings, "start_screen", False)):
-            _show_start_screen(screen, app, db, settings, timing_state)
-    except Exception:
-        # Ignore start screen failures and continue into main loop
-        pass
+    if bool(getattr(settings, "start_screen", True)):
+        app._start_overlay_until = time.time() + 7.0
 
     while True:
         timing_state = _update_frame_timing(timing_state, settings)
