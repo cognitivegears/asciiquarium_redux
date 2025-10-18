@@ -337,8 +337,8 @@ class Settings:
     # Panning step size as a fraction of current screen width (e.g., 0.2 = 20% of screen width)
     scene_pan_step_fraction: float = 0.2
     # Rendering options
-    solid_fish: bool = False
-    start_screen: bool = False
+    solid_fish: bool = True
+    start_screen: bool = True
     # Optional post-start overlay animation (list of multi-line string frames)
     start_overlay_after_frames: List[str] = field(default_factory=list)
     # Seconds to hold each post-start frame
