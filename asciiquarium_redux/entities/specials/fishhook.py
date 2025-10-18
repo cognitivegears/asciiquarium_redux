@@ -173,8 +173,8 @@ class FishHook(Actor):
       ||
  .    ||
 / \   ||
- \\__//
-  `--'
+ \\__// 
+  `--'  
 """
         )
         draw_sprite(screen, hook, self.x, int(self.y), Screen.COLOUR_WHITE if mono else Screen.COLOUR_GREEN)
