@@ -92,11 +92,6 @@ ygcgwwwww  ygcgwwwww  ygcgwwwww
         self._frame_t = 0.0
         self._frame_dt = 0.25
         self._active = True
-        # Respect solid_fish setting
-        try:
-            self.solid_fish = bool(getattr(getattr(app, "settings", None), "solid_fish", False))
-        except Exception:
-            self.solid_fish = False
 
     @property
     def active(self) -> bool:
