@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import random
-from ...screen_compat import Screen
 from typing import TYPE_CHECKING
+
+from ...screen_compat import Screen
+
 if TYPE_CHECKING:
     from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
-from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked
+from ...util import parse_sprite, sprite_size
 from ..base import Actor
 
 
 class Ducks(Actor):
     def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
+        self.app = app
         self.dir = random.choice([-1, 1])
         self.speed = 10.0 * self.dir
         try:
@@ -89,6 +92,11 @@ ygcgwwwww  ygcgwwwww  ygcgwwwww
         self._frame_t = 0.0
         self._frame_dt = 0.25
         self._active = True
+        # Respect solid_fish setting
+        try:
+            self.solid_fish = bool(getattr(getattr(app, "settings", None), "solid_fish", False))
+        except Exception:
+            self.solid_fish = False
 
     @property
     def active(self) -> bool:
@@ -109,10 +117,15 @@ ygcgwwwww  ygcgwwwww  ygcgwwwww
 
     def draw(self, screen: "ScreenProtocol", mono: bool = False) -> None:
         img = self.frames[self._frame_idx]
-        if mono:
-            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
-        else:
-            draw_sprite_masked(screen, img, self.mask, int(self.x), int(self.y), Screen.COLOUR_YELLOW)
+        self.draw_sprite(
+            self.app,
+            screen,
+            img,
+            self.mask,
+            int(self.x),
+            int(self.y),
+            Screen.COLOUR_YELLOW,
+        )
 
 
 def spawn_ducks(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
