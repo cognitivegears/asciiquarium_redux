@@ -4,7 +4,7 @@ import random
 from typing import TYPE_CHECKING
 from ...screen_compat import Screen
 
-from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked, randomize_colour_mask
+from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked, draw_sprite_masked_with_bg, randomize_colour_mask
 from ..base import Actor
 from ..environment import WATER_SEGMENTS
 
@@ -60,6 +60,7 @@ _BF_W, _BF_H = sprite_size(parse_sprite(SPRITE_RIGHT))
 
 class BigFish(Actor):
   def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
+    self.app = app
     self.dir = random.choice([-1, 1])
     self.speed = 30.0 * (self.dir / abs(self.dir))
 
@@ -139,13 +140,15 @@ class BigFish(Actor):
       self._active = False
 
   def draw(self, screen: "ScreenProtocol", mono: bool = False) -> None:
-    img = self.img
-    if mono:
-      draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
-    else:
-      mask = self._rand_mask
-      draw_sprite_masked(screen, img, mask, int(self.x), int(self.y), Screen.COLOUR_YELLOW)
-
+      self.draw_sprite(
+          self.app,
+          screen,
+          self.img,
+          self._rand_mask,
+          int(self.x),
+          int(self.y),
+          Screen.COLOUR_YELLOW
+      )
 
 def spawn_big_fish(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
   # Ensure there is enough vertical space to fit the big fish entirely
