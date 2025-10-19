@@ -1,14 +1,15 @@
 from __future__ import annotations
 
 import random
-from ...screen_compat import Screen
 
-from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked
 from ..base import Actor
+from ...screen_compat import Screen
+from ...util import parse_sprite, sprite_size
 
 
 class Ship(Actor):
     def __init__(self, screen: Screen, app):
+        self.app = app
         self.dir = random.choice([-1, 1])
         self.speed = 10.0 * self.dir
         # Spawn relative to full scene width so ship traverses entire scene
@@ -130,11 +131,7 @@ yywwwyyyyyyyyyyyyyyyyyyyy
 
     def draw(self, screen, mono: bool = False) -> None:
         img = self.frames[self._frame_idx]
-        if mono:
-            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
-        else:
-            mask = self.mask_frames[self._frame_idx % len(self.mask_frames)]
-            draw_sprite_masked(screen, img, mask, int(self.x), int(self.y), Screen.COLOUR_WHITE)
+        self.draw_sprite(self.app, screen, img, int(self.x), int(self.y), Screen.COLOUR_YELLOW)
 
 
 def spawn_ship(screen: Screen, app):
