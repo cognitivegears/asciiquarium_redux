@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING
 
+from ..screen_compat import Screen
+from ..util import draw_sprite, draw_sprite_masked_with_bg, draw_sprite_masked
+
 if TYPE_CHECKING:
     from ..protocols import ScreenProtocol, AsciiQuariumProtocol
 
@@ -102,6 +105,59 @@ class Actor:
             - Should handle transparency and layering appropriately
         """
         ...
+
+    def draw_sprite(
+            self,
+            app: "AsciiQuariumProtocol",
+            screen: "ScreenProtocol",
+            img: list[str],
+            img_mask: list[str],
+            px: int,
+            py: int,
+            primary_colour: int,
+            background_colour: int = Screen.COLOUR_BLACK,
+    ):
+        """Identify the proper render method and draw sprite.
+
+        This is a helper method to abstract away the difference between
+        `draw_sprite`, `draw_sprite_masked` and `draw_sprite_masked_with_bg`.
+
+        Args:
+            app: Reference to main AsciiQuarium instance for global state access
+            screen: Screen abstraction for rendering operations
+            img: String representation of the sprite image
+            img_mask: String representation of the sprite mask image
+            px: X coordinate for the top-left corner of the sprite
+            py: Y coordinate for the top-left corner of the sprite
+            primary_colour: Primary colour of the sprite
+            background_colour: Background colour for masked sprites
+
+        Implementation Notes:
+            - Should be called from draw() on the child class after appropriate
+                variables have been set up
+        """
+        if app.settings.color == "mono":
+            draw_sprite(screen, img, px, py, Screen.COLOUR_WHITE)
+        else:
+            if app.settings.solid_fish:
+                draw_sprite_masked_with_bg(
+                    screen,
+                    img,
+                    img_mask,
+                    px,
+                    py,
+                    primary_colour,
+                    background_colour
+                )
+            else:
+                draw_sprite_masked(
+                    screen,
+                    img,
+                    img_mask,
+                    px,
+                    py,
+                    background_colour
+                )
 
     @property
     def active(self) -> bool:
