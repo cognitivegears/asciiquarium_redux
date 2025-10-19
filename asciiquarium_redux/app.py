@@ -188,6 +188,10 @@ class AsciiQuarium:
         self._mouse_buttons: int = 0
         self._last_mouse_event_time: float = 0.0
 
+        if bool(getattr(self.settings, "start_screen", True)):
+            self._start_overlay_until = time.time() + 7.0
+
+
     def rebuild(self, screen: Screen) -> None:
         """Initialize/reset all entities for the current screen size.
 
@@ -1532,8 +1536,6 @@ def run(screen: Screen, settings: Settings):
     """
     app, db, timing_state = _initialize_game_state(screen, settings)
 
-    if bool(getattr(settings, "start_screen", True)):
-        app._start_overlay_until = time.time() + 7.0
 
     while True:
         timing_state = _update_frame_timing(timing_state, settings)
