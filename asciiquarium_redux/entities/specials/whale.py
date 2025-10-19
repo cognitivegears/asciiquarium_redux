@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import random
 from typing import List
-from ...screen_compat import Screen
 from typing import TYPE_CHECKING
+
+from ...screen_compat import Screen
+
 if TYPE_CHECKING:
     from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
-from ...util import parse_sprite, sprite_size, draw_sprite_masked, draw_sprite
+from ...util import parse_sprite, sprite_size
 from ..base import Actor
 
 
@@ -35,6 +37,7 @@ def _compose_frames(base: List[str], sp_align: int, spout_frames: List[List[str]
 
 class Whale(Actor):
     def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
+        self.app = app
         self.dir = random.choice([-1, 1])
         # Keep whale relatively slow, similar to Perl pacing
         self.speed = 10.0 * self.dir
@@ -223,11 +226,16 @@ class Whale(Actor):
         else:
             img = self.frames_left[self._frame_idx]
             msk = self.masks_left[self._frame_idx]
-        if mono:
-            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_BLUE)
-        else:
-            # Default to blue for any mask gaps so the whale always stays blue
-            draw_sprite_masked(screen, img, msk, int(self.x), int(self.y), Screen.COLOUR_BLUE)
+
+        self.draw_sprite(
+            self.app,
+            screen,
+            img,
+            msk,
+            int(self.x),
+            int(self.y),
+            Screen.COLOUR_BLUE,
+        )
 
 
 def spawn_whale(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
