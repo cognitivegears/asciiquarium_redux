@@ -130,8 +130,15 @@ yywwwyyyyyyyyyyyyyyyyyyyy
             self._active = False
 
     def draw(self, screen, mono: bool = False) -> None:
-        img = self.frames[self._frame_idx]
-        self.draw_sprite(self.app, screen, img, int(self.x), int(self.y), Screen.COLOUR_YELLOW)
+        self.draw_sprite(
+            self.app,
+            screen,
+            self.frames[self._frame_idx],
+            self.mask_frames[self._frame_idx],
+            int(self.x),
+            int(self.y),
+            Screen.COLOUR_YELLOW
+        )
 
 
 def spawn_ship(screen: Screen, app):
