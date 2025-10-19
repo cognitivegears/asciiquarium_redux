@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
-from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked
+from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked, draw_sprite_masked_with_bg
 from ..core import Splat
 from ..base import Actor
 from ...constants import (
@@ -21,6 +21,7 @@ from ...constants import (
 
 class Shark(Actor):
     def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
+        self.app = app
         self.dir = random.choice([-1, 1])
         self.speed = SHARK_SPEED * self.dir
         self.y = random.randint(max(9, 1), max(9, screen.height - 10))
@@ -144,11 +145,16 @@ class Shark(Actor):
         else:
             img = self.img_left
             msk = self.mask_left
-        if mono:
-            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
-        else:
-            # Default colour matches Perl's CYAN body
-            draw_sprite_masked(screen, img, msk, int(self.x), int(self.y), Screen.COLOUR_CYAN)
+
+        self.draw_sprite(
+            self.app,
+            screen,
+            img,
+            msk,
+            int(self.x),
+            int(self.y),
+            Screen.COLOUR_CYAN,
+        )
 
 
 def spawn_shark(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
