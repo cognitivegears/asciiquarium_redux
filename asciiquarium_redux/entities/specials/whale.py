@@ -60,9 +60,9 @@ class Whale(Actor):
 (__,          \_.'/
 """
         )
-        # Replace placeholders with spaces
-        whale_right = [ln.replace('?', ' ') for ln in whale_right_raw]
-        whale_left = [ln.replace('?', ' ') for ln in whale_left_raw]
+        # Keep '?' placeholders in sprite data; renderer treats them as transparent
+        whale_right = whale_right_raw
+        whale_left = whale_left_raw
 
         mask_right = parse_sprite(
             r"""

@@ -56,9 +56,9 @@ class Shark(Actor):
                                      `-`???????????`
 """
         )
-        # Replace the placeholders with spaces
-        self.img_right = [ln.replace('?', ' ') for ln in right_img_raw]
-        self.img_left = [ln.replace('?', ' ') for ln in left_img_raw]
+        # Keep '?' placeholders in sprite data; renderer treats them as transparent
+        self.img_right = right_img_raw
+        self.img_left = left_img_raw
 
         right_mask_raw = parse_sprite(
             r"""

@@ -39,9 +39,9 @@ def sprite_size(lines: List[str]) -> Tuple[int, int]:
 
 
 def draw_sprite(screen: "ScreenProtocol", lines: List[str], x: int, y: int, colour: int) -> None:
-    """Draw an unmasked sprite, treating spaces as transparent.
+    """Draw an unmasked sprite, treating spaces and '?' as transparent.
 
-    Only non-space characters are printed so background/sprites behind are preserved.
+    Only non-space, non-'?' characters are printed so background/sprites behind are preserved.
 
     Args:
         screen: Screen object to draw on
@@ -62,11 +62,11 @@ def draw_sprite(screen: "ScreenProtocol", lines: List[str], x: int, y: int, colo
         end_idx = min(len(row), max_x - x + 1)
         if end_idx <= start_idx:
             continue
-        # Print contiguous non-space runs only
+        # Print contiguous runs of drawable glyphs (exclude spaces and '?')
         run_start: Optional[int] = None
         for cx in range(start_idx, end_idx + 1):  # sentinel at end
             ch: Optional[str] = row[cx] if cx < end_idx else None
-            if cx < end_idx and ch != ' ':
+            if cx < end_idx and ch not in (' ', '?'):
                 if run_start is None:
                     run_start = cx
             else:
@@ -155,7 +155,7 @@ def draw_sprite_masked(
                 ch = row[cx]
                 mch = mrow[cx] if cx < len(mrow) else ' '
                 col = _mask_char_to_colour(mch, default_colour)
-                drawable = (ch != ' ' and col is not None)
+                drawable = (ch not in (' ', '?') and col is not None)
             else:
                 # sentinel to flush any pending run
                 ch = None  # type: ignore
@@ -212,12 +212,12 @@ def draw_sprite_masked_with_bg(
     default_colour: int,
     bg_colour: int,
 ):
-    """Draw a masked sprite with an opaque background span per row.
+    """Draw a masked sprite with an opaque background per-row while honoring transparency.
 
-    For each row, first paint spaces from x..x+len(row)-1 in bg_colour to make
-    sprite spaces opaque within the silhouette of that row, then draw the masked
-    glyphs over the top. This avoids blanking a full rectangle and matches Perl
-    behavior for sprites like the castle that are effectively non-transparent.
+    Spaces are opaque (they erase with bg_colour) only within the silhouette of
+    visible glyphs on that row. Question marks ('?') are treated as transparent
+    placeholders: they neither erase the background nor draw a glyph, letting
+    whatever was previously on the screen show through.
     """
     if not lines:
         return
@@ -231,27 +231,38 @@ def draw_sprite_masked_with_bg(
         sy = y + dy
         if sy < 0 or sy > max_y:
             continue
-        # Determine silhouette span for this row (first..last non-space)
+        # Determine silhouette span for this row (first..last non-transparent glyph)
+        # Non-transparent glyphs are any characters except space and '?'
         first = None
         last = None
         for i, ch in enumerate(row):
-            if ch != ' ':
+            if ch != ' ' and ch != '?':
                 if first is None:
                     first = i
                 last = i
         if first is None or last is None:
-            # Entire row is spaces; nothing to fill or draw
+            # Entire row is spaces and/or transparent '?'; nothing to fill or draw
             continue
         # Clip horizontally to screen
         start_idx = max(first, 0 if x >= 0 else -x)
         end_idx = min(last + 1, max_x - x + 1, len(row))
         if end_idx <= start_idx:
             continue
-        span = ' ' * (end_idx - start_idx)
-        screen.print_at(span, x + start_idx, sy, colour=bg_colour)
-        # Now draw the masked row on top
-        # Use the existing masked renderer for batching
-        draw_sprite_masked(screen, [row], [mask[dy] if dy < len(mask) else ''], x, sy, default_colour)
+        # Paint background only under actual spaces, skipping '?' to preserve transparency
+        run_start = None
+        for cx in range(start_idx, end_idx + 1):  # include sentinel to flush
+            is_space_run = (cx < end_idx and row[cx] == ' ')
+            if not is_space_run:
+                if run_start is not None and cx > run_start:
+                    span = ' ' * (cx - run_start)
+                    screen.print_at(span, x + run_start, sy, colour=bg_colour)
+                    run_start = None
+            else:
+                if run_start is None:
+                    run_start = cx
+        # Now draw the masked row on top; replace '?' with spaces to avoid drawing them
+        safe_row = row.replace('?', ' ')
+        draw_sprite_masked(screen, [safe_row], [mask[dy] if dy < len(mask) else ''], x, sy, default_colour)
 
 
 def randomize_colour_mask(mask: List[str]) -> List[str]:

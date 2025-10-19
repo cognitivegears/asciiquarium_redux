@@ -97,9 +97,9 @@ class Monster(Actor):
             ),
         ]
 
-        # Normalize placeholders to spaces
-        self.frames_right = [[ln.replace('?', ' ') for ln in fr] for fr in right_frames_raw]
-        self.frames_left = [[ln.replace('?', ' ') for ln in fr] for fr in left_frames_raw]
+        # Keep '?' placeholders in sprite data; renderer treats them as transparent
+        self.frames_right = right_frames_raw
+        self.frames_left = left_frames_raw
 
         # Masks from Perl: one per direction, applied to all frames (white eye)
         mask_right_raw = parse_sprite(
