@@ -1,17 +1,20 @@
 from __future__ import annotations
 
 import random
-from ...screen_compat import Screen
 from typing import TYPE_CHECKING
+
+from ...screen_compat import Screen
+
 if TYPE_CHECKING:
     from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
-from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked
+from ...util import parse_sprite, sprite_size
 from ..base import Actor
 
 
 class Monster(Actor):
     def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
+        self.app = app
         self.dir = random.choice([-1, 1])
         self.y = 2
 
@@ -162,10 +165,16 @@ class Monster(Actor):
         else:
             img = self.frames_left[self._frame_idx]
             msk = self.masks_left[self._frame_idx]
-        if mono:
-            draw_sprite(screen, img, int(self.x), int(self.y), Screen.COLOUR_WHITE)
-        else:
-            draw_sprite_masked(screen, img, msk, int(self.x), int(self.y), Screen.COLOUR_GREEN)
+
+        self.draw_sprite(
+            self.app,
+            screen,
+            img,
+            msk,
+            int(self.x),
+            int(self.y),
+            Screen.COLOUR_GREEN
+        )
 
 
 def spawn_monster(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
