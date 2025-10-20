@@ -12,7 +12,7 @@ This guide covers setting up, running, and deploying the Asciiquarium Redux web 
 
 ## Overview
 
-The web backend allows running Asciiquarium Redux in a browser using WebAssembly (WASM) through Pyodide. The system supports both local development and GitHub Pages deployment. A production instance is available at <https://ascifi.sh/>.
+The web backend allows running Asciiquarium Redux in a browser using WebAssembly (WASM) through Pyodide. The system supports both local development and GitHub Pages deployment. A production instance is available at <https://asciifi.sh/>.
 
 ## Architecture
 
@@ -178,11 +178,11 @@ cp out/index.html out/404.html
 
 ## Custom domain and CDN/proxy (Cloudflare)
 
-You can serve the GitHub Pages site at a custom domain such as `https://ascifi.sh/` behind Cloudflare for caching and TLS termination.
+You can serve the GitHub Pages site at a custom domain such as `https://asciifi.sh/` behind Cloudflare for caching and TLS termination.
 
-- In GitHub → Settings → Pages, set your Custom domain to your apex (e.g., `ascifi.sh`) and enable Enforce HTTPS.
+- In GitHub → Settings → Pages, set your Custom domain to your apex (e.g., `asciifi.sh`) and enable Enforce HTTPS.
 - In Cloudflare DNS, add a proxied CNAME from your apex (or `www`) to `USERNAME.github.io` (orange cloud enabled).
-- Optionally, configure a Page Rule/Redirect to map `https://ascifi.sh/*` → `https://USERNAME.github.io/REPO/$1` if serving from a project page.
+- Optionally, configure a Page Rule/Redirect to map `https://asciifi.sh/*` → `https://USERNAME.github.io/REPO/$1` if serving from a project page.
 - This repo uses relative URLs for all PWA assets (`./manifest.webmanifest`, `./service-worker.js`, icons), so the app works under either a subpath (`/REPO/`) or the apex domain without path rewrites.
 - The service worker chooses a versioned cache name derived from the local `wheels/manifest.json` so updates roll out cleanly across domains.
 

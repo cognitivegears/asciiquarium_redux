@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "asciiquarium-redux"
-version = "1.1.1"
+version = "1.1.2"
 description = "A Python port of Asciiquarium with asciimatics"
 readme = "README.md"
 requires-python = ">=3.11"
