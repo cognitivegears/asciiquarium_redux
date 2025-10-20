@@ -844,18 +844,19 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--ai", dest="ai_enabled", action="store_true")
     parser.add_argument("--no-ai", dest="ai_enabled", action="store_false")
     # Default paired booleans to None so absent flags don't override config
-    parser.set_defaults(fullscreen=None, ai_enabled=None)
+    parser.set_defaults(fullscreen=None, ai_enabled=None, fish_tank=None, solid_fish=None, start_screen=None)
     parser.add_argument("--fish-tank", dest="fish_tank", action="store_true")
     parser.add_argument("--no-fish-tank", dest="fish_tank", action="store_false")
     parser.add_argument("--fish-tank-margin", dest="fish_tank_margin", type=int)
-    parser.add_argument("--click", dest="click_action", choices=["hook", "feed"])
+    parser.add_argument("--click", dest="click_action", choices=["hook", "feed"]) 
     parser.add_argument("--scene-width-factor", dest="scene_width_factor", type=int)
     parser.add_argument("--scene-offset", dest="scene_offset", type=int)
     parser.add_argument("--scene-pan-step", dest="scene_pan_step_fraction", type=float)
-    parser.set_defaults(fish_tank=None)
     # Rendering flags
     parser.add_argument("--solid-fish", dest="solid_fish", action="store_true")
+    parser.add_argument("--no-solid-fish", dest="solid_fish", action="store_false")
     parser.add_argument("--start-screen", dest="start_screen", action="store_true")
+    parser.add_argument("--no-start-screen", dest="start_screen", action="store_false")
     args = parser.parse_args(argv)
 
     if args.fps is not None:
@@ -907,10 +908,10 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
         s.ui_font_max_size = s.ui_font_min_size
     # Rendering flags
     try:
-        if getattr(args, "solid_fish", False):
-            s.solid_fish = True
-        if getattr(args, "start_screen", False):
-            s.start_screen = True
+        if getattr(args, "solid_fish", None) is not None:
+            s.solid_fish = bool(args.solid_fish)
+        if getattr(args, "start_screen", None) is not None:
+            s.start_screen = bool(args.start_screen)
     except Exception:
         pass
 
