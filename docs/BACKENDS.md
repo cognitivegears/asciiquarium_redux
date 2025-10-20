@@ -18,17 +18,17 @@ Asciiquarium Redux implements a multi-backend architecture using the Strategy Pa
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│                  AsciiQuarium Core                         │
-│  - Entity management and game logic                        │
-│  - Platform-agnostic simulation                            │
+│                  AsciiQuarium Core                          │
+│  - Entity management and game logic                         │
+│  - Platform-agnostic simulation                             │
 └─────────────────────┬───────────────────────────────────────┘
                       │ Screen Interface
                       ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                Screen Abstraction                          │
-│  - print_at(text, x, y, colour)                           │
-│  - get_event() → KeyboardEvent | MouseEvent                │
-│  - width, height properties                               │
+│                Screen Abstraction                           │
+│  - print_at(text, x, y, colour)                             │
+│  - get_event() → KeyboardEvent | MouseEvent                 │
+│  - width, height properties                                 │
 └─────────────────────┬───────────────────────────────────────┘
                       │ Strategy Pattern
                       ▼
@@ -105,20 +105,20 @@ asciiquarium --backend terminal --color 256
 
 ### Terminal Compatibility
 
-| Terminal | Color Support | Mouse Support | Performance |
-|----------|---------------|---------------|-------------|
-| **Modern Terminals** | | | |
-| iTerm2 (macOS) | True-color | Full | Excellent |
-| Terminal.app (macOS) | 256-color | Full | Excellent |
-| Windows Terminal | True-color | Full | Excellent |
-| GNOME Terminal | True-color | Full | Excellent |
-| **Legacy Terminals** | | | |
-| cmd.exe | 16-color | Limited | Good |
-| PuTTY | 256-color | Full | Good |
-| **Remote/SSH** | | | |
-| tmux | 256-color | Full | Excellent |
-| screen | 256-color | Limited | Good |
-| SSH terminals | Varies | Varies | Good |
+| Terminal             | Color Support | Mouse Support | Performance |
+|----------------------|---------------|---------------|-------------|
+| **Modern Terminals** |               |               |             |
+| iTerm2 (macOS)       | True-color    | Full          | Excellent   |
+| Terminal.app (macOS) | 256-color     | Full          | Excellent   |
+| Windows Terminal     | True-color    | Full          | Excellent   |
+| GNOME Terminal       | True-color    | Full          | Excellent   |
+| **Legacy Terminals** |               |               |             |
+| cmd.exe              | 16-color      | Limited       | Good        |
+| PuTTY                | 256-color     | Full          | Good        |
+| **Remote/SSH**       |               |               |             |
+| tmux                 | 256-color     | Full          | Excellent   |
+| screen               | 256-color     | Limited       | Good        |
+| SSH terminals        | Varies        | Varies        | Good        |
 
 ### Best Use Cases
 
@@ -348,11 +348,11 @@ window_height = rows * cell_height
 
 ### Platform Behavior
 
-| Platform | Native Look | Performance | Font Rendering |
-|----------|-------------|-------------|----------------|
-| **Windows** | Windows 10/11 style | Good | ClearType |
-| **macOS** | Aqua/System style | Excellent | Retina-aware |
-| **Linux** | GTK/Qt themed | Good | Fontconfig |
+| Platform    | Native Look         | Performance | Font Rendering |
+|-------------|---------------------|-------------|----------------|
+| **Windows** | Windows 10/11 style | Good        | ClearType      |
+| **macOS**   | Aqua/System style   | Excellent   | Retina-aware   |
+| **Linux**   | GTK/Qt themed       | Good        | Fontconfig     |
 
 ### Best Use Cases
 
@@ -373,28 +373,28 @@ window_height = rows * cell_height
 
 ### Feature Matrix
 
-| Feature | Terminal | Web | TkInter |
-|---------|----------|-----|---------|
-| **Installation** | ||||
-| Dependencies | Asciimatics | websockets | Built-in |
-| Platform Support | All | All | All |
-| Setup Complexity | Medium | High | Low |
-| **Performance** | ||||
-| Rendering Speed | Excellent | Good | Fair |
-| Memory Usage | Low | Medium | Medium |
-| CPU Usage | Low | Medium | Medium |
-| **Display** | ||||
-| Color Support | Full | Full | Limited |
-| Font Control | Terminal | Browser | Full |
-| Fullscreen | Terminal | Browser | Native |
-| **Input** | ||||
-| Keyboard | Full | Full | Full |
-| Mouse | Full | Full | Full |
-| Touch | No | Yes | No |
-| **Deployment** | ||||
-| Remote Access | SSH | Network | No |
-| Mobile Support | Limited | Full | No |
-| Offline Use | Yes | No | Yes |
+| Feature          | Terminal    | Web        | TkInter  |
+|------------------|-------------|------------|----------|
+| **Installation** |             |            |          ||
+| Dependencies     | Asciimatics | websockets | Built-in |
+| Platform Support | All         | All        | All      |
+| Setup Complexity | Medium      | High       | Low      |
+| **Performance**  |             |            |          ||
+| Rendering Speed  | Excellent   | Good       | Fair     |
+| Memory Usage     | Low         | Medium     | Medium   |
+| CPU Usage        | Low         | Medium     | Medium   |
+| **Display**      |             |            |          ||
+| Color Support    | Full        | Full       | Limited  |
+| Font Control     | Terminal    | Browser    | Full     |
+| Fullscreen       | Terminal    | Browser    | Native   |
+| **Input**        |             |            |          ||
+| Keyboard         | Full        | Full       | Full     |
+| Mouse            | Full        | Full       | Full     |
+| Touch            | No          | Yes        | No       |
+| **Deployment**   |             |            |          ||
+| Remote Access    | SSH         | Network    | No       |
+| Mobile Support   | Limited     | Full       | No       |
+| Offline Use      | Yes         | No         | Yes      |
 
 ### Performance Characteristics
 

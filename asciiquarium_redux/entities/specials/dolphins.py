@@ -7,12 +7,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
-from ...util import parse_sprite, draw_sprite, draw_sprite_masked
+from ...util import parse_sprite
 from ..base import Actor
 
 
 class Dolphins(Actor):
     def __init__(self, screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):
+        self.app = app
         self.dir = random.choice([-1, 1])
         self.speed = 20.0 * self.dir
         try:
@@ -26,16 +27,16 @@ class Dolphins(Actor):
         dolph_lr = [
             parse_sprite(
                 r"""
-     ,
-   _/(__
+?????,
+???_/(__
 .-'a    `-._/)
 '^^~\)''''~~\)
 """
             ),
             parse_sprite(
                 r"""
-     ,
-   _/(__  __/)
+?????,
+???_/(__??__/)
 .-'a    ``.~\)
 '^^~(/''''
 """
@@ -44,18 +45,18 @@ class Dolphins(Actor):
         dolph_rl = [
             parse_sprite(
                 r"""
-        ,
-      __)\_
+????????,
+??????__)\_
 (\_.-'    a`-.
 (/~~````(/~^^`
 """
             ),
             parse_sprite(
                 r"""
-        ,
-(\__  __)\_
+????????,
+(\__??__)\_
 (/~.''    a`-.
-    ````\)~^^`
+????````\)~^^`
 """
             ),
         ]
@@ -112,10 +113,15 @@ class Dolphins(Actor):
             frame = self.frames[(self._frame_idx + i) % len(self.frames)]
             px = int(self.x + i * self.distance)
             py = int(self.base_y + 3 * math.sin((self.t * 2 + i) * 1.2))
-            if mono:
-                draw_sprite(screen, frame, px, py, Screen.COLOUR_WHITE)
-            else:
-                draw_sprite_masked(screen, frame, self.mask, px, py, colours[i])
+            self.draw_sprite(
+                app=self.app,
+                screen=screen,
+                img=frame,
+                img_mask=self.mask,
+                px=px,
+                py=py,
+                primary_colour=colours[i]
+            )
 
 
 def spawn_dolphins(screen: "ScreenProtocol", app: "AsciiQuariumProtocol"):

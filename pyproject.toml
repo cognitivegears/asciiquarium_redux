@@ -51,3 +51,8 @@ exclude = [
     "**/__pycache__",
     "asciiquarium_redux/web/wheels/**",
 ]
+
+[dependency-groups]
+dev = [
+    "ruff>=0.14.0",
+]

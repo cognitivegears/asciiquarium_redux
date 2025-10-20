@@ -336,6 +336,13 @@ class Settings:
     scene_offset: int = 0
     # Panning step size as a fraction of current screen width (e.g., 0.2 = 20% of screen width)
     scene_pan_step_fraction: float = 0.2
+    # Rendering options
+    solid_fish: bool = True
+    start_screen: bool = True
+    # Optional post-start overlay animation (list of multi-line string frames)
+    start_overlay_after_frames: List[str] = field(default_factory=list)
+    # Seconds to hold each post-start frame
+    start_overlay_after_frame_seconds: float = 0.08
 
 
 def _find_config_paths(override: Optional[Path] = None) -> List[Path]:
@@ -792,6 +799,17 @@ def _parse_ui_settings(s: Settings, ui: dict) -> None:
     if isinstance(v, int):
         s.ui_font_max_size = max(8, min(72, v))
 
+    # Optional post-start overlay animation frames and timing
+    try:
+        frames = ui.get("start_overlay_after_frames")
+        if isinstance(frames, list):
+            s.start_overlay_after_frames = [str(x) for x in frames]
+        dur = ui.get("start_overlay_after_frame_seconds")
+        if dur is not None:
+            s.start_overlay_after_frame_seconds = float(dur)
+    except Exception:
+        pass
+
     # Ensure coherent bounds
     if s.ui_font_max_size < s.ui_font_min_size:
         s.ui_font_max_size = s.ui_font_min_size
@@ -826,7 +844,7 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--ai", dest="ai_enabled", action="store_true")
     parser.add_argument("--no-ai", dest="ai_enabled", action="store_false")
     # Default paired booleans to None so absent flags don't override config
-    parser.set_defaults(fullscreen=None, ai_enabled=None)
+    parser.set_defaults(fullscreen=None, ai_enabled=None, fish_tank=None, solid_fish=None, start_screen=None)
     parser.add_argument("--fish-tank", dest="fish_tank", action="store_true")
     parser.add_argument("--no-fish-tank", dest="fish_tank", action="store_false")
     parser.add_argument("--fish-tank-margin", dest="fish_tank_margin", type=int)
@@ -834,7 +852,11 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--scene-width-factor", dest="scene_width_factor", type=int)
     parser.add_argument("--scene-offset", dest="scene_offset", type=int)
     parser.add_argument("--scene-pan-step", dest="scene_pan_step_fraction", type=float)
-    parser.set_defaults(fish_tank=None)
+    # Rendering flags
+    parser.add_argument("--solid-fish", dest="solid_fish", action="store_true")
+    parser.add_argument("--no-solid-fish", dest="solid_fish", action="store_false")
+    parser.add_argument("--start-screen", dest="start_screen", action="store_true")
+    parser.add_argument("--no-start-screen", dest="start_screen", action="store_false")
     args = parser.parse_args(argv)
 
     if args.fps is not None:
@@ -884,6 +906,15 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
         s.ui_font_max_size = max(8, min(72, int(args.ui_font_max_size)))
     if s.ui_font_max_size < s.ui_font_min_size:
         s.ui_font_max_size = s.ui_font_min_size
+    # Rendering flags
+    try:
+        if getattr(args, "solid_fish", None) is not None:
+            s.solid_fish = bool(args.solid_fish)
+        if getattr(args, "start_screen", None) is not None:
+            s.start_screen = bool(args.start_screen)
+    except Exception:
+        pass
+
     try:
         if getattr(args, "web_open", False):
             s.web_open = True

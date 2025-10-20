@@ -7,7 +7,7 @@ to reduce code duplication and ensure consistent behavior.
 from __future__ import annotations
 
 import logging
-from typing import Dict, List, Optional, Union, TYPE_CHECKING, Callable, Any, Tuple
+from typing import Dict, List, TYPE_CHECKING, Callable, Any, Tuple
 from dataclasses import dataclass
 
 if TYPE_CHECKING:

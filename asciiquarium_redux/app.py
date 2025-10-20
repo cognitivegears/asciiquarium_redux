@@ -29,12 +29,10 @@ Usage:
 
 Example:
     >>> from asciiquarium_redux.util.settings import Settings
-    >>> from asciiquarium_redux.backends.terminal import TerminalScreen
+    >>> from asciiquarium_redux.runner import run_with_resize
     >>>
     >>> settings = Settings(fps=30, density=1.5)
-    >>> aquarium = AsciiQuarium(settings)
-    >>> screen = TerminalScreen()
-    >>> aquarium.run(screen)
+    >>> run_with_resize(settings)
 
 Performance:
     The module is optimized for 20-60 FPS animation with hundreds of entities.
@@ -52,15 +50,14 @@ from __future__ import annotations
 import random
 import time
 import logging
-from typing import List, Dict, Tuple, Optional, Union, Any, TYPE_CHECKING, cast
+from typing import List, Dict, Tuple, Any, TYPE_CHECKING, cast
 
 if TYPE_CHECKING:
-    from .protocols import ScreenProtocol, AsciiQuariumProtocol, SettingsProtocol, ActorProtocol
     from .screen_compat import Screen
 else:
     from .screen_compat import Screen
 
-from .util import sprite_size, draw_sprite, draw_sprite_masked, fill_rect, draw_sprite_masked_with_bg
+from .util import sprite_size, draw_sprite, draw_sprite_masked_with_bg
 from .util.buffer import DoubleBufferedScreen
 from .entities.environment import WATER_SEGMENTS, CASTLE, CASTLE_MASK, waterline_row, CHEST_CLOSED
 from .util.settings import Settings
@@ -93,6 +90,13 @@ from .constants import (
     FISH_MINIMUM_COUNT,
     MAX_DELTA_TIME,
 )
+
+# Default post-overlay frames for an "old TV turning off" effect
+DEFAULT_START_OVERLAY_AFTER_FRAMES: list[str] = [
+    "---------------------------------------------",
+    "                ------(O)------              ",
+    "                      (*)                    ",
+]
 
 
 class AsciiQuarium:
@@ -135,13 +139,10 @@ class AsciiQuarium:
 
     Example:
         >>> from asciiquarium_redux.util.settings import Settings
-        >>> from asciiquarium_redux.backends.terminal import TerminalScreen
+        >>> from asciiquarium_redux.runner import run_with_resize
         >>>
         >>> settings = Settings(fps=30, density=1.5, color="256")
-        >>> aquarium = AsciiQuarium(settings)
-        >>> screen = TerminalScreen()
-        >>> aquarium.rebuild(screen)
-        >>> aquarium.run(screen)  # Start the main animation loop
+        >>> run_with_resize(settings)
 
     See Also:
         - Settings: Configuration management for all simulation parameters
@@ -186,6 +187,10 @@ class AsciiQuarium:
         # Track mouse button state for debounce
         self._mouse_buttons: int = 0
         self._last_mouse_event_time: float = 0.0
+
+        if bool(getattr(self.settings, "start_screen", True)):
+            self._start_overlay_until = time.time() + 7.0
+
 
     def rebuild(self, screen: Screen) -> None:
         """Initialize/reset all entities for the current screen size.
@@ -612,6 +617,119 @@ class AsciiQuarium:
         self.draw_waterline(screen)
         mono: bool = self.settings.color == "mono"
 
+        # Optional non-blocking start overlay: draw centered behind all entities
+        try:
+            until = float(getattr(self, "_start_overlay_until", 0.0))
+        except Exception:
+            until = 0.0
+        # Shared overlay content
+        title_lines = [
+            r"   _____                .__.__                          .__                ",
+            r"  /  _  \   ______ ____ |__|__| ________ _______ _______|__|__ __  _____   ",
+            r" /  /_\  \ /  ___// ___\|  |  |/ ____/  |  \__  \\_  __ \  |  |  \/     \  ",
+            r"/    |    \\___ \\  \___|  |  ( (_|  |  |  // __ \|  | \/  |  |  /  Y Y  \ ",
+            r"\____|__  /____  )\___  )__|__|\__   |____/(____  /__|  |__|____/|__|_|  / ",
+            r"        \/     \/     \/          |__|          \/                     \/  ",
+        ]
+        guide_lines = [
+            "Controls: q quit  p pause/resume  r rebuild  f feed  SPACE fishhook",
+            "Arrows: pan view    Mouse: click to drop/retract hook    h/?: help",
+        ]
+        full_lines = title_lines + [""] + guide_lines
+        w, h = screen.width, screen.height
+        def _center_x(wi: int, s: str) -> int:
+            return max(0, (wi - len(s)) // 2)
+
+        now = time.time()
+        # Phase 1: timer-active (draw full overlay)
+        if until > 0.0 and now < until:
+            art_h = len(title_lines)
+            guide_h = len(guide_lines)
+            block_h = art_h + 1 + guide_h
+            top = max(0, (h - block_h) // 2)
+            for i, line in enumerate(title_lines):
+                screen.print_at(line, _center_x(w, line), top + i, colour=Screen.COLOUR_WHITE)
+            y = top + art_h
+            for j, line in enumerate(guide_lines):
+                screen.print_at(line, _center_x(w, line), y + 1 + j, colour=Screen.COLOUR_WHITE)
+        else:
+            # If just expired, initialize shrink phase once
+            if until > 0.0:
+                self._start_overlay_until = 0.0
+                if not getattr(self, "_start_overlay_shrinking", False):
+                    self._start_overlay_shrinking = True
+                    self._start_overlay_cut_top = 0
+                    self._start_overlay_cut_bot = 0
+
+            # Phase 2: shrinking away line by line from top & bottom
+            if getattr(self, "_start_overlay_shrinking", False):
+                total = len(full_lines)
+                cut_top = int(getattr(self, "_start_overlay_cut_top", 0))
+                cut_bot = int(getattr(self, "_start_overlay_cut_bot", 0))
+                remaining = max(0, total - (cut_top + cut_bot))
+                if remaining > 0:
+                    visible = full_lines[cut_top: total - cut_bot]
+                    block_h = len(visible)
+                    top = max(0, (h - block_h) // 2)
+                    for i, line in enumerate(visible):
+                        if not line:
+                            continue
+                        screen.print_at(line, _center_x(w, line), top + i, colour=Screen.COLOUR_WHITE)
+                    # Advance cuts for next frame
+                    self._start_overlay_cut_top = cut_top + 1
+                    self._start_overlay_cut_bot = cut_bot + 1
+
+                else:
+                    # Transition to post-overlay animation
+                    self._start_overlay_shrinking = False
+                    # Build frames from custom app attribute override or settings
+                    frames_list = getattr(self, "_start_overlay_after_frames", None)
+                    if not frames_list:
+                        raw_frames = getattr(self.settings, "start_overlay_after_frames", [])
+                        if raw_frames:
+                            frames_list = [str(fr).splitlines() for fr in raw_frames]
+                        else:
+                            # Fall back to built-in default TV-off effect
+                            frames_list = [s.splitlines() for s in DEFAULT_START_OVERLAY_AFTER_FRAMES]
+                    if frames_list:
+                        self._start_overlay_after_frames = frames_list
+                        self._start_overlay_after_index = 0
+                        hold = float(getattr(self.settings, "start_overlay_after_frame_seconds", 0.08))
+                        self._start_overlay_after_next_time = now + max(0.0, hold)
+                    else:
+                        # Nothing to play; clear any previous leftovers
+                        self._start_overlay_after_frames = []
+                        self._start_overlay_after_index = 0
+                        self._start_overlay_after_next_time = 0.0
+
+            # Phase 3: play optional post-overlay frames
+            frames = getattr(self, "_start_overlay_after_frames", None)
+            if frames:
+                idx = int(getattr(self, "_start_overlay_after_index", 0))
+                if 0 <= idx < len(frames):
+                    lines = frames[idx]
+                    block_h = len(lines)
+                    top = max(0, (h - block_h) // 2)
+                    for i, line in enumerate(lines):
+                        if not line:
+                            continue
+                        screen.print_at(line, _center_x(w, line), top + i, colour=Screen.COLOUR_WHITE)
+                    # Advance on timer
+                    nxt = float(getattr(self, "_start_overlay_after_next_time", now))
+                    if now >= nxt:
+                        hold = float(getattr(self.settings, "start_overlay_after_frame_seconds", 0.08))
+                        self._start_overlay_after_index = idx + 1
+                        self._start_overlay_after_next_time = now + max(0.0, hold)
+                else:
+                    # Finished playback; clear state
+                    try:
+                        self._start_overlay_after_frames = []
+                        self._start_overlay_after_index = 0
+                        self._start_overlay_after_next_time = 0.0
+                    except Exception:
+                        pass
+
+
         # Draw entities in correct z-order: seaweed → decor → fish → castle → bubbles → specials → splats
         self._render_seaweed(screen, mono)
         self._render_decor(screen, mono)
@@ -923,7 +1041,6 @@ class AsciiQuarium:
             mono: Whether to use monochrome rendering mode
         """
         off = int(getattr(self.settings, "scene_offset", 0))
-        from .entities.specials import FishHook  # type: ignore
         for special_actor in list(self.specials):
             # All specials, including FishHook, are treated as scene-space now
             has_x = hasattr(special_actor, "x")
@@ -1174,7 +1291,6 @@ class AsciiQuarium:
         """
         if frames is None:
             frames = random_fish_frames(direction)
-        colour = random.choice(colours)
 
         # Build initial colour mask consistent with frames
         from .entities.core import (
@@ -1274,7 +1390,7 @@ class AsciiQuarium:
             band_low, band_high = self.settings.fish_y_band
         else:
             band_low, band_high = self._preferred_band_for_height(fish_height)
-        return Fish(
+        fish = Fish(
             frames=frames,
             x=x,
             y=y,
@@ -1290,6 +1406,8 @@ class AsciiQuarium:
             waterline_top=self.settings.waterline_top,
             water_rows=len(WATER_SEGMENTS),
         )
+        setattr(fish, 'solid_fish', bool(getattr(self.settings, 'solid_fish', True)))
+        return fish
 
     def _preferred_band_for_height(self, fish_height: int) -> tuple[float, float]:
         """Return a (low, high) vertical band fraction based on fish size.
@@ -1417,7 +1535,6 @@ def run(screen: Screen, settings: Settings):
         settings: Configuration object with all simulation parameters
     """
     app, db, timing_state = _initialize_game_state(screen, settings)
-
     while True:
         timing_state = _update_frame_timing(timing_state, settings)
 
