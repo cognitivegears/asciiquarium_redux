@@ -7,7 +7,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
-from ...util import parse_sprite, draw_sprite, draw_sprite_masked, draw_sprite_masked_with_bg
+from ...util import parse_sprite
 from ..base import Actor
 
 

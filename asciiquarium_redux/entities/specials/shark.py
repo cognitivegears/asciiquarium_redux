@@ -6,7 +6,7 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from ...protocols import ScreenProtocol, AsciiQuariumProtocol
 
-from ...util import parse_sprite, sprite_size, draw_sprite, draw_sprite_masked, draw_sprite_masked_with_bg
+from ...util import parse_sprite, sprite_size
 from ..core import Splat
 from ..base import Actor
 from ...constants import (
