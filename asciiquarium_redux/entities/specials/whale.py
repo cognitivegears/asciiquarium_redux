@@ -46,17 +46,17 @@ class Whale(Actor):
         # Base whale images (Perl asciiquarium) and colour masks by direction
         whale_right_raw = parse_sprite(
             r"""
-        .-----:
-      .'       `.
+????????.-----:
+??????.'       `.
 ,????/       (o) \
 \`._/          ,__)
 """
         )
         whale_left_raw = parse_sprite(
             r"""
-    :-----.
-  .'       `.
- / (o)       \????,
+????:-----.
+??.'       `.
+?/ (o)       \????,
 (__,          \_.'/
 """
         )
