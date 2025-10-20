@@ -156,7 +156,7 @@ class Actor:
                     img_mask,
                     px,
                     py,
-                    background_colour
+                    primary_colour
                 )
 
     @property
