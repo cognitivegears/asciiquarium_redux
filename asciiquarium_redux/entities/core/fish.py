@@ -650,7 +650,14 @@ class Fish:
             left = (w - vis) // 2
             x_off = left
         if mask is not None:
-            if bool(self.app.settings.solid_fish):
+            solid_fish_setting = bool(getattr(self, "solid_fish", True))
+            app_ref = getattr(self, "app", None)
+            if app_ref is not None:
+                try:
+                    solid_fish_setting = bool(getattr(app_ref.settings, "solid_fish", solid_fish_setting))
+                except Exception:
+                    pass
+            if solid_fish_setting:
                 # Fill the silhouette row span with the fish base colour first, then draw coloured glyphs
                 draw_sprite_masked_with_bg(screen, lines, mask, int(self.x) + x_off, int(self.y), self.colour, self.colour)
             else:
