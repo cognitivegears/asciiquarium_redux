@@ -1535,8 +1535,6 @@ def run(screen: Screen, settings: Settings):
         settings: Configuration object with all simulation parameters
     """
     app, db, timing_state = _initialize_game_state(screen, settings)
-
-
     while True:
         timing_state = _update_frame_timing(timing_state, settings)
 
