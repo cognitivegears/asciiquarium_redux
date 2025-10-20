@@ -137,7 +137,7 @@ yywwwyyyyyyyyyyyyyyyyyyyy
             self.mask_frames[self._frame_idx],
             int(self.x),
             int(self.y),
-            Screen.COLOUR_YELLOW
+            Screen.COLOUR_WHITE
         )
 
 
