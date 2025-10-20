@@ -329,27 +329,14 @@ class Fish:
                     if not self.turning and self.vx > 0:
                         # Initiate turn immediately at boundary
                         self.start_turn()
-                        # If AI brain present, apply a cooldown so it doesn't instantly re-request
-                        if getattr(self, "_brain", None) is not None:
-                            try:
-                                height_bias = max(1.0, float(self.height))
-                                base_cd = float(getattr(app.settings, "ai_turn_base_cooldown", 1.2))
-                                size_fac = float(getattr(app.settings, "ai_turn_size_factor", 0.08))
-                                self._brain.turn_cooldown = base_cd * (1.0 + size_fac * (height_bias - 1.0))
-                            except Exception:
-                                pass
+                        # Apply AI turn cooldown after forced boundary turn (deduplicated)
+                        self._apply_turn_cooldown(app)
                 elif self.scene_x < left_limit:
                     self.scene_x = float(left_limit)
                     if not self.turning and self.vx < 0:
                         self.start_turn()
-                        if getattr(self, "_brain", None) is not None:
-                            try:
-                                height_bias = max(1.0, float(self.height))
-                                base_cd = float(getattr(app.settings, "ai_turn_base_cooldown", 1.2))
-                                size_fac = float(getattr(app.settings, "ai_turn_size_factor", 0.08))
-                                self._brain.turn_cooldown = base_cd * (1.0 + size_fac * (height_bias - 1.0))
-                            except Exception:
-                                pass
+                        # Apply AI turn cooldown after forced boundary turn (deduplicated)
+                        self._apply_turn_cooldown(app)
                 # While turning, ensure we do not drift beyond boundaries due to shrink phase momentum
                 if self.turning:
                     if self.vx > 0 and self.scene_x > right_limit:
@@ -376,17 +363,9 @@ class Fish:
             pass
         next_y = self.scene_y + self.vy * dt
         if next_y < top_bound:
-            if random.random() < 0.5:
-                self.vy = 0.0
-            else:
-                self.vy = abs(self.vy) if self.vy != 0 else random.uniform(0.05, v_max)
-            self.scene_y = float(top_bound)
+            self._handle_vertical_bound(True, v_max, top_bound, bottom_bound)
         elif next_y > bottom_bound:
-            if random.random() < 0.5:
-                self.vy = 0.0
-            else:
-                self.vy = -abs(self.vy) if self.vy != 0 else -random.uniform(0.05, v_max)
-            self.scene_y = float(bottom_bound)
+            self._handle_vertical_bound(False, v_max, top_bound, bottom_bound)
         else:
             self.scene_y = next_y
 
@@ -477,6 +456,29 @@ class Fish:
                         self.turn_min_interval + (FISH_TURN_COOLDOWN_MAX - FISH_TURN_COOLDOWN_MIN),
                     ),
                 )
+
+    def _apply_turn_cooldown(self, app: "AsciiQuariumProtocol") -> None:
+        """Apply AI turn cooldown after a forced boundary turn (deduplicated)."""
+        if getattr(self, "_brain", None) is not None:
+            try:
+                height_bias = max(1.0, float(self.height))
+                base_cd = float(getattr(app.settings, "ai_turn_base_cooldown", 1.2))
+                size_fac = float(getattr(app.settings, "ai_turn_size_factor", 0.08))
+                self._brain.turn_cooldown = base_cd * (1.0 + size_fac * (height_bias - 1.0))
+            except Exception:
+                pass
+
+    def _handle_vertical_bound(self, at_top: bool, v_max: float, top_bound: float, bottom_bound: float) -> None:
+        """Resolve vertical collision at top/bottom by stopping or reflecting vy."""
+        if random.random() < 0.5:
+            self.vy = 0.0
+        else:
+            if self.vy != 0:
+                self.vy = abs(self.vy) if at_top else -abs(self.vy)
+            else:
+                val = random.uniform(0.05, v_max)
+                self.vy = val if at_top else -val
+        self.scene_y = float(top_bound if at_top else bottom_bound)
 
     def respawn(self, screen: Screen, direction: int):
         # choose new frames and matching mask
