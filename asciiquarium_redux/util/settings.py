@@ -848,7 +848,7 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--fish-tank", dest="fish_tank", action="store_true")
     parser.add_argument("--no-fish-tank", dest="fish_tank", action="store_false")
     parser.add_argument("--fish-tank-margin", dest="fish_tank_margin", type=int)
-    parser.add_argument("--click", dest="click_action", choices=["hook", "feed"]) 
+    parser.add_argument("--click", dest="click_action", choices=["hook", "feed"])
     parser.add_argument("--scene-width-factor", dest="scene_width_factor", type=int)
     parser.add_argument("--scene-offset", dest="scene_offset", type=int)
     parser.add_argument("--scene-pan-step", dest="scene_pan_step_fraction", type=float)
