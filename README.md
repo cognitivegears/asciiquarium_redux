@@ -1,6 +1,6 @@
 # Asciiquarium Redux 🐠
 
-[![PyPI version](https://img.shields.io/pypi/v/asciiquarium-redux.svg)](https://pypi.org/project/asciiquarium-redux/) [![Live demo](https://img.shields.io/badge/web%20demo-ascifi.sh-0aaac0?logo=icloud&logoColor=white)](https://asciifi.sh/) [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/) [![CI](https://github.com/cognitivegears/asciiquarium_redux/actions/workflows/ci.yml/badge.svg)](https://github.com/cognitivegears/asciiquarium_redux/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/cognitivegears/asciiquarium_redux.svg)](LICENSE)
+[![PyPI version](https://img.shields.io/pypi/v/asciiquarium-redux.svg)](https://pypi.org/project/asciiquarium-redux/) [![Live demo](https://img.shields.io/badge/web%20demo-ascifi.sh-0aaac0?logo=icloud&logoColor=white)](https://asciifi.sh/) [![Python](https://img.shields.io/badge/python-3.11%20%7C%203.12%20%7C%203.13%20%7C%203.14-3776AB?logo=python&logoColor=white)](https://www.python.org/downloads/) [![CI](https://github.com/cognitivegears/asciiquarium_redux/actions/workflows/ci.yml/badge.svg)](https://github.com/cognitivegears/asciiquarium_redux/actions/workflows/ci.yml) [![License](https://img.shields.io/github/license/cognitivegears/asciiquarium_redux.svg)](LICENSE)
 
 A joyful, colorful Python reimagining of the classic terminal aquarium. Watch fish swim, seaweed sway, hooks drop, sharks prowl, and bubbles pop—right in your terminal or a windowed Tk screen.
 
