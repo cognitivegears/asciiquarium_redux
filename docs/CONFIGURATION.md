@@ -205,11 +205,13 @@ swan = 1.0
 monster = 1.0
 big_fish = 1.0
 fishhook = 1.0
+crab = 1.0
 
 [spawn.per_type]           # Per-entity cooldowns (seconds)
 shark = 0.0                # No additional cooldown
 whale = 0.0
 ship = 0.0
+crab = 0.0
 # ... other entities
 ```
 
@@ -281,6 +283,7 @@ shark = 0.0      # No predators
 whale = 1.0
 ducks = 2.0
 swan = 2.0
+crab = 1.0
 ```
 
 **Shark-Heavy Theme**:
@@ -291,6 +294,7 @@ big_fish = 2.0   # Moderate
 whale = 0.1      # Rare
 ship = 0.0       # Disabled
 ducks = 0.0      # Disabled
+crab = 0.0       # Disabled
 ```
 
 ## Fish Settings
@@ -767,6 +771,7 @@ monster = 0.0
 whale = 2.0
 ducks = 1.0
 swan = 1.0
+crab = 1.0
 
 [fish]
 speed_min = 0.4
@@ -787,6 +792,7 @@ monster = 5.0
 big_fish = 3.0
 whale = 0.0
 ducks = 0.0
+crab = 0.0
 
 [fish]
 speed_min = 1.0

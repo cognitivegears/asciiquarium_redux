@@ -380,6 +380,7 @@ from asciiquarium_redux.entities.specials import (
     spawn_big_fish,        # Large decorative fish
     spawn_fishhook,        # Interactive fishing hook
     spawn_treasure_chest,  # Persistent decoration
+    spawn_crab,            # Crab on the Sea floor 
 )
 ```
 

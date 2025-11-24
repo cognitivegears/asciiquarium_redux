@@ -78,6 +78,7 @@ from .entities.specials import (
     spawn_treasure_chest,
     spawn_fish_food,
     spawn_fish_food_at,
+    spawn_crab,
 )
 from .constants import (
     SCREEN_WIDTH_UNIT_DIVISOR,
@@ -1113,6 +1114,7 @@ class AsciiQuarium:
             ("swan", spawn_swan),
             ("monster", spawn_monster),
             ("big_fish", spawn_big_fish),
+            ("crab", spawn_crab),
         ]
         weighted_choices: List[Tuple[float, str, Any]] = []
         current_time: float = self._time
