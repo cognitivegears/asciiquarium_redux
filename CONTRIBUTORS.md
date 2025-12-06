@@ -10,5 +10,9 @@ Nathan Byrd (cognitivegears): [cognitivegears](https://github.com/cognitivegears
 
 Joe Kaufeld (itsthejoker): [itsthejoker](https://github.com/itsthejoker)
 
-* Added cool new features including solid fish and a startup banner.
+* Added great new features including solid fish and a startup banner.
 * Many, many bugfixes and code improvements.
+
+Simon Vallières (sisimomo): [sisimomo](https://github.com/sisimomo)
+
+* Added a very cool crab.
