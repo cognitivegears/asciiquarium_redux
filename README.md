@@ -22,7 +22,7 @@ Secondary (direct GitHub Pages): <https://cognitivegears.github.io/asciiquarium_
 
 ## Features
 
-- Faithful animations: fish (with color masks), seaweed lifecycle/sway, waterline, castle, bubbles, and many specials (shark, whale, ship, ducks, swan, dolphins, monster, big fish)
+- Faithful animations: fish (with color masks), seaweed lifecycle/sway, waterline, castle, bubbles, and many specials (shark, whale, ship, ducks, swan, dolphins, monster, big fish, crab)
 - Decor: treasure chest that sits on the seabed, occasionally bubbles, and periodically opens to release a stream of bubbles (drawn behind fish)
 - Fishhook gameplay: one hook at a time, impact pause, configurable dwell time, collisions while lowering/dwelling/retracting
 - Smooth rendering: double-buffered terminal drawing to reduce flicker
@@ -312,6 +312,7 @@ dolphins = 0.0
 swan = 0.0
 monster = 0.0
 big_fish = 0.0
+crab = 0.0
 [spawn]
 max_concurrent = 1
 cooldown_global = 0.0
@@ -325,6 +326,7 @@ dolphins = 1.0
 swan = 1.0
 monster = 1.0
 big_fish = 1.0
+crab = 1.0
 # Optional extra scaling beyond density for counts
 fish_scale = 1.0
 seaweed_scale = 1.0
