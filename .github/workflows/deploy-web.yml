@@ -4,7 +4,7 @@ on:
   push:
     branches: [ main ]
     paths:
-      - 'asciiquarium_redux/web/**'
+      - 'asciiquarium_redux/**'
       - '.github/workflows/deploy-web.yml'
       - 'pyproject.toml'
       - 'README.md'
@@ -19,14 +19,37 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Build wheel
+        run: |
+          uv build
+
       - name: Build static web directory
         run: |
           set -euo pipefail
           mkdir -p out
           rsync -a --delete asciiquarium_redux/web/ out/
+
+          # Copy freshly built wheel to web output
+          mkdir -p out/wheels
+          WHEEL=$(ls -t dist/*.whl | head -n1)
+          WHEEL_NAME=$(basename "$WHEEL")
+          cp "$WHEEL" "out/wheels/$WHEEL_NAME"
+          cp "$WHEEL" "out/wheels/asciiquarium_redux-latest.whl"
+          echo "{\"wheel\": \"$WHEEL_NAME\"}" > out/wheels/manifest.json
+
           # Improve GitHub Pages behavior
           touch out/.nojekyll
           cp -f out/index.html out/404.html || true
+
       - name: Publish to gh-pages branch
         uses: peaceiris/actions-gh-pages@v3
         with:
