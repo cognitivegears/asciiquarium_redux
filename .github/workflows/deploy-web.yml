@@ -39,6 +39,7 @@ jobs:
           rsync -a --delete asciiquarium_redux/web/ out/
 
           # Copy freshly built wheel to web output
+          mkdir -p out/wheels
           WHEEL=$(ls -t dist/*.whl | head -n1)
           WHEEL_NAME=$(basename "$WHEEL")
           cp "$WHEEL" "out/wheels/$WHEEL_NAME"
