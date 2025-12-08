@@ -48,7 +48,7 @@ The system organizes entities into two main categories:
 **Special Entities** (`entities/specials/`):
 - **Interactive**: Player-triggered elements (fishhook)
 - **Dramatic**: Rare spectacular events (whale, monster)
-- **Atmospheric**: Mood-setting elements (ship, ducks, crab)
+- **Atmospheric**: Mood-setting elements (ship, ducks, crab, scuba diver)
 - **Decorative**: Persistent scenery (treasure chest)
 
 ## Entity Lifecycle

@@ -51,6 +51,7 @@ cooldown_global = 0.0       # seconds after any special before next can spawn
  monster = 0.0
  big_fish = 0.0
  crab = 0.0
+ scuba_diver = 0.0
 
 # Relative spawn weights per special type
 # - Scale: non-negative floats; 0 disables a type
@@ -66,6 +67,7 @@ swan = 1.0
 monster = 1.0
 big_fish = 1.0
 crab = 1.0
+scuba_diver = 1.0
 
 
 # Fishhook behavior

@@ -396,6 +396,7 @@ class WebApp:
             "monster": options.get("w_monster"),
             "big_fish": options.get("w_big_fish"),
             "crab": options.get("w_crab"),
+            "scuba_diver": options.get("w_scuba_diver"),
         }
         for k, v in weights.items():
             if v is not None:

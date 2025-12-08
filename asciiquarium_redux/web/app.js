@@ -364,6 +364,7 @@ function collectOptionsFromUI() {
     w_monster: num("w_monster"),
     w_big_fish: num("w_big_fish"),
     w_crab: num("w_crab"),
+    w_scuba_diver: num("w_scuba_diver"),
   // Fishhook
   fishhook_dwell_seconds: num("fishhook_dwell_seconds")
   };
@@ -421,7 +422,7 @@ function recomputeFontAndGrid() {
   "seaweed_scale","seaweed_sway_min","seaweed_sway_max",
     // scene & spawn
   "waterline_top","chest_burst_seconds","fish_tank","fish_tank_margin","spawn_start_delay_min","spawn_start_delay_max","spawn_interval_min","spawn_interval_max",
-    "spawn_max_concurrent","spawn_cooldown_global","w_shark","w_fishhook","w_whale","w_ship","w_ducks","w_dolphins","w_swan","w_monster","w_big_fish","w_crab",
+    "spawn_max_concurrent","spawn_cooldown_global","w_shark","w_fishhook","w_whale","w_ship","w_ducks","w_dolphins","w_swan","w_monster","w_big_fish","w_crab","w_scuba_diver",
   // scene controls
   "scene_width_factor","scene_pan_step_fraction","click_action",
     // fishhook

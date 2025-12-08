@@ -381,6 +381,7 @@ from asciiquarium_redux.entities.specials import (
     spawn_fishhook,        # Interactive fishing hook
     spawn_treasure_chest,  # Persistent decoration
     spawn_crab,            # Crab on the Sea floor 
+    spawn_scuba_diver,     # Wandering diver releasing bubbles
 )
 ```
 
