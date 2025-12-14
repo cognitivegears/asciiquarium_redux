@@ -24,4 +24,5 @@ swan = 1.0
 monster = 1.0
 big_fish = 1.0
 crab = 1.0
+scuba_diver = 0.0
 # fishhook = 0.0   # uncomment to disable hooks in ocean mode

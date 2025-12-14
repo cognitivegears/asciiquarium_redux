@@ -16,3 +16,4 @@ Joe Kaufeld (itsthejoker): [itsthejoker](https://github.com/itsthejoker)
 Simon Vallières (sisimomo): [sisimomo](https://github.com/sisimomo)
 
 * Added a very cool crab.
+* Added a scuba diver.

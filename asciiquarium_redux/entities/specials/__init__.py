@@ -10,6 +10,7 @@ from .big_fish import BigFish, spawn_big_fish
 from .treasure_chest import TreasureChest, spawn_treasure_chest
 from .fish_food import FishFoodFlake, spawn_fish_food, spawn_fish_food_at
 from .crab import Crab, spawn_crab
+from .scuba_diver import ScubaDiver, spawn_scuba_diver
 
 __all__ = [
     "Shark",
@@ -38,4 +39,6 @@ __all__ = [
     "spawn_fish_food_at",
     "Crab",
     "spawn_crab",
+    "ScubaDiver",
+    "spawn_scuba_diver",
 ]
