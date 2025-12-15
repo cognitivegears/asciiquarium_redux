@@ -207,6 +207,7 @@ big_fish = 1.0
 fishhook = 1.0
 crab = 1.0
 scuba_diver = 1.0
+submarine = 1.0
 
 [spawn.per_type]           # Per-entity cooldowns (seconds)
 shark = 0.0                # No additional cooldown
@@ -214,6 +215,7 @@ whale = 0.0
 ship = 0.0
 crab = 0.0
 scuba_diver = 0.0
+submarine = 0.0
 # ... other entities
 ```
 
@@ -287,6 +289,7 @@ ducks = 2.0
 swan = 2.0
 crab = 1.0
 scuba_diver = 1.0
+submarine = 1.0
 ```
 
 **Shark-Heavy Theme**:
@@ -299,6 +302,7 @@ ship = 0.0         # Disabled
 ducks = 0.0        # Disabled
 crab = 0.0         # Disabled
 scuba_diver = 0.0  # Disabled
+submarine = 0.0    # Disabled
 ```
 
 ## Fish Settings
@@ -777,6 +781,7 @@ ducks = 1.0
 swan = 1.0
 crab = 1.0
 scuba_diver = 1.0
+submarine = 1.0
 
 [fish]
 speed_min = 0.4
@@ -799,7 +804,7 @@ whale = 0.0
 ducks = 0.0
 crab = 0.0
 scuba_diver = 0.0
-
+submarine = 0.0
 [fish]
 speed_min = 1.0
 speed_max = 3.0

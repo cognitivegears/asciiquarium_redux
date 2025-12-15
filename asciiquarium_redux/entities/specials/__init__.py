@@ -11,7 +11,7 @@ from .treasure_chest import TreasureChest, spawn_treasure_chest
 from .fish_food import FishFoodFlake, spawn_fish_food, spawn_fish_food_at
 from .crab import Crab, spawn_crab
 from .scuba_diver import ScubaDiver, spawn_scuba_diver
-
+from .submarine import Submarine, spawn_submarine
 __all__ = [
     "Shark",
     "FishHook",
@@ -41,4 +41,6 @@ __all__ = [
     "spawn_crab",
     "ScubaDiver",
     "spawn_scuba_diver",
+    "Submarine",
+    "spawn_submarine",
 ]

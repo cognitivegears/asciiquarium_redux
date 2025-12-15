@@ -169,7 +169,7 @@ class Settings:
         speed (float): Global animation speed multiplier. Default: 0.75
 
         specials_weights (Dict[str, float]): Spawn probability weights for special entities.
-            Keys: shark, fishhook, whale, ship, ducks, dolphins, swan, monster, big_fish, crab, scuba_diver
+            Keys: shark, fishhook, whale, ship, ducks, dolphins, swan, monster, big_fish, crab, scuba_diver, submarine
             Values: 0.0 (disabled) to 2.0+ (high frequency). Default: 1.0 each
 
         spawn_start_delay_min/max (float): Initial delay before first special spawn (seconds)
@@ -239,6 +239,7 @@ class Settings:
         "big_fish": 1.0,
         "crab": 1.0,
         "scuba_diver": 1.0,
+        "submarine": 1.0,
     })
     spawn_start_delay_min: float = 3.0
     spawn_start_delay_max: float = 8.0
