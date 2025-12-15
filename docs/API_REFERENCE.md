@@ -382,7 +382,7 @@ from asciiquarium_redux.entities.specials import (
     spawn_treasure_chest,  # Persistent decoration
     spawn_crab,            # Crab on the Sea floor
     spawn_scuba_diver,     # Wandering diver releasing bubbles
-    spawn_submarine,        # Submarine with wake
+    spawn_submarine,        # Submarine releasing bubbles
 )
 ```
 
