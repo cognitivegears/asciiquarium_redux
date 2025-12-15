@@ -361,7 +361,7 @@ b   yyyy       yyy                  yyyyyyyy
             self.masks[self._frame_idx],
             int(self.x),
             int(self.y),
-            Screen.COLOUR_BLUE,
+            Screen.COLOUR_YELLOW,
         )
 
 
