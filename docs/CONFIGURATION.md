@@ -803,7 +803,7 @@ big_fish = 3.0
 whale = 0.0
 ducks = 0.0
 crab = 0.0
-_diver = 0.0
+scuba_diver = 0.0
 submarine = 0.0
 [fish]
 speed_min = 1.0
