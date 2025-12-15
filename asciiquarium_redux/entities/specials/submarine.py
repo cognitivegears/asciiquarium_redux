@@ -312,7 +312,7 @@ b   yyyy       yyy                  yyyyyyyy
         self._active = True
 
     def _next_burst_delay(self) -> float:
-        """Delay between bubble bursts (simulates breathing cadence)."""
+        """Delay between bubble bursts (simulates air release intervals)."""
         return random.uniform(1.2, 2.6)
 
     def _next_bubble_gap(self) -> float:
