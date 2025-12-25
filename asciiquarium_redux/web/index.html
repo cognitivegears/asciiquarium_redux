@@ -4,6 +4,8 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Asciiquarium Redux (Web)</title>
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="screen-orientation" content="landscape" />
   <meta name="theme-color" content="#0b3d91" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <!-- iOS PWA support -->
@@ -13,6 +15,19 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- Portrait mode overlay for mobile -->
+  <div id="rotateOverlay" class="rotate-overlay" aria-hidden="true" role="status" aria-live="polite" aria-atomic="true">
+    <div class="rotate-content">
+      <div class="rotate-icon" aria-hidden="true">
+        <span class="rotate-phone rotate-phone--portrait">📱</span>
+        <span class="rotate-arrow">→</span>
+        <span class="rotate-phone rotate-phone--landscape">📱</span>
+      </div>
+      <h2>Please Rotate Your Device</h2>
+      <p>This application is best viewed in landscape mode</p>
+    </div>
+  </div>
+  
   <header class="hero">
     <div class="brand">
       <h1>Asciiquarium Redux</h1>

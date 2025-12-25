@@ -118,7 +118,11 @@ def main(argv: list[str] | None = None) -> None:
     if backend == "web":
         # Simple local server to host the web assets
         from .web_server import serve_web
-        serve_web(port=int(getattr(settings, 'web_port', 8000)), open_browser=bool(getattr(settings, 'web_open', False)))
+        serve_web(
+            host=str(getattr(settings, 'web_host', '127.0.0.1')),
+            port=int(getattr(settings, 'web_port', 8000)),
+            open_browser=bool(getattr(settings, 'web_open', False)),
+        )
         return
     if backend == "tk":
         try:

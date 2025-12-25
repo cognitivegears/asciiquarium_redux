@@ -616,3 +616,123 @@ function escapeHtml(s) {
 function escapeHtmlPreserveTags(s) {
   return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])).replace(/&lt;(\/?)(a|code|pre|h1|h2|h3|ul|li)&gt;/g, '<$1$2>');
 }
+
+// ============================================================================
+// Orientation handling for mobile devices
+// ============================================================================
+
+// Attempt to lock orientation on mobile (if supported)
+function lockOrientation() {
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('landscape').catch((err) => {
+      console.info('Orientation lock not available:', err.message);
+    });
+  } else if (screen.lockOrientation) {
+    // Legacy API
+    screen.lockOrientation('landscape');
+  } else if (screen.mozLockOrientation) {
+    screen.mozLockOrientation('landscape');
+  } else if (screen.msLockOrientation) {
+    screen.msLockOrientation('landscape');
+  }
+}
+
+// Handle orientation changes with auto-dismiss
+let orientationTimeout = null;
+let orientationFinalizeTimeout = null;
+
+// Bump this if the hint UI/behavior changes so existing sessions see it again.
+const ROTATE_HINT_KEY = 'asciiquarium_rotate_hint_shown';
+
+function getRotateHintShown() {
+  try {
+    return sessionStorage.getItem(ROTATE_HINT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setRotateHintShown() {
+  try {
+    sessionStorage.setItem(ROTATE_HINT_KEY, '1');
+  } catch {
+    // ignore
+  }
+}
+
+function handleOrientationChange() {
+  const overlay = document.getElementById('rotateOverlay');
+  const isMobile = window.innerWidth <= 900;
+  const isPortrait = window.innerHeight > window.innerWidth;
+  
+  if (!overlay) return;
+  
+  // Clear any existing timeout
+  if (orientationTimeout) {
+    clearTimeout(orientationTimeout);
+    orientationTimeout = null;
+  }
+
+  if (orientationFinalizeTimeout) {
+    clearTimeout(orientationFinalizeTimeout);
+    orientationFinalizeTimeout = null;
+  }
+  
+  if (isMobile && isPortrait) {
+    // Only show the hint once per session to avoid annoyance
+    if (!getRotateHintShown()) {
+      setRotateHintShown();
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.classList.remove('fade-out');
+      // Trigger show animation
+      requestAnimationFrame(() => {
+        overlay.classList.add('show');
+      });
+      
+      // Auto-dismiss after a short delay (long enough to notice)
+      orientationTimeout = setTimeout(() => {
+        overlay.classList.add('fade-out');
+        orientationFinalizeTimeout = setTimeout(() => {
+          overlay.classList.remove('show');
+          overlay.setAttribute('aria-hidden', 'true');
+        }, 400); // Match CSS transition duration
+      }, 6500);
+    }
+  } else {
+    // In landscape, immediately hide
+    overlay.classList.remove('show');
+    overlay.classList.add('fade-out');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+}
+
+// Set up orientation handling
+if (window.matchMedia) {
+  const mql = window.matchMedia('(orientation: portrait)');
+  if (mql.addEventListener) {
+    mql.addEventListener('change', handleOrientationChange);
+  } else if (mql.addListener) {
+    // Safari < 14
+    mql.addListener(handleOrientationChange);
+  }
+}
+window.addEventListener('resize', handleOrientationChange);
+window.addEventListener('orientationchange', handleOrientationChange);
+
+// Try to lock orientation when page loads or becomes fullscreen
+document.addEventListener('DOMContentLoaded', () => {
+  // Most browsers require a user gesture OR standalone/fullscreen mode.
+  // Avoid spamming the console with expected failures.
+  if (typeof isStandalone === 'function' && isStandalone()) {
+    lockOrientation();
+  }
+  handleOrientationChange();
+});
+
+if (document.documentElement.requestFullscreen) {
+  document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement) {
+      lockOrientation();
+    }
+  });
+}

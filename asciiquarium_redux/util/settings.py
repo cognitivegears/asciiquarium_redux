@@ -305,6 +305,7 @@ class Settings:
     ui_font_min_size: int = 10
     ui_font_max_size: int = 22
     web_open: bool = False
+    web_host: str = "127.0.0.1"
     web_port: int = 8000
     # AI configuration (Utility AI + steering)
     ai_enabled: bool = True
@@ -834,6 +835,7 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     parser.add_argument("--speed", type=float)
     parser.add_argument("--backend", choices=["terminal", "tk", "web"])
     parser.add_argument("--open", dest="web_open", action="store_true")
+    parser.add_argument("--host", dest="web_host", type=str)
     parser.add_argument("--port", dest="web_port", type=int)
     parser.add_argument("--fullscreen", action="store_true")
     parser.add_argument("--no-fullscreen", dest="fullscreen", action="store_false")
@@ -921,6 +923,9 @@ def _apply_cli_overrides(s: Settings, argv: Optional[List[str]]) -> None:
     try:
         if getattr(args, "web_open", False):
             s.web_open = True
+        vh = getattr(args, "web_host", None)
+        if isinstance(vh, str) and vh.strip():
+            s.web_host = vh.strip()
         vp = getattr(args, "web_port", None)
         if isinstance(vp, int) and vp:
             s.web_port = vp
