@@ -31,13 +31,24 @@
   <header class="hero">
     <div class="brand">
       <h1>Asciiquarium Redux</h1>
-      <span class="tag">Web (WASM)</span>
     </div>
     <nav class="links">
-      <button id="installBtn" class="install-btn" type="button" aria-label="Install Asciiquarium app" hidden>Install App</button>
-      <button id="settingsBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="settingsDialog">Settings</button>
-  <button id="aboutBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="aboutDialog">About</button>
-      <a class="repo" href="https://github.com/cognitivegears/asciiquarium_redux" target="_blank" rel="noopener noreferrer" title="Repository">GitHub</a>
+      <div class="links-inline" aria-label="Header actions">
+        <button id="installBtn" class="install-btn" type="button" aria-label="Install Asciiquarium app" hidden>Install App</button>
+        <button id="settingsBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="settingsDialog">Settings</button>
+        <button id="aboutBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="aboutDialog">About</button>
+        <a class="settings-btn repo" href="https://github.com/cognitivegears/asciiquarium_redux" target="_blank" rel="noopener noreferrer" title="Repository">GitHub</a>
+      </div>
+
+      <details id="mobileMenu" class="links-menu">
+        <summary class="settings-btn" aria-label="Menu" title="Menu">☰</summary>
+        <div class="menu-panel" role="menu" aria-label="Menu">
+          <button id="installMenuBtn" class="install-btn" type="button" hidden>Install App</button>
+          <button id="settingsMenuBtn" class="settings-btn" type="button">Settings</button>
+          <button id="aboutMenuBtn" class="settings-btn" type="button">About</button>
+          <a class="settings-btn repo" href="https://github.com/cognitivegears/asciiquarium_redux" target="_blank" rel="noopener noreferrer" title="Repository">GitHub</a>
+        </div>
+      </details>
     </nav>
   </header>
 
