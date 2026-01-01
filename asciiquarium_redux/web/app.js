@@ -752,17 +752,19 @@ function handleOrientationChange() {
 }
 
 // Set up orientation handling
-if (window.matchMedia) {
+if (window.matchMedia && typeof window.matchMedia === 'function') {
   const mql = window.matchMedia('(orientation: portrait)');
+  const handleMqlChange = () => handleOrientationChange();
   if (mql.addEventListener) {
-    mql.addEventListener('change', handleOrientationChange);
+    mql.addEventListener('change', handleMqlChange);
   } else if (mql.addListener) {
     // Safari < 14
-    mql.addListener(handleOrientationChange);
+    mql.addListener(handleMqlChange);
   }
+} else {
+  window.addEventListener('orientationchange', handleOrientationChange);
+  window.addEventListener('resize', handleOrientationChange);
 }
-window.addEventListener('resize', handleOrientationChange);
-window.addEventListener('orientationchange', handleOrientationChange);
 
 // Try to lock orientation when page loads or becomes fullscreen
 document.addEventListener('DOMContentLoaded', () => {
