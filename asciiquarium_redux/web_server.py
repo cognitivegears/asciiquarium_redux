@@ -21,7 +21,7 @@ class _WasmHandler(http.server.SimpleHTTPRequestHandler):
         return typ
 
 
-def serve_web(port: int = 8000, open_browser: bool = True) -> None:
+def serve_web(host: str = "127.0.0.1", port: int = 8000, open_browser: bool = True) -> None:
     root = Path(__file__).parent / 'web'
     # Best-effort: place latest local wheel at a stable path for the web app
     try:
@@ -61,9 +61,17 @@ def serve_web(port: int = 8000, open_browser: bool = True) -> None:
         def __init__(self, *args, **kwargs):
             super().__init__(*args, directory=str(root), **kwargs)
 
-    with socketserver.TCPServer(("127.0.0.1", port), Handler) as httpd:
-        url = f"http://127.0.0.1:{port}/"
+    # NOTE: if binding to 0.0.0.0 / :: (all interfaces), open the browser via localhost.
+    browser_host = host
+    if host in {"0.0.0.0", "::", ""}:
+        browser_host = "127.0.0.1"
+
+    with socketserver.TCPServer((host, port), Handler) as httpd:
+        url = f"http://{browser_host}:{port}/"
         if open_browser:
             webbrowser.open(url)
-        print(f"Serving {root} at {url} (Ctrl+C to stop)")
+        if browser_host != host:
+            print(f"Serving {root} at {url} (bound to {host}:{port}) (Ctrl+C to stop)")
+        else:
+            print(f"Serving {root} at {url} (Ctrl+C to stop)")
         httpd.serve_forever()

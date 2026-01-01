@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Asciiquarium Redux (Web)</title>
+  <meta name="mobile-web-app-capable" content="yes" />
   <meta name="theme-color" content="#0b3d91" />
   <link rel="manifest" href="./manifest.webmanifest" />
   <!-- iOS PWA support -->
@@ -13,16 +14,40 @@
   <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
+  <!-- Portrait mode overlay for mobile -->
+  <div id="rotateOverlay" class="rotate-overlay" aria-hidden="true" role="status" aria-live="polite" aria-atomic="true">
+    <div class="rotate-content">
+      <div class="rotate-icon" aria-hidden="true">
+        <span class="rotate-phone rotate-phone--portrait">📱</span>
+        <span class="rotate-arrow">→</span>
+        <span class="rotate-phone rotate-phone--landscape">📱</span>
+      </div>
+      <h2>Please Rotate Your Device</h2>
+      <p>This application is best viewed in landscape mode</p>
+    </div>
+  </div>
+  
   <header class="hero">
     <div class="brand">
       <h1>Asciiquarium Redux</h1>
-      <span class="tag">Web (WASM)</span>
     </div>
     <nav class="links">
-      <button id="installBtn" class="install-btn" type="button" aria-label="Install Asciiquarium app" hidden>Install App</button>
-      <button id="settingsBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="settingsDialog">Settings</button>
-  <button id="aboutBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="aboutDialog">About</button>
-      <a class="repo" href="https://github.com/cognitivegears/asciiquarium_redux" target="_blank" rel="noopener noreferrer" title="Repository">GitHub</a>
+      <div class="links-inline" aria-label="Header actions">
+        <button id="installBtn" class="install-btn" type="button" aria-label="Install Asciiquarium app" hidden>Install App</button>
+        <button id="settingsBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="settingsDialog">Settings</button>
+        <button id="aboutBtn" class="settings-btn" type="button" aria-haspopup="dialog" aria-controls="aboutDialog">About</button>
+        <a class="settings-btn repo" href="https://github.com/cognitivegears/asciiquarium_redux" target="_blank" rel="noopener noreferrer" title="Repository">GitHub</a>
+      </div>
+
+      <details id="mobileMenu" class="links-menu">
+        <summary class="settings-btn" aria-label="Menu" title="Menu">☰</summary>
+        <div class="menu-panel" role="menu" aria-label="Menu">
+          <button id="installMenuBtn" class="install-btn" type="button" role="menuitem" hidden>Install App</button>
+          <button id="settingsMenuBtn" class="settings-btn" type="button" role="menuitem">Settings</button>
+          <button id="aboutMenuBtn" class="settings-btn" type="button" role="menuitem">About</button>
+          <a class="settings-btn repo" href="https://github.com/cognitivegears/asciiquarium_redux" target="_blank" rel="noopener noreferrer" title="Repository" role="menuitem">GitHub</a>
+        </div>
+      </details>
     </nav>
   </header>
 

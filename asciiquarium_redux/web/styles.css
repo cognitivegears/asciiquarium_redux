@@ -15,12 +15,63 @@ body {
 .hero .brand { display: flex; align-items: center; gap: 10px; }
 .hero h1 { margin: 0; font-size: 20px; letter-spacing: 0.5px; }
 .hero .tag { padding: 2px 8px; border-radius: 10px; background: #003746; color: #66f3ff; font-size: 12px; }
-.links a { color: #9fdbe2; text-decoration: none; border: 1px solid #004a5e; padding: 6px 10px; border-radius: 6px; background: #001c24; }
-.links a:hover { background: #003241; color: #66f3ff; }
-.install-btn { margin-right: 8px; padding: 6px 10px; border: 1px solid #2b4fa8; border-radius: 6px; background: #0b3d91; color: #e6f7ff; cursor: pointer; }
+.links { display: flex; align-items: center; gap: 8px; }
+.links-inline { display: flex; align-items: center; gap: 8px; }
+.links-menu { display: none; position: relative; }
+.links-menu > summary { list-style: none; }
+.links-menu > summary::-webkit-details-marker { display: none; }
+
+.links-menu[open] > summary {
+  background: #004353;
+}
+
+.menu-panel {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 8px);
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  min-width: 210px;
+  border: 1px solid #003746;
+  border-radius: 12px;
+  background: rgba(0, 30, 40, 0.96);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45);
+}
+
+/* Normalize header controls so buttons/links align */
+.links a,
+.install-btn,
+.settings-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 10px;
+  white-space: nowrap;
+  text-decoration: none;
+  margin: 0;
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+/* summary is not a button element; normalize it too */
+.links-menu > summary.settings-btn {
+  cursor: pointer;
+}
+
+.install-btn { border: 1px solid #2b4fa8; background: #0b3d91; color: #e6f7ff; cursor: pointer; }
 .install-btn:hover { background: #0d47a1; }
-.settings-btn { margin-right: 8px; padding: 6px 10px; border: 1px solid #005e75; border-radius: 6px; background: #003746; color: #66f3ff; cursor: pointer; }
+.settings-btn { border: 1px solid #005e75; background: #003746; color: #66f3ff; cursor: pointer; }
 .settings-btn:hover { background: #004353; }
+
+/* Ensure links styled as buttons inherit hover color */
+.links a.settings-btn:hover { color: #66f3ff; }
 .controls::backdrop { background: rgba(0,0,0,0.55); }
 .controls { padding: 16px; border: 1px solid #003746; border-radius: 10px; background: rgba(0, 30, 40, 0.95); max-width: 720px; width: calc(100% - 24px); color: #e6f7ff; }
 .controls h2 { margin: 0; font-size: 18px; }
@@ -56,12 +107,160 @@ body {
 .hint .repo { margin-left: auto; color: #9fdbe2; text-decoration: none; }
 .hint .repo:hover { color: #66f3ff; }
 
+/* Portrait mode overlay - subtle notification banner */
+.rotate-overlay {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: min(420px, calc(100% - 32px));
+  background: rgba(11, 61, 145, 0.95);
+  backdrop-filter: blur(8px);
+  z-index: 9999;
+  padding: 12px 16px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(102, 243, 255, 0.25);
+  border-radius: 12px;
+  opacity: 0;
+  transform: translate(-50%, -60%);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+  pointer-events: none;
+}
+
+.rotate-overlay.show {
+  opacity: 1;
+  transform: translate(-50%, -50%);
+}
+
+.rotate-overlay.fade-out {
+  opacity: 0;
+  transform: translate(-50%, -60%);
+}
+
+.rotate-content {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  text-align: center;
+}
+
+.rotate-icon {
+  font-size: 22px;
+  animation: rotate-wiggle 1.5s ease-in-out infinite;
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.rotate-phone {
+  display: inline-block;
+  line-height: 1;
+}
+
+.rotate-phone--landscape {
+  transform: rotate(90deg);
+}
+
+.rotate-arrow {
+  display: inline-block;
+  opacity: 0.9;
+}
+
+@keyframes rotate-wiggle {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rotate-overlay {
+    transition: none;
+  }
+
+  .rotate-icon {
+    animation: none;
+  }
+}
+
+.rotate-content h2 {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 500;
+  color: #66f3ff;
+}
+
+.rotate-content p {
+  display: none; /* Hide on mobile for brevity */
+}
+
+/* Show overlay on mobile in portrait mode */
+@media (max-width: 900px) and (orientation: portrait) {
+  .rotate-overlay {
+    display: block;
+  }
+}
+
 @media (max-width: 600px) {
   #aquarium {
     font-size: 10px !important;
   }
   .controls { width: calc(100% - 16px); }
   .field input[type="range"] { width: 100%; }
+
+  /* Mobile header: keep a single row with a hamburger menu. */
+  .hero { padding: 10px 12px; gap: 10px; }
+  .hero .brand { min-width: 0; }
+  .hero h1 {
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    letter-spacing: 0.2px;
+  }
+  .links {
+    min-width: 0;
+    flex: 1 1 auto;
+    justify-content: flex-end;
+  }
+
+  .links-inline { display: none; }
+  .links-menu { display: block; }
+
+  .links-menu > summary.settings-btn {
+    height: 32px;
+    width: 42px;
+    padding: 0;
+    font-size: 18px;
+    line-height: 1;
+  }
+
+  .menu-panel .install-btn,
+  .menu-panel .settings-btn,
+  .menu-panel a.settings-btn {
+    width: 100%;
+    justify-content: flex-start;
+    height: 34px;
+    font-size: 14px;
+  }
+}
+
+/* Optimize for mobile landscape */
+@media (max-width: 900px) and (orientation: landscape) {
+  .hero {
+    padding: 8px 12px;
+  }
+  .hero h1 {
+    font-size: 16px;
+  }
+  .hint {
+    padding: 6px 12px;
+    font-size: 11px;
+  }
+  .stage {
+    padding: 8px;
+  }
 }
 
 @media (min-width: 1100px) {

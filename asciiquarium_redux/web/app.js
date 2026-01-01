@@ -11,6 +11,10 @@ const closeAbout = document.getElementById("closeAbout");
 const aboutContent = document.getElementById("aboutContent");
 const closeSettings = document.getElementById("closeSettings");
 const installBtn = document.getElementById("installBtn");
+const mobileMenu = document.getElementById("mobileMenu");
+const installMenuBtn = document.getElementById("installMenuBtn");
+const settingsMenuBtn = document.getElementById("settingsMenuBtn");
+const aboutMenuBtn = document.getElementById("aboutMenuBtn");
 const ctx2d = canvas.getContext("2d", { alpha: false, desynchronized: true });
 const FONT_FAMILY = "Menlo, 'SF Mono', Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
 const state = { cols: 120, rows: 40, cellW: 12, cellH: 18, baseline: 4, fps: 24, running: false, drawFontSizePx: 16 };
@@ -537,16 +541,56 @@ document.querySelectorAll('.controls details.group').forEach((d) => {
 
 boot();
 
+// Mobile hamburger menu wiring (small screens)
+function closeMobileMenu() {
+  try {
+    if (mobileMenu) mobileMenu.open = false;
+  } catch (e) {
+    // Intentionally ignore failures to close the mobile menu, but log for debugging.
+    console.debug('closeMobileMenu: failed to close mobile menu', e);
+  }
+}
+
+settingsMenuBtn?.addEventListener('click', () => {
+  closeMobileMenu();
+  settingsBtn?.click();
+});
+aboutMenuBtn?.addEventListener('click', () => {
+  closeMobileMenu();
+  aboutBtn?.click();
+});
+
+function setInstallVisible(visible) {
+  if (installBtn) installBtn.hidden = !visible;
+  if (installMenuBtn) installMenuBtn.hidden = !visible;
+}
+
+function setInstallLabel(text, title) {
+  if (installBtn) {
+    installBtn.textContent = text;
+    if (title) installBtn.title = title;
+  }
+  if (installMenuBtn) {
+    installMenuBtn.textContent = text;
+    if (title) installMenuBtn.title = title;
+  }
+}
+
+installMenuBtn?.addEventListener('click', async () => {
+  closeMobileMenu();
+  installBtn?.click();
+});
+
 // Install (A2HS) flow
 let deferredPrompt = null;
 window.addEventListener('beforeinstallprompt', (e) => {
   e.preventDefault();
   deferredPrompt = e;
-  if (installBtn) installBtn.hidden = false;
+  setInstallVisible(true);
 });
 installBtn?.addEventListener('click', async () => {
   if (!deferredPrompt) return;
-  installBtn.hidden = true;
+  setInstallVisible(false);
   deferredPrompt.prompt();
   try {
     await deferredPrompt.userChoice;
@@ -554,7 +598,7 @@ installBtn?.addEventListener('click', async () => {
   deferredPrompt = null;
 });
 window.addEventListener('appinstalled', () => {
-  if (installBtn) installBtn.hidden = true;
+  setInstallVisible(false);
 });
 
 // iOS A2HS hint when not supported and not already standalone
@@ -564,10 +608,11 @@ function isStandalone() {
 document.addEventListener('DOMContentLoaded', () => {
   const isiOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
   if (isiOS && !isStandalone() && installBtn) {
-    installBtn.hidden = false;
-    installBtn.textContent = 'Add to Home Screen';
-    installBtn.title = 'Open Share and use “Add to Home Screen”';
-    installBtn.addEventListener('click', () => alert('On iOS: open the Share menu and tap “Add to Home Screen”.'));
+    setInstallVisible(true);
+    setInstallLabel('Add to Home Screen', 'Open Share and use “Add to Home Screen”');
+    const handler = () => alert('On iOS: open the Share menu and tap “Add to Home Screen”.');
+    installBtn.addEventListener('click', handler);
+    installMenuBtn?.addEventListener('click', handler);
   }
 });
 
@@ -615,4 +660,126 @@ function escapeHtml(s) {
 }
 function escapeHtmlPreserveTags(s) {
   return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])).replace(/&lt;(\/?)(a|code|pre|h1|h2|h3|ul|li)&gt;/g, '<$1$2>');
+}
+
+// ============================================================================
+// Orientation handling for mobile devices
+// ============================================================================
+
+// Attempt to lock orientation on mobile (if supported)
+function lockOrientation() {
+  if (screen.orientation && screen.orientation.lock) {
+    screen.orientation.lock('landscape').catch((err) => {
+      console.info('Orientation lock not available:', err.message);
+    });
+  } else if (screen.lockOrientation) {
+    // Legacy API
+    screen.lockOrientation('landscape');
+  } else if (screen.mozLockOrientation) {
+    screen.mozLockOrientation('landscape');
+  } else if (screen.msLockOrientation) {
+    screen.msLockOrientation('landscape');
+  }
+}
+
+// Handle orientation changes with auto-dismiss
+let orientationTimeout = null;
+let orientationFinalizeTimeout = null;
+
+// Bump this if the hint UI/behavior changes so existing sessions see it again.
+const ROTATE_HINT_KEY = 'asciiquarium_rotate_hint_shown';
+
+function getRotateHintShown() {
+  try {
+    return sessionStorage.getItem(ROTATE_HINT_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+function setRotateHintShown() {
+  try {
+    sessionStorage.setItem(ROTATE_HINT_KEY, '1');
+  } catch {
+    // ignore
+  }
+}
+
+function handleOrientationChange() {
+  const overlay = document.getElementById('rotateOverlay');
+  const isMobile = window.innerWidth <= 900;
+  const isPortrait = window.innerHeight > window.innerWidth;
+  
+  if (!overlay) return;
+  
+  // Clear any existing timeout
+  if (orientationTimeout) {
+    clearTimeout(orientationTimeout);
+    orientationTimeout = null;
+  }
+
+  if (orientationFinalizeTimeout) {
+    clearTimeout(orientationFinalizeTimeout);
+    orientationFinalizeTimeout = null;
+  }
+  
+  if (isMobile && isPortrait) {
+    // Only show the hint once per session to avoid annoyance
+    if (!getRotateHintShown()) {
+      setRotateHintShown();
+      overlay.setAttribute('aria-hidden', 'false');
+      overlay.classList.remove('fade-out');
+      // Trigger show animation
+      requestAnimationFrame(() => {
+        overlay.classList.add('show');
+      });
+      
+      // Auto-dismiss after a short delay (long enough to notice)
+      orientationTimeout = setTimeout(() => {
+        overlay.classList.add('fade-out');
+        orientationFinalizeTimeout = setTimeout(() => {
+          overlay.classList.remove('show');
+          overlay.setAttribute('aria-hidden', 'true');
+        }, 400); // Match CSS transition duration
+      }, 6500);
+    }
+  } else {
+    // In landscape, immediately hide
+    overlay.classList.remove('show');
+    overlay.classList.add('fade-out');
+    overlay.setAttribute('aria-hidden', 'true');
+  }
+}
+
+// Set up orientation handling
+if (window.matchMedia && typeof window.matchMedia === 'function') {
+  const mql = window.matchMedia('(orientation: portrait)');
+  const handleMqlChange = () => handleOrientationChange();
+  if (mql.addEventListener) {
+    mql.addEventListener('change', handleMqlChange);
+  } else if (mql.addListener) {
+    // Safari < 14
+    mql.addListener(handleMqlChange);
+  }
+} else {
+  window.addEventListener('orientationchange', handleOrientationChange);
+  window.addEventListener('resize', handleOrientationChange);
+}
+
+// Try to lock orientation when page loads or becomes fullscreen
+document.addEventListener('DOMContentLoaded', () => {
+  // Most browsers require a user gesture OR standalone/fullscreen mode.
+  // Avoid spamming the console with expected failures.
+  if (typeof isStandalone === 'function' && isStandalone()) {
+    lockOrientation();
+  }
+  handleOrientationChange();
+});
+
+if (document.documentElement.requestFullscreen) {
+  document.addEventListener('fullscreenchange', () => {
+    if (document.fullscreenElement) {
+      lockOrientation();
+    }
+  });
 }
