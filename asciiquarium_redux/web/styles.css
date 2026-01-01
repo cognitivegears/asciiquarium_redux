@@ -130,7 +130,6 @@ body {
 .rotate-overlay.show {
   opacity: 1;
   transform: translate(-50%, -50%);
-  pointer-events: auto;
 }
 
 .rotate-overlay.fade-out {
