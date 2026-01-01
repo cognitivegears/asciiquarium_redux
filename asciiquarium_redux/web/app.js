@@ -545,7 +545,10 @@ boot();
 function closeMobileMenu() {
   try {
     if (mobileMenu) mobileMenu.open = false;
-  } catch {}
+  } catch (e) {
+    // Intentionally ignore failures to close the mobile menu, but log for debugging.
+    console.debug('closeMobileMenu: failed to close mobile menu', e);
+  }
 }
 
 settingsMenuBtn?.addEventListener('click', () => {
